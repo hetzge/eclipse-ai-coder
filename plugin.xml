@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         point="org.eclipse.ui.startup">
+      <startup
+            class="de.hetzge.eclipse.aicoder.AiCoderStartup">
+      </startup>
+   </extension>
+
+	<extension point="org.eclipse.ui.commands">
+		<category
+			id="de.hetzge.eclipse.codestral.commands.inlineCompletion"
+			name="AI Code Completion">
+		</category>
+		<command
+			categoryId="de.hetzge.eclipse.codestral.commands.inlineCompletion"
+			name="Trigger Inline Completion"
+			id="de.hetzge.eclipse.codestral.commands.inlineCompletion.trigger">
+		</command>
+		<command
+			categoryId="de.hetzge.eclipse.codestral.commands.inlineCompletion"
+			name="Accept Inline Completion"
+			id="de.hetzge.eclipse.codestral.commands.inlineCompletion.accept">
+		</command>
+		<command
+			categoryId="de.hetzge.eclipse.codestral.commands.inlineCompletion"
+			name="Dismiss Inline Completion"
+			id="de.hetzge.eclipse.codestral.commands.inlineCompletion.dismiss">
+		</command>
+	</extension>
+
+	<extension point="org.eclipse.ui.handlers">
+		<handler
+			class="de.hetzge.eclipse.aicoder.handler.TriggerHandler"
+			commandId="de.hetzge.eclipse.codestral.commands.inlineCompletion.trigger">
+		</handler>
+		<handler
+			class="de.hetzge.eclipse.aicoder.handler.AcceptHandler"
+			commandId="de.hetzge.eclipse.codestral.commands.inlineCompletion.accept">
+		</handler>
+		<handler
+			class="de.hetzge.eclipse.aicoder.handler.DismissHandler"
+			commandId="de.hetzge.eclipse.codestral.commands.inlineCompletion.dismiss">
+		</handler>
+	</extension>
+
+	<extension point="org.eclipse.ui.contexts">
+		<context
+			id="de.hetzge.eclipse.codestral.inlineCompletionVisible"
+			name="Inline Completion Visible"
+			description="Inline completion visible"
+			parentId="org.eclipse.ui.textEditorScope">
+		</context>
+	</extension>
+
+	<extension point="org.eclipse.ui.bindings">
+		<key
+			commandId="de.hetzge.eclipse.codestral.commands.inlineCompletion.trigger"
+			contextId="org.eclipse.ui.textEditorScope"
+			schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+			sequence="M1+M2+SPACE">
+		</key>
+		<key
+	        commandId="de.hetzge.eclipse.codestral.commands.inlineCompletion.accept"
+	        contextId="de.hetzge.eclipse.codestral.inlineCompletionVisible"
+	        schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+	        sequence="TAB">
+		</key>
+		<key
+			commandId="de.hetzge.eclipse.codestral.commands.inlineCompletion.dismiss"
+			contextId="de.hetzge.eclipse.codestral.inlineCompletionVisible"
+			schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+			sequence="ESC">
+		</key>
+	</extension>
+</plugin>
