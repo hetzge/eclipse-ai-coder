@@ -15,6 +15,7 @@ import org.eclipse.ui.texteditor.ITextEditor;
 /**
  * https://stackoverflow.com/a/26901175/7662651
  * https://github.com/TabbyML/tabby/blob/main/clients/eclipse/plugin/src/com/tabbyml/tabby4eclipse/editor/WorkbenchPartListener.java
+ * https://docs.continue.dev/autocomplete/context-selection
  */
 public class AiCoderStartup implements IStartup {
 

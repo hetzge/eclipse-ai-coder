@@ -20,9 +20,9 @@ public final class MistralUtils {
 		final String urlString = "https://codestral.mistral.ai/v1/fim/completions";
 		final Json json = Json.object()
 				.set("model", "codestral-latest")
-				.set("prompt", prompt.trim())
-				.set("suffix", suffix.trim())
-				.set("max_tokens", 128)
+				.set("prompt", prompt.trim()) // TODO
+				.set("suffix", suffix.trim()) // TODO
+				.set("max_tokens", 1024)
 				.set("stop", Json.array().add("\n\n"))
 				.set("temperature", 0);
 		final URL url = URI.create(urlString).toURL();

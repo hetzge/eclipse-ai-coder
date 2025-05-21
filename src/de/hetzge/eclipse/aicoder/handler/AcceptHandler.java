@@ -6,7 +6,7 @@ import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.ui.texteditor.ITextEditor;
 
-import de.hetzge.eclipse.aicoder.EditorUtils;
+import de.hetzge.eclipse.aicoder.EclipseUtils;
 import de.hetzge.eclipse.aicoder.InlineCompletionController;
 
 public class AcceptHandler extends AbstractHandler {
@@ -14,7 +14,7 @@ public class AcceptHandler extends AbstractHandler {
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		System.out.println("Accept.execute()");
-		final ITextEditor textEditor = EditorUtils.getActiveTextEditor();
+		final ITextEditor textEditor = EclipseUtils.getActiveTextEditor();
 		final InlineCompletionController controller = InlineCompletionController.setup(textEditor);
 		try {
 			controller.accept();

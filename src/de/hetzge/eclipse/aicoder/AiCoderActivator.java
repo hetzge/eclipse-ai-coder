@@ -13,7 +13,7 @@ public class AiCoderActivator extends AbstractUIPlugin {
 
 	// The shared instance
 	private static AiCoderActivator plugin;
-	
+
 	/**
 	 * The constructor
 	 */

@@ -1,5 +1,13 @@
 package de.hetzge.eclipse.aicoder;
 
+import java.util.Optional;
+
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.jdt.core.ICompilationUnit;
+import org.eclipse.jdt.core.IJavaElement;
+import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.jdt.internal.ui.text.javadoc.JavadocContentAccess2;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.ITextViewerExtension5;
@@ -7,14 +15,16 @@ import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.swt.SwtCallable;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.contexts.IContextService;
+import org.eclipse.ui.part.FileEditorInput;
 import org.eclipse.ui.texteditor.ITextEditor;
 
-public class EditorUtils {
+public class EclipseUtils {
 	public static IWorkbenchPage getActiveWorkbenchPage() {
 		final IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
 		if (window != null) {
@@ -36,13 +46,12 @@ public class EditorUtils {
 	}
 
 	public static boolean isActiveEditor(ITextEditor textEditor) {
-		return textEditor == EditorUtils.getActiveTextEditor();
+		return textEditor == EclipseUtils.getActiveTextEditor();
 	}
 
 	public static ITextViewer getTextViewer(ITextEditor textEditor) {
 		return textEditor.getAdapter(ITextViewer.class);
 	}
-
 
 	public static StyledText getStyledTextWidget(ITextEditor textEditor) {
 		return getTextViewer(textEditor).getTextWidget();
@@ -118,5 +127,25 @@ public class EditorUtils {
 			return textSelection.getText();
 		}
 		return null;
+	}
+
+	public static Optional<ICompilationUnit> getCompilationUnit(ITextEditor textEditor) {
+		final IEditorInput editorInput = textEditor.getEditorInput();
+		if (editorInput instanceof final FileEditorInput fileEditorInput) {
+			final IFile file = fileEditorInput.getFile();
+			final IJavaElement element = JavaCore.create(file);
+			if (element instanceof final ICompilationUnit compilationUnit) {
+				return Optional.of(compilationUnit);
+			}
+		}
+		return Optional.empty();
+	}
+
+	public static String getJavadoc(final IJavaElement element) {
+		try {
+			return JavadocContentAccess2.getHTMLContent(element, true);
+		} catch (final CoreException exception) {
+			throw new RuntimeException("Failed to get javadoc for java element", exception);
+		}
 	}
 }
