@@ -24,6 +24,11 @@ import org.eclipse.jdt.ui.JavaElementLabels;
  * TODO lazy create methods
  * TODO MINIMUM, EXTENDED, FULL levels
  * TODO show tokens of each entry
+ * TODO last edited files
+ * TODO last viewed files
+ * TODO manually ranked files
+ * TODO sticky types
+ * TODO ignore items (ignore-file and storage)
  */
 
 public class Context {

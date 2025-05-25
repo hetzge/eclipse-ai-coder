@@ -1,0 +1,36 @@
+package de.hetzge.eclipse.aicoder;
+
+import org.eclipse.jface.text.BadLocationException;
+import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.IRegion;
+import org.eclipse.jface.text.Region;
+
+public record Completion(
+		int lineIndex,
+		IRegion modelRegion,
+		int widgetOffset,
+		String firstLineContent,
+		String content,
+		/*
+		 * if the completion is not the end of the line, this contains the next letter
+		 * (otherwise null)
+		 */
+		String firstLineSuffixCharacter,
+		int lineSpacing,
+		int lineHeight) {
+
+	public static Completion create(IDocument document, int modelOffset, int widgetOffset, int widgetLine, String content, int lineHeight, int defaultLineSpacing) throws BadLocationException {
+		final int lineSuffixLength = document.getLineOffset(document.getLineOfOffset(modelOffset) + 1) - modelOffset - 1; // -1 = "\n"
+		final String lineSuffix = document.get(modelOffset, lineSuffixLength);
+		final String firstLineSuffixCharacter = !lineSuffix.isBlank() ? lineSuffix.substring(0, 1) : null;
+		String firstLineContent = content.lines().findFirst().orElse("");
+		final boolean contentContainsLineSuffix = content.startsWith(lineSuffix);
+		if (contentContainsLineSuffix) {
+			content = content.substring(lineSuffixLength);
+			firstLineContent = firstLineContent.substring(Math.min(lineSuffixLength, firstLineContent.length()));
+		}
+		final int lineSpacing = (int) (defaultLineSpacing + (content.lines().count() - 1) * lineHeight);
+		final Region modelRegion = new Region(modelOffset, contentContainsLineSuffix ? lineSuffix.length() : 0);
+		return new Completion(widgetLine, modelRegion, widgetOffset, firstLineContent, content, firstLineSuffixCharacter, lineSpacing, lineHeight);
+	}
+}

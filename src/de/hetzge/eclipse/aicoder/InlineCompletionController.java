@@ -20,6 +20,7 @@ import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.ITextViewerExtension2;
 import org.eclipse.jface.text.ITextViewerExtension5;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.custom.StyledTextLineSpacingProvider;
 import org.eclipse.swt.events.KeyEvent;
@@ -28,6 +29,8 @@ import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
+import org.eclipse.swt.graphics.FontMetrics;
+import org.eclipse.swt.graphics.GlyphMetrics;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.contexts.IContextActivation;
@@ -106,14 +109,14 @@ public final class InlineCompletionController {
 			// remove comment)
 			// Comment complete "?!" trigger
 
-			final int offset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
+			final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
 
 			final StringBuilder contextBuilder = new StringBuilder();
 			contextBuilder.append("# Available types (with fields and methods)\n");
 			try {
 				for (final ICompilationUnit unit : EclipseUtils.getCompilationUnit(this.textEditor).stream().toList()) {
-					final RootContextEntry rootContextEntry = RootContextEntry.create(unit, offset);
-					rootContextEntry.apply(contextBuilder, offset, new TokenCounter(30_000));
+					final RootContextEntry rootContextEntry = RootContextEntry.create(unit, modelOffset);
+					rootContextEntry.apply(contextBuilder, modelOffset, new TokenCounter(30_000));
 				}
 			} catch (final JavaModelException e) {
 				// TODO Auto-generated catch block
@@ -121,55 +124,59 @@ public final class InlineCompletionController {
 			}
 
 			final IDocument document = InlineCompletionController.this.textEditor.getDocumentProvider().getDocument(InlineCompletionController.this.textEditor.getEditorInput());
-			final int line;
-			if (this.textViewer instanceof final ITextViewerExtension5 extension5) {
-				// calculate line when parts of the lines are collapsed
-				line = extension5.modelLine2WidgetLine(document.getLineOfOffset(offset));
-			} else {
-				line = document.getLineOfOffset(offset);
-			}
 
-			final int widgetOffset;
-			if (this.textViewer instanceof final ITextViewerExtension5 extension5) {
-				// calculate offset when parts of the code are collapsed
-				widgetOffset = extension5.modelOffset2WidgetOffset(offset);
-			} else {
-				widgetOffset = offset;
-			}
+			final int widgetLine = getWidgetLine(this.textViewer, modelOffset);
+			final int widgetOffset = getWidgetOffset(this.textViewer, modelOffset);
+			final int firstLine = Math.max(0, widgetLine - 100); // TODO
+			final int lastLine = Math.min(document.getNumberOfLines() - 1, widgetLine + 100); // TODO
+			final String prefix = document.get(document.getLineOffset(firstLine), modelOffset - document.getLineOffset(firstLine));
+			final String suffix = document.get(modelOffset, document.getLineOffset(lastLine) - modelOffset);
 
-			final int firstLine = Math.max(0, line - 50);
-			final int lastLine = Math.min(document.getNumberOfLines() - 1, line + 50);
-			final String prefix = document.get(document.getLineOffset(firstLine), offset - document.getLineOffset(firstLine));
-			final String suffix = document.get(offset, document.getLineOffset(lastLine) - offset);
 			final int lineHeight = InlineCompletionController.this.textViewer.getTextWidget().getLineHeight();
 			final int defaultLineSpacing = InlineCompletionController.this.textViewer.getTextWidget().getLineSpacing();
-			InlineCompletionController.this.abort();
+
 			if (this.job != null) {
 				this.job.cancel();
 			}
 			this.job = Job.create("AI inline completion", monitor -> {
 				try {
-					// TODO provide single (as completion?!) and multiline
-
-					System.out.println(contextBuilder.toString());
+					System.out.println("Context: " + contextBuilder.toString());
 					final String content = MistralUtils.execute("TODO", contextBuilder.toString() + "\n# Here is the file to edit:\n" + prefix, suffix);
-					final int lineSpacing = (int) (defaultLineSpacing + (content.lines().count() - 1) * lineHeight);
-					setup(new Completion(line, offset, widgetOffset, content, lineSpacing, lineHeight));
+					if (!content.isBlank()) {
+						setup(Completion.create(document, modelOffset, widgetOffset, widgetLine, content, lineHeight, defaultLineSpacing));
+					}
 				} catch (final IOException exception) {
+					throw new CoreException(Status.error("Failed to compute inline completion", exception));
+				} catch (final BadLocationException exception) {
 					throw new CoreException(Status.error("Failed to compute inline completion", exception));
 				}
 			});
 			this.job.schedule();
-
 		} catch (final BadLocationException exception) {
 			throw new RuntimeException(exception);
+		}
+	}
+
+	private static int getWidgetLine(ITextViewer textViewer, int modelOffset) throws BadLocationException {
+		if (textViewer instanceof final ITextViewerExtension5 extension5) {
+			return extension5.modelLine2WidgetLine(textViewer.getDocument().getLineOfOffset(modelOffset));
+		} else {
+			return textViewer.getDocument().getLineOfOffset(modelOffset);
+		}
+	}
+
+	private static int getWidgetOffset(ITextViewer textViewer, int modelOffset) {
+		if (textViewer instanceof final ITextViewerExtension5 extension5) {
+			return extension5.modelOffset2WidgetOffset(modelOffset);
+		} else {
+			return modelOffset;
 		}
 	}
 
 	private void setup(Completion completion) {
 		this.context = EclipseUtils.getContextService(this.textEditor).activateContext("de.hetzge.eclipse.codestral.inlineCompletionVisible");
 		this.completion = completion;
-		System.out.println("Set completion: " + completion);
+		System.out.println("setup: " + completion);
 	}
 
 	public void abort() {
@@ -178,6 +185,7 @@ public final class InlineCompletionController {
 			this.context = null;
 		}
 		this.completion = null;
+		this.textViewer.invalidateTextPresentation();
 	}
 
 	public void accept() throws CoreException {
@@ -187,8 +195,8 @@ public final class InlineCompletionController {
 		final IDocument document = InlineCompletionController.this.textEditor.getDocumentProvider().getDocument(InlineCompletionController.this.textEditor.getEditorInput());
 		try {
 			final Completion completion = this.completion;
-			document.replace(this.completion.modelOffset, 0, this.completion.content); // triggers document change -> triggers abort
-			this.textViewer.setSelectedRange(completion.modelOffset + completion.content.length(), 0);
+			document.replace(completion.modelRegion().getOffset(), completion.modelRegion().getLength(), this.completion.content()); // triggers document change -> triggers abort
+			this.textViewer.setSelectedRange(completion.modelRegion().getOffset() + completion.content().length(), 0);
 		} catch (final BadLocationException exception) {
 			throw new CoreException(Status.error("Failed to accept inline completion", exception));
 		}
@@ -219,8 +227,8 @@ public final class InlineCompletionController {
 		@Override
 		public Integer getLineSpacing(int lineIndex) {
 			final Completion completion = InlineCompletionController.this.completion;
-			if (completion != null && completion.lineIndex == lineIndex) {
-				return completion.lineSpacing;
+			if (completion != null && completion.lineIndex() == lineIndex) {
+				return completion.lineSpacing();
 			}
 			return null;
 		}
@@ -230,17 +238,28 @@ public final class InlineCompletionController {
 		@Override
 		public void paintControl(PaintEvent event) {
 			final Completion completion = InlineCompletionController.this.completion;
+			final StyledText widget = InlineCompletionController.this.textViewer.getTextWidget();
 			if (completion != null) {
-				final List<String> lines = completion.content.lines().toList();
-				event.gc.setForeground(InlineCompletionController.this.textViewer.getTextWidget().getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
+				final List<String> lines = completion.content().lines().toList();
+				event.gc.setForeground(widget.getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
 				event.gc.setFont(InlineCompletionController.this.font);
-				final Point location = InlineCompletionController.this.textViewer.getTextWidget().getLocationAtOffset(completion.widgetOffset);
+				final Point location = widget.getLocationAtOffset(completion.widgetOffset());
 				for (int i = 0; i < lines.size(); i++) {
 					final String line = lines.get(i);
 					if (i == 0) {
-						event.gc.drawText(line, location.x, location.y, true);
+						// first line
+						event.gc.drawText(completion.firstLineContent(), location.x, location.y, true);
+						if (completion.firstLineSuffixCharacter() != null) {
+							final int suffixCharacterWidth = event.gc.textExtent(completion.firstLineSuffixCharacter()).x;
+							final int contentWidth = event.gc.textExtent(completion.firstLineContent()).x;
+							final FontMetrics fontMetrics = event.gc.getFontMetrics();
+							final StyleRange styleRange = new StyleRange(completion.widgetOffset(), 1, null, null);
+							styleRange.metrics = new GlyphMetrics(fontMetrics.getAscent(), fontMetrics.getDescent(), contentWidth + suffixCharacterWidth);
+							widget.setStyleRange(styleRange);
+							event.gc.drawText(completion.firstLineSuffixCharacter(), location.x + contentWidth, location.y, false);
+						}
 					} else {
-						event.gc.drawText(line.replace("\t", " ".repeat(InlineCompletionController.this.widget.getTabs())), 0, location.y + i * completion.lineHeight, true);
+						event.gc.drawText(line.replace("\t", " ".repeat(InlineCompletionController.this.widget.getTabs())), 0, location.y + i * completion.lineHeight(), true);
 					}
 				}
 			}
@@ -265,15 +284,6 @@ public final class InlineCompletionController {
 		@Override
 		public void setPositionManager(IPaintPositionManager manager) {
 		}
-	}
-
-	private record Completion(
-			int lineIndex,
-			int modelOffset,
-			int widgetOffset,
-			String content,
-			int lineSpacing,
-			int lineHeight) {
 	}
 
 }
