@@ -1,5 +1,6 @@
 package de.hetzge.eclipse.aicoder;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.eclipse.core.runtime.CoreException;
@@ -115,41 +116,56 @@ public class ContextView extends ViewPart {
 	private void fillContextMenu(IMenuManager manager) {
 		final IStructuredSelection selection = this.viewer.getStructuredSelection();
 		if (!selection.isEmpty() && selection.getFirstElement() instanceof ContextEntry) {
-			final ContextEntry entry = (ContextEntry) selection.getFirstElement();
-			final ContextEntryKey key = entry.getKey();
+			final List<ContextEntry> entries = selection.stream().filter(ContextEntry.class::isInstance).map(ContextEntry.class::cast).toList();
+			final ContextEntry firstEntry = (ContextEntry) selection.getFirstElement();
+			final ContextEntryKey key = firstEntry.getKey();
 
 			final Action blacklistAction = new Action(ContextPreferences.isBlacklisted(key) ? "Remove from Blacklist" : "Add to Blacklist") {
 				@Override
 				public void run() {
-					if (ContextPreferences.isBlacklisted(key)) {
-						ContextPreferences.removeFromBlacklist(key);
-						showMessage("Removed from blacklist: " + entry.getLabel());
-					} else {
-						ContextPreferences.addToBlacklist(key);
-						showMessage("Added to blacklist: " + entry.getLabel());
+					final boolean isBlacklisted = ContextPreferences.isBlacklisted(key);
+					for (final ContextEntry contextEntry : entries) {
+						if (isBlacklisted) {
+							ContextPreferences.removeFromBlacklist(contextEntry.getKey());
+						} else {
+							ContextPreferences.addToBlacklist(contextEntry.getKey());
+						}
 					}
-					ContextView.this.viewer.refresh(entry);
+					if (isBlacklisted) {
+						showMessage("Removed from blacklist");
+					} else {
+						showMessage("Added to blacklist");
+					}
+					ContextView.this.viewer.resetFilters();
+					ContextView.this.viewer.refresh(true);
 				}
 			};
 
 			final Action stickyAction = new Action(ContextPreferences.isSticky(key) ? "Remove Sticky" : "Make Sticky") {
 				@Override
 				public void run() {
-					if (ContextPreferences.isSticky(key)) {
-						ContextPreferences.removeFromStickylist(key);
-						showMessage("Removed sticky: " + entry.getLabel());
-					} else {
-						ContextPreferences.addToStickylist(key);
-						showMessage("Made sticky: " + entry.getLabel());
+					final boolean isSticky = ContextPreferences.isSticky(key);
+					for (final ContextEntry contextEntry : entries) {
+						if (isSticky) {
+							ContextPreferences.removeFromStickylist(contextEntry.getKey());
+						} else {
+							ContextPreferences.addToStickylist(contextEntry.getKey());
+						}
 					}
-					ContextView.this.viewer.refresh(entry);
+					if (isSticky) {
+						showMessage("Removed sticky");
+					} else {
+						showMessage("Made sticky");
+					}
+					ContextView.this.viewer.resetFilters();
+					ContextView.this.viewer.refresh(true);
 				}
 			};
 
 			final Action previewAction = new Action("Preview Content") {
 				@Override
 				public void run() {
-					showContentPreview(entry);
+					showContentPreview(firstEntry);
 				}
 			};
 
@@ -306,17 +322,7 @@ public class ContextView extends ViewPart {
 		@Override
 		public String getText(Object obj) {
 			if (obj instanceof final ContextEntry contextEntry) {
-				String label = contextEntry.getLabel();
-				final ContextEntryKey key = contextEntry.getKey();
-
-				// Add indicators for blacklisted and sticky items
-				if (ContextPreferences.isBlacklisted(key)) {
-					label += " [Blacklisted]";
-				}
-				if (ContextPreferences.isSticky(key)) {
-					label += " [Sticky]";
-				}
-				return label;
+				return contextEntry.getLabel();
 			}
 			return obj.toString();
 		}
@@ -405,13 +411,21 @@ public class ContextView extends ViewPart {
 
 		@Override
 		public boolean prepareDecoration(Object element, String originalText, IDecorationContext context) {
-			return false;
+			return true;
 		}
 
 		@Override
 		public String decorateText(String text, Object element, IDecorationContext context) {
 			if (element instanceof final ContextEntry contextEntry) {
-				return String.format("%s (%s)", text, contextEntry.getTokenCount());
+				final ContextEntryKey key = contextEntry.getKey();
+				String tag = "";
+				if (ContextPreferences.isBlacklisted(key)) {
+					tag += " [Blacklisted]";
+				}
+				if (ContextPreferences.isSticky(key)) {
+					tag += " [Sticky]";
+				}
+				return String.format("%s%s (%s)", text, tag, contextEntry.getTokenCount());
 			}
 			return null;
 		}
