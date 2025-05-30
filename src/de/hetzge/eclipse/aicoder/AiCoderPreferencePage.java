@@ -33,16 +33,16 @@ public class AiCoderPreferencePage extends FieldEditorPreferencePage implements 
 
 		// Mistral settings
 		addField(new StringFieldEditor(
-				AiCoderPreferences.DEVSTRAL_BASE_URL_PREFERENCE_KEY,
-				"Devstral Base URL:",
+				AiCoderPreferences.CODESTRAL_BASE_URL_PREFERENCE_KEY,
+				"Codestral Base URL:",
 				getFieldEditorParent()));
 
-		final StringFieldEditor devstralApiKeyFieldEditor = new StringFieldEditor(
-				AiCoderPreferences.DEVSTRAL_API_KEY_PREFERENCE_KEY,
-				"Devstral API Key:",
+		final StringFieldEditor codestralApiKeyFieldEditor = new StringFieldEditor(
+				AiCoderPreferences.CODESTRAL_API_KEY_PREFERENCE_KEY,
+				"Codestral API Key:",
 				getFieldEditorParent());
-		devstralApiKeyFieldEditor.getTextControl(getFieldEditorParent()).setEchoChar('*');
-		addField(devstralApiKeyFieldEditor);
+		codestralApiKeyFieldEditor.getTextControl(getFieldEditorParent()).setEchoChar('*');
+		addField(codestralApiKeyFieldEditor);
 
 		// Multiline completion setting
 		addField(new BooleanFieldEditor(

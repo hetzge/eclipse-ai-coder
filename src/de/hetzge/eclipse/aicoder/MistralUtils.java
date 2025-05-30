@@ -17,8 +17,8 @@ public final class MistralUtils {
 	}
 
 	public static String execute(String prompt, String suffix) throws IOException {
-		final String urlString = AiCoderPreferences.getDevstralBaseUrl();
-		final String devstralApiKey = AiCoderPreferences.getDevstralApiKey();
+		final String urlString = AiCoderPreferences.getCodestralBaseUrl();
+		final String codestralApiKey = AiCoderPreferences.getCodestralApiKey();
 		final boolean multilineEnabled = AiCoderPreferences.isMultilineEnabled();
 		final Json json = Json.object()
 				.set("model", "codestral-latest")
@@ -32,7 +32,7 @@ public final class MistralUtils {
 		connection.setRequestMethod("POST");
 		connection.setRequestProperty("Content-Type", "application/json");
 		connection.setRequestProperty("Accept", "application/json");
-		connection.setRequestProperty("Authorization", "Bearer " + devstralApiKey);
+		connection.setRequestProperty("Authorization", "Bearer " + codestralApiKey);
 		connection.setDoOutput(true);
 		try (OutputStream os = connection.getOutputStream()) {
 			os.write(json.toString().getBytes(StandardCharsets.UTF_8));
