@@ -117,7 +117,7 @@ public final class Context {
 			this.tokenCount = tokenCount;
 		}
 
-		abstract String getKey();
+		public abstract String getKey();
 
 		public void apply(StringBuilder builder, TokenCounter counter) {
 			for (final ContextEntry entry : this.childContextEntries) {
@@ -156,7 +156,7 @@ public final class Context {
 		}
 
 		@Override
-		String getKey() {
+		public String getKey() {
 			return "EMPTY";
 		}
 	}
@@ -173,7 +173,7 @@ public final class Context {
 		}
 
 		@Override
-		String getKey() {
+		public String getKey() {
 			return "SCOPE";
 		}
 
@@ -224,8 +224,8 @@ public final class Context {
 		}
 
 		@Override
-		String getKey() {
-			return "PREFIX";
+		public String getKey() {
+			return "PREFIX_" + this.content.hashCode();
 		}
 
 		@Override
@@ -261,8 +261,8 @@ public final class Context {
 		}
 
 		@Override
-		String getKey() {
-			return "SUFFIX";
+		public String getKey() {
+			return "SUFFIX_" + this.content.hashCode();
 		}
 
 		@Override
@@ -304,8 +304,8 @@ public final class Context {
 		}
 
 		@Override
-		String getKey() {
-			return "CURRENT_PACKAGE";
+		public String getKey() {
+			return "PACKAGE_" + this.name;
 		}
 
 		@Override
@@ -333,7 +333,7 @@ public final class Context {
 		}
 
 		@Override
-		String getKey() {
+		public String getKey() {
 			return "IMPORTS";
 		}
 
@@ -371,7 +371,7 @@ public final class Context {
 		}
 
 		@Override
-		String getKey() {
+		public String getKey() {
 			return "CLIPBOARD";
 		}
 
@@ -401,7 +401,7 @@ public final class Context {
 		}
 
 		@Override
-		String getKey() {
+		public String getKey() {
 			return "ROOT";
 		}
 
@@ -434,8 +434,8 @@ public final class Context {
 		}
 
 		@Override
-		String getKey() {
-			return "TODO " + this.signature; // TODO
+		public String getKey() {
+			return this.signature;
 		}
 
 		@Override
@@ -480,7 +480,7 @@ public final class Context {
 		}
 
 		@Override
-		String getKey() {
+		public String getKey() {
 			return this.signature;
 		}
 

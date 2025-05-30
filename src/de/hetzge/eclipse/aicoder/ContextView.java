@@ -12,6 +12,7 @@ import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.viewers.DecoratingLabelProvider;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IColorProvider;
@@ -114,22 +115,33 @@ public class ContextView extends ViewPart {
         IStructuredSelection selection = viewer.getStructuredSelection();
         if (!selection.isEmpty() && selection.getFirstElement() instanceof ContextEntry) {
             ContextEntry entry = (ContextEntry) selection.getFirstElement();
+            String key = entry.getKey();
             
-            Action blacklistAction = new Action("Add to Blacklist") {
+            Action blacklistAction = new Action(ContextPreferences.isBlacklisted(key) ? "Remove from Blacklist" : "Add to Blacklist") {
                 @Override
                 public void run() {
-                    // TODO: Implement blacklist functionality
-                    // This should be connected to the blacklist system
-                    showMessage("Added to blacklist: " + entry.getLabel());
+                    if (ContextPreferences.isBlacklisted(key)) {
+                        ContextPreferences.removeFromBlacklist(key);
+                        showMessage("Removed from blacklist: " + entry.getLabel());
+                    } else {
+                        ContextPreferences.addToBlacklist(key);
+                        showMessage("Added to blacklist: " + entry.getLabel());
+                    }
+                    viewer.refresh(entry);
                 }
             };
             
-            Action stickyAction = new Action("Make Sticky") {
+            Action stickyAction = new Action(ContextPreferences.isSticky(key) ? "Remove Sticky" : "Make Sticky") {
                 @Override
                 public void run() {
-                    // TODO: Implement sticky functionality
-                    // This should be connected to the sticky entries system
-                    showMessage("Made sticky: " + entry.getLabel());
+                    if (ContextPreferences.isSticky(key)) {
+                        ContextPreferences.removeFromStickylist(key);
+                        showMessage("Removed sticky: " + entry.getLabel());
+                    } else {
+                        ContextPreferences.addToStickylist(key);
+                        showMessage("Made sticky: " + entry.getLabel());
+                    }
+                    viewer.refresh(entry);
                 }
             };
             
@@ -285,7 +297,17 @@ public class ContextView extends ViewPart {
 		@Override
 		public String getText(Object obj) {
 			if (obj instanceof final ContextEntry contextEntry) {
-				return contextEntry.getLabel();
+				String label = contextEntry.getLabel();
+				String key = contextEntry.getKey();
+				
+				// Add indicators for blacklisted and sticky items
+				if (ContextPreferences.isBlacklisted(key)) {
+					label += " [Blacklisted]";
+				}
+				if (ContextPreferences.isSticky(key)) {
+					label += " [Sticky]";
+				}
+				return label;
 			}
 			return obj.toString();
 		}
@@ -300,16 +322,37 @@ public class ContextView extends ViewPart {
 
 		@Override
 		public Color getForeground(Object element) {
+			if (element instanceof final ContextEntry contextEntry) {
+				String key = contextEntry.getKey();
+				if (ContextPreferences.isBlacklisted(key)) {
+					// Use a gray color for blacklisted items
+					return viewer.getControl().getDisplay().getSystemColor(SWT.COLOR_GRAY);
+				}
+			}
 			return null;
 		}
 
 		@Override
 		public Color getBackground(Object element) {
+			if (element instanceof final ContextEntry contextEntry) {
+				String key = contextEntry.getKey();
+				if (ContextPreferences.isSticky(key)) {
+					// Use a light yellow background for sticky items
+					return viewer.getControl().getDisplay().getSystemColor(SWT.COLOR_INFO_BACKGROUND);
+				}
+			}
 			return null;
 		}
 
 		@Override
 		public Font getFont(Object element) {
+			if (element instanceof final ContextEntry contextEntry) {
+				String key = contextEntry.getKey();
+				if (ContextPreferences.isSticky(key)) {
+					// Make sticky items bold
+					return JFaceResources.getFontRegistry().getBold(JFaceResources.DEFAULT_FONT);
+				}
+			}
 			return null;
 		}
 	}
