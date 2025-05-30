@@ -5,40 +5,53 @@ import org.eclipse.jface.preference.IPreferenceStore;
 
 public class AiCoderPreferences extends AbstractPreferenceInitializer {
 
-    // Preference keys
-    public static final String AI_PROVIDER_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.ai_provider";
-    public static final String CODESTRAL_BASE_URL_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.codestral_base_url";
-    public static final String CODESTRAL_API_KEY_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.codestral_api_key";
-    public static final String ENABLE_MULTILINE_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.enable_multiline";
+	// Preference keys
+	public static final String AI_PROVIDER_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.ai_provider";
+	public static final String CODESTRAL_BASE_URL_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.codestral_base_url";
+	public static final String CODESTRAL_API_KEY_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.codestral_api_key";
+	public static final String ENABLE_MULTILINE_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.enable_multiline";
+	public static final String OPENAI_BASE_URL_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.openai_base_url";
+	public static final String OPENAI_API_KEY_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.openai_api_key";
+	public static final String OPENAI_MODEL_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.openai_model";
 
-    // Default values
-    private static final String DEFAULT_AI_PROVIDER = "mistral";
-    private static final String DEFAULT_CODESTRAL_BASE_URL = "https://codestral.mistral.ai/v1/fim/completions";
-    private static final String DEFAULT_CODESTRAL_API_KEY = "";
-    private static final boolean DEFAULT_ENABLE_MULTILINE = true;
+	@Override
+	public void initializeDefaultPreferences() {
+		final IPreferenceStore store = AiCoderActivator.getDefault().getPreferenceStore();
+		store.setDefault(AI_PROVIDER_PREFERENCE_KEY, AiProvider.MISTRAL.name());
+		store.setDefault(CODESTRAL_BASE_URL_PREFERENCE_KEY, "https://codestral.mistral.ai/v1/fim/completions");
+		store.setDefault(CODESTRAL_API_KEY_PREFERENCE_KEY, "");
+		store.setDefault(ENABLE_MULTILINE_PREFERENCE_KEY, true);
+		store.setDefault(OPENAI_BASE_URL_PREFERENCE_KEY, "https://api.openai.com/v1/chat/completions");
+		store.setDefault(OPENAI_API_KEY_PREFERENCE_KEY, "");
+		store.setDefault(OPENAI_MODEL_PREFERENCE_KEY, "gpt-3.5-turbo");
+	}
 
-    @Override
-    public void initializeDefaultPreferences() {
-        final IPreferenceStore store = AiCoderActivator.getDefault().getPreferenceStore();
-        store.setDefault(AI_PROVIDER_PREFERENCE_KEY, DEFAULT_AI_PROVIDER);
-        store.setDefault(CODESTRAL_BASE_URL_PREFERENCE_KEY, DEFAULT_CODESTRAL_BASE_URL);
-        store.setDefault(CODESTRAL_API_KEY_PREFERENCE_KEY, DEFAULT_CODESTRAL_API_KEY);
-        store.setDefault(ENABLE_MULTILINE_PREFERENCE_KEY, DEFAULT_ENABLE_MULTILINE);
-    }
+	public static AiProvider getAiProvider() {
+		final String providerId = AiCoderActivator.getDefault().getPreferenceStore().getString(AI_PROVIDER_PREFERENCE_KEY);
+		return AiProvider.valueOf(providerId.toUpperCase());
+	}
 
-    public static String getAiProvider() {
-        return AiCoderActivator.getDefault().getPreferenceStore().getString(AI_PROVIDER_PREFERENCE_KEY);
-    }
+	public static String getCodestralBaseUrl() {
+		return AiCoderActivator.getDefault().getPreferenceStore().getString(CODESTRAL_BASE_URL_PREFERENCE_KEY);
+	}
 
-    public static String getCodestralBaseUrl() {
-        return AiCoderActivator.getDefault().getPreferenceStore().getString(CODESTRAL_BASE_URL_PREFERENCE_KEY);
-    }
+	public static String getCodestralApiKey() {
+		return AiCoderActivator.getDefault().getPreferenceStore().getString(CODESTRAL_API_KEY_PREFERENCE_KEY);
+	}
 
-    public static String getCodestralApiKey() {
-        return AiCoderActivator.getDefault().getPreferenceStore().getString(CODESTRAL_API_KEY_PREFERENCE_KEY);
-    }
+	public static boolean isMultilineEnabled() {
+		return AiCoderActivator.getDefault().getPreferenceStore().getBoolean(ENABLE_MULTILINE_PREFERENCE_KEY);
+	}
 
-    public static boolean isMultilineEnabled() {
-        return AiCoderActivator.getDefault().getPreferenceStore().getBoolean(ENABLE_MULTILINE_PREFERENCE_KEY);
-    }
+	public static String getOpenAiBaseUrl() {
+		return AiCoderActivator.getDefault().getPreferenceStore().getString(OPENAI_BASE_URL_PREFERENCE_KEY);
+	}
+
+	public static String getOpenAiApiKey() {
+		return AiCoderActivator.getDefault().getPreferenceStore().getString(OPENAI_API_KEY_PREFERENCE_KEY);
+	}
+
+	public static String getOpenAiModel() {
+		return AiCoderActivator.getDefault().getPreferenceStore().getString(OPENAI_MODEL_PREFERENCE_KEY);
+	}
 }
