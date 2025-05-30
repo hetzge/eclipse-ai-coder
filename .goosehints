@@ -1,0 +1,2 @@
+* Use `exception` or more specific for exception variable names (never `e` or `ex`)
+* Use `find` command instead of `rg` to search in files
