@@ -290,7 +290,8 @@ public final class Context {
 
 		public static PrefixContextEntry create(IDocument document, int modelOffset) throws BadLocationException {
 			final int modelLine = document.getLineOfOffset(modelOffset);
-			final int firstLine = Math.max(0, modelLine - 100); // TODO
+			final int maxLines = AiCoderPreferences.getMaxPrefixSize();
+			final int firstLine = Math.max(0, modelLine - maxLines);
 			final String prefix = document.get(document.getLineOffset(firstLine), modelOffset - document.getLineOffset(firstLine));
 			return new PrefixContextEntry(prefix);
 		}
@@ -330,7 +331,8 @@ public final class Context {
 
 		public static SuffixContextEntry create(IDocument document, int modelOffset) throws BadLocationException {
 			final int modelLine = document.getLineOfOffset(modelOffset);
-			final int lastLine = Math.min(document.getNumberOfLines() - 1, modelLine + 100); // TODO
+			final int maxLines = AiCoderPreferences.getMaxSuffixSize();
+			final int lastLine = Math.min(document.getNumberOfLines() - 1, modelLine + maxLines);
 			final String suffix = document.get(modelOffset, document.getLineOffset(lastLine) - modelOffset);
 			return new SuffixContextEntry(suffix);
 		}

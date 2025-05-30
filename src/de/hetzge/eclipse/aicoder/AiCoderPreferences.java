@@ -13,6 +13,9 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String OPENAI_BASE_URL_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.openai_base_url";
 	public static final String OPENAI_API_KEY_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.openai_api_key";
 	public static final String OPENAI_MODEL_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.openai_model";
+	public static final String ENABLE_AUTOCOMPLETE_KEY = "de.hetzge.eclipse.aicoder.enable_autocomplete";
+	public static final String MAX_PREFIX_SIZE_KEY = "de.hetzge.eclipse.aicoder.max_prefix_size";
+	public static final String MAX_SUFFIX_SIZE_KEY = "de.hetzge.eclipse.aicoder.max_suffix_size";
 
 	@Override
 	public void initializeDefaultPreferences() {
@@ -24,6 +27,9 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(OPENAI_BASE_URL_PREFERENCE_KEY, "https://api.openai.com/v1/chat/completions");
 		store.setDefault(OPENAI_API_KEY_PREFERENCE_KEY, "");
 		store.setDefault(OPENAI_MODEL_PREFERENCE_KEY, "gpt-3.5-turbo");
+		store.setDefault(ENABLE_AUTOCOMPLETE_KEY, true);
+		store.setDefault(MAX_PREFIX_SIZE_KEY, 1000);
+		store.setDefault(MAX_SUFFIX_SIZE_KEY, 1000);
 	}
 
 	public static AiProvider getAiProvider() {
@@ -53,5 +59,17 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 
 	public static String getOpenAiModel() {
 		return AiCoderActivator.getDefault().getPreferenceStore().getString(OPENAI_MODEL_PREFERENCE_KEY);
+	}
+
+	public static boolean isAutocompleteEnabled() {
+		return AiCoderActivator.getDefault().getPreferenceStore().getBoolean(ENABLE_AUTOCOMPLETE_KEY);
+	}
+
+	public static int getMaxPrefixSize() {
+		return AiCoderActivator.getDefault().getPreferenceStore().getInt(MAX_PREFIX_SIZE_KEY);
+	}
+
+	public static int getMaxSuffixSize() {
+		return AiCoderActivator.getDefault().getPreferenceStore().getInt(MAX_SUFFIX_SIZE_KEY);
 	}
 }

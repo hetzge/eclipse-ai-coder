@@ -2,6 +2,7 @@ package de.hetzge.eclipse.aicoder;
 
 import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
+import org.eclipse.jface.preference.IntegerFieldEditor;
 import org.eclipse.jface.preference.RadioGroupFieldEditor;
 import org.eclipse.jface.preference.StringFieldEditor;
 import org.eclipse.swt.SWT;
@@ -85,5 +86,26 @@ public class AiCoderPreferencePage extends FieldEditorPreferencePage implements 
 				AiCoderPreferences.ENABLE_MULTILINE_PREFERENCE_KEY,
 				"Enable multiline completion",
 				generalGroup));
+
+		// Autocomplete settings
+		addField(new BooleanFieldEditor(
+				AiCoderPreferences.ENABLE_AUTOCOMPLETE_KEY,
+				"Enable autocomplete",
+				generalGroup));
+
+		// Context size settings
+		final IntegerFieldEditor maxPrefixSizeEditor = new IntegerFieldEditor(
+				AiCoderPreferences.MAX_PREFIX_SIZE_KEY,
+				"Maximum prefix size:",
+				generalGroup);
+		maxPrefixSizeEditor.setValidRange(0, 10000);
+		addField(maxPrefixSizeEditor);
+
+		final IntegerFieldEditor maxSuffixSizeEditor = new IntegerFieldEditor(
+				AiCoderPreferences.MAX_SUFFIX_SIZE_KEY,
+				"Maximum suffix size:",
+				generalGroup);
+		maxSuffixSizeEditor.setValidRange(0, 10000);
+		addField(maxSuffixSizeEditor);
 	}
 }
