@@ -13,69 +13,29 @@ import org.eclipse.ui.IWorkbenchPreferencePage;
 
 public class AiCoderPreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
 
+	private Group mistralGroup;
+	private Group openaiGroup;
+
 	public AiCoderPreferencePage() {
 		super(GRID);
 		setPreferenceStore(AiCoderActivator.getDefault().getPreferenceStore());
-		setDescription("AI Code Completion Settings");
+		setDescription("AI Coder Settings");
 	}
 
 	@Override
 	public void init(IWorkbench workbench) {
 	}
 
+	private void updateVisibility(String selectedProvider) {
+		this.mistralGroup.setVisible(AiProvider.MISTRAL.name().equals(selectedProvider));
+		((GridData) this.mistralGroup.getLayoutData()).exclude = !AiProvider.MISTRAL.name().equals(selectedProvider);
+		this.openaiGroup.setVisible(AiProvider.OPENAI.name().equals(selectedProvider));
+		((GridData) this.openaiGroup.getLayoutData()).exclude = !AiProvider.OPENAI.name().equals(selectedProvider);
+		getFieldEditorParent().layout(true, true);
+	}
+
 	@Override
 	protected void createFieldEditors() {
-		// Create the main selection for AI Provider
-		final RadioGroupFieldEditor providerEditor = new RadioGroupFieldEditor(
-				AiCoderPreferences.AI_PROVIDER_PREFERENCE_KEY,
-				"AI Provider:",
-				1,
-				new String[][] {
-						{ "Mistral", AiProvider.MISTRAL.name() },
-						{ "OpenAI", AiProvider.OPENAI.name() }
-				},
-				getFieldEditorParent());
-		addField(providerEditor);
-
-		// Create settings groups right after their respective radio buttons
-		final Group mistralGroup = new Group(getFieldEditorParent(), SWT.NONE);
-		mistralGroup.setText("Mistral Settings");
-		mistralGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
-
-		addField(new StringFieldEditor(
-				AiCoderPreferences.CODESTRAL_BASE_URL_PREFERENCE_KEY,
-				"Codestral Base URL:",
-				mistralGroup));
-
-		final StringFieldEditor codestralApiKeyFieldEditor = new StringFieldEditor(
-				AiCoderPreferences.CODESTRAL_API_KEY_PREFERENCE_KEY,
-				"Codestral API Key:",
-				mistralGroup);
-		codestralApiKeyFieldEditor.getTextControl(mistralGroup).setEchoChar('*');
-		addField(codestralApiKeyFieldEditor);
-
-		// OpenAI settings group
-		final Group openaiGroup = new Group(getFieldEditorParent(), SWT.NONE);
-		openaiGroup.setText("OpenAI Settings");
-		openaiGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
-
-		addField(new StringFieldEditor(
-				AiCoderPreferences.OPENAI_BASE_URL_PREFERENCE_KEY,
-				"OpenAI Base URL:",
-				openaiGroup));
-
-		final StringFieldEditor openaiApiKeyFieldEditor = new StringFieldEditor(
-				AiCoderPreferences.OPENAI_API_KEY_PREFERENCE_KEY,
-				"OpenAI API Key:",
-				openaiGroup);
-		openaiApiKeyFieldEditor.getTextControl(openaiGroup).setEchoChar('*');
-		addField(openaiApiKeyFieldEditor);
-
-		addField(new StringFieldEditor(
-				AiCoderPreferences.OPENAI_MODEL_PREFERENCE_KEY,
-				"OpenAI Model:",
-				openaiGroup));
-
 		// General settings group
 		final Group generalGroup = new Group(getFieldEditorParent(), SWT.NONE);
 		generalGroup.setText("General Settings");
@@ -107,5 +67,67 @@ public class AiCoderPreferencePage extends FieldEditorPreferencePage implements 
 				generalGroup);
 		maxSuffixSizeEditor.setValidRange(0, 10000);
 		addField(maxSuffixSizeEditor);
+
+		// Create the main selection for AI Provider
+		final RadioGroupFieldEditor providerEditor = new RadioGroupFieldEditor(
+				AiCoderPreferences.AI_PROVIDER_PREFERENCE_KEY,
+				"AI Provider:",
+				1,
+				new String[][] {
+						{ "Mistral", AiProvider.MISTRAL.name() },
+						{ "OpenAI", AiProvider.OPENAI.name() }
+				},
+				getFieldEditorParent()) {
+			@Override
+			protected void fireValueChanged(String property, Object oldValue, Object newValue) {
+				super.fireValueChanged(property, oldValue, newValue);
+				if ("field_editor_value".equals(property)) {
+					updateVisibility((String) newValue);
+				}
+			}
+		};
+		addField(providerEditor);
+
+		// Create settings groups right after their respective radio buttons
+		this.mistralGroup = new Group(getFieldEditorParent(), SWT.NONE);
+		this.mistralGroup.setText("Mistral Settings");
+		this.mistralGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
+
+		addField(new StringFieldEditor(
+				AiCoderPreferences.CODESTRAL_BASE_URL_PREFERENCE_KEY,
+				"Codestral Base URL:",
+				this.mistralGroup));
+
+		final StringFieldEditor codestralApiKeyFieldEditor = new StringFieldEditor(
+				AiCoderPreferences.CODESTRAL_API_KEY_PREFERENCE_KEY,
+				"Codestral API Key:",
+				this.mistralGroup);
+		codestralApiKeyFieldEditor.getTextControl(this.mistralGroup).setEchoChar('*');
+		addField(codestralApiKeyFieldEditor);
+
+		// OpenAI settings group
+		this.openaiGroup = new Group(getFieldEditorParent(), SWT.NONE);
+		this.openaiGroup.setText("OpenAI Settings");
+		this.openaiGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
+
+		addField(new StringFieldEditor(
+				AiCoderPreferences.OPENAI_BASE_URL_PREFERENCE_KEY,
+				"OpenAI Base URL:",
+				this.openaiGroup));
+
+		final StringFieldEditor openaiApiKeyFieldEditor = new StringFieldEditor(
+				AiCoderPreferences.OPENAI_API_KEY_PREFERENCE_KEY,
+				"OpenAI API Key:",
+				this.openaiGroup);
+		openaiApiKeyFieldEditor.getTextControl(this.openaiGroup).setEchoChar('*');
+		addField(openaiApiKeyFieldEditor);
+
+		addField(new StringFieldEditor(
+				AiCoderPreferences.OPENAI_MODEL_PREFERENCE_KEY,
+				"OpenAI Model:",
+				this.openaiGroup));
+
+		// Initialize visibility based on current selection
+		updateVisibility(getPreferenceStore().getString(AiCoderPreferences.AI_PROVIDER_PREFERENCE_KEY));
 	}
 }
