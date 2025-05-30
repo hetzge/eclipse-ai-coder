@@ -101,4 +101,19 @@
        </view>
     </perspectiveExtension>
  </extension>
+ <extension
+       point="org.eclipse.ui.preferencePages">
+    <page
+          class="de.hetzge.eclipse.aicoder.AiCoderPreferencePage"
+          id="de.hetzge.eclipse.aicoder.preferences"
+          name="AI Coder">
+    </page>
+ </extension>
+ 
+ <extension
+       point="org.eclipse.core.runtime.preferences">
+    <initializer
+          class="de.hetzge.eclipse.aicoder.AiCoderPreferences">
+    </initializer>
+ </extension>
 </plugin>

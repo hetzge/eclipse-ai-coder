@@ -150,7 +150,7 @@ public final class InlineCompletionController {
 					System.out.println("Context: " + contextBuilder.toString());
 					final String contextString = contextBuilder.toString();
 					final String[] contextParts = contextString.split(Context.SuffixContextEntry.FILL_HERE_PLACEHOLDER);
-					final String content = MistralUtils.execute("eJizOMDTZmrPHnESsUun4L1Rj6iPPybT", contextParts[0], contextParts[1]);
+					final String content = MistralUtils.execute( contextParts[0], contextParts[1]);
 					if (!content.isBlank()) {
 						setup(Completion.create(document, modelOffset, widgetOffset, widgetLine, content, lineHeight, defaultLineSpacing));
 					}

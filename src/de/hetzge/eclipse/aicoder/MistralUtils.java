@@ -16,21 +16,23 @@ public final class MistralUtils {
 	private MistralUtils() {
 	}
 
-	public static String execute(String apiKey, String prompt, String suffix) throws IOException {
-		final String urlString = "https://codestral.mistral.ai/v1/fim/completions";
+	public static String execute(String prompt, String suffix) throws IOException {
+		final String urlString = AiCoderPreferences.getDevstralBaseUrl();
+		final String devstralApiKey = AiCoderPreferences.getDevstralApiKey();
+		final boolean multilineEnabled = AiCoderPreferences.isMultilineEnabled();
 		final Json json = Json.object()
 				.set("model", "codestral-latest")
 				.set("prompt", prompt.trim()) // TODO
 				.set("suffix", suffix.trim()) // TODO
 				.set("max_tokens", 1024)
-				.set("stop", Json.array().add("\n\n"))
+				.set("stop", Json.array().add(multilineEnabled ? "\n\n" : "\n"))
 				.set("temperature", 0);
 		final URL url = URI.create(urlString).toURL();
 		final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 		connection.setRequestMethod("POST");
 		connection.setRequestProperty("Content-Type", "application/json");
 		connection.setRequestProperty("Accept", "application/json");
-		connection.setRequestProperty("Authorization", "Bearer " + apiKey);
+		connection.setRequestProperty("Authorization", "Bearer " + devstralApiKey);
 		connection.setDoOutput(true);
 		try (OutputStream os = connection.getOutputStream()) {
 			os.write(json.toString().getBytes(StandardCharsets.UTF_8));
