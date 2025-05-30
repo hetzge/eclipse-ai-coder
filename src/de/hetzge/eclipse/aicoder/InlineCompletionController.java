@@ -36,6 +36,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.contexts.IContextActivation;
 import org.eclipse.ui.texteditor.ITextEditor;
 
+import de.hetzge.eclipse.aicoder.Context.ContextEntry;
 import de.hetzge.eclipse.aicoder.Context.RootContextEntry;
 import de.hetzge.eclipse.aicoder.Context.TokenCounter;
 
@@ -111,26 +112,32 @@ public final class InlineCompletionController {
 
 			final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
 
+			final IDocument document = InlineCompletionController.this.textEditor.getDocumentProvider().getDocument(InlineCompletionController.this.textEditor.getEditorInput());
+
 			final StringBuilder contextBuilder = new StringBuilder();
 			contextBuilder.append("# Available types (with fields and methods)\n");
 			try {
 				for (final ICompilationUnit unit : EclipseUtils.getCompilationUnit(this.textEditor).stream().toList()) {
-					final RootContextEntry rootContextEntry = RootContextEntry.create(unit, modelOffset);
-					rootContextEntry.apply(contextBuilder, modelOffset, new TokenCounter(30_000));
+					final RootContextEntry rootContextEntry = RootContextEntry.create(document, unit, modelOffset);
+					ContextEntry.apply(contextBuilder, new TokenCounter(30_000), rootContextEntry);
+					Display.getCurrent().asyncExec(() -> {
+						try {
+							ContextView.get().ifPresent(view -> {
+								view.setRootContextEntry(rootContextEntry);
+							});
+						} catch (final CoreException exception) {
+							throw new RuntimeException(exception);
+						}
+					});
+
 				}
 			} catch (final JavaModelException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 
-			final IDocument document = InlineCompletionController.this.textEditor.getDocumentProvider().getDocument(InlineCompletionController.this.textEditor.getEditorInput());
-
 			final int widgetLine = getWidgetLine(this.textViewer, modelOffset);
 			final int widgetOffset = getWidgetOffset(this.textViewer, modelOffset);
-			final int firstLine = Math.max(0, widgetLine - 100); // TODO
-			final int lastLine = Math.min(document.getNumberOfLines() - 1, widgetLine + 100); // TODO
-			final String prefix = document.get(document.getLineOffset(firstLine), modelOffset - document.getLineOffset(firstLine));
-			final String suffix = document.get(modelOffset, document.getLineOffset(lastLine) - modelOffset);
 
 			final int lineHeight = InlineCompletionController.this.textViewer.getTextWidget().getLineHeight();
 			final int defaultLineSpacing = InlineCompletionController.this.textViewer.getTextWidget().getLineSpacing();
@@ -141,7 +148,9 @@ public final class InlineCompletionController {
 			this.job = Job.create("AI inline completion", monitor -> {
 				try {
 					System.out.println("Context: " + contextBuilder.toString());
-					final String content = MistralUtils.execute("TODO", contextBuilder.toString() + "\n# Here is the file to edit:\n" + prefix, suffix);
+					final String contextString = contextBuilder.toString();
+					final String[] contextParts = contextString.split(Context.SuffixContextEntry.FILL_HERE_PLACEHOLDER);
+					final String content = MistralUtils.execute("eJizOMDTZmrPHnESsUun4L1Rj6iPPybT", contextParts[0], contextParts[1]);
 					if (!content.isBlank()) {
 						setup(Completion.create(document, modelOffset, widgetOffset, widgetLine, content, lineHeight, defaultLineSpacing));
 					}

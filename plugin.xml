@@ -74,4 +74,31 @@
 			sequence="ESC">
 		</key>
 	</extension>
+ <extension
+       point="org.eclipse.ui.views">
+    <category
+          id="de.hetzge.eclipse.aicoder"
+          name="AI Coder">
+    </category>
+    <view
+          category="de.hetzge.eclipse.aicoder"
+          class="de.hetzge.eclipse.aicoder.ContextView"
+          icon="icons/sample.png"
+          id="de.hetzge.eclipse.aicoder.ContextView"
+          inject="true"
+          name="AI Coder Context">
+    </view>
+ </extension>
+ <extension
+       point="org.eclipse.ui.perspectiveExtensions">
+    <perspectiveExtension
+          targetID="org.eclipse.jdt.ui.JavaPerspective">
+       <view
+             id="de.hetzge.eclipse.aicoder.ContextView"
+             ratio="0.5"
+             relationship="right"
+             relative="org.eclipse.ui.views.ProblemView">
+       </view>
+    </perspectiveExtension>
+ </extension>
 </plugin>
