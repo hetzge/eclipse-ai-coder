@@ -45,6 +45,7 @@ import org.eclipse.ui.part.DrillDownAdapter;
 import org.eclipse.ui.part.ViewPart;
 
 import de.hetzge.eclipse.aicoder.Context.ContextEntry;
+import de.hetzge.eclipse.aicoder.Context.ContextEntryKey;
 import de.hetzge.eclipse.aicoder.Context.EmptyContextEntry;
 import de.hetzge.eclipse.aicoder.Context.TokenCounter;
 import jakarta.inject.Inject;
@@ -112,12 +113,12 @@ public class ContextView extends ViewPart {
 	}
 
 	private void fillContextMenu(IMenuManager manager) {
-        IStructuredSelection selection = viewer.getStructuredSelection();
+        final IStructuredSelection selection = this.viewer.getStructuredSelection();
         if (!selection.isEmpty() && selection.getFirstElement() instanceof ContextEntry) {
-            ContextEntry entry = (ContextEntry) selection.getFirstElement();
-            String key = entry.getKey();
-            
-            Action blacklistAction = new Action(ContextPreferences.isBlacklisted(key) ? "Remove from Blacklist" : "Add to Blacklist") {
+            final ContextEntry entry = (ContextEntry) selection.getFirstElement();
+            final ContextEntryKey key = entry.getKey();
+
+            final Action blacklistAction = new Action(ContextPreferences.isBlacklisted(key) ? "Remove from Blacklist" : "Add to Blacklist") {
                 @Override
                 public void run() {
                     if (ContextPreferences.isBlacklisted(key)) {
@@ -127,11 +128,11 @@ public class ContextView extends ViewPart {
                         ContextPreferences.addToBlacklist(key);
                         showMessage("Added to blacklist: " + entry.getLabel());
                     }
-                    viewer.refresh(entry);
+                    ContextView.this.viewer.refresh(entry);
                 }
             };
-            
-            Action stickyAction = new Action(ContextPreferences.isSticky(key) ? "Remove Sticky" : "Make Sticky") {
+
+            final Action stickyAction = new Action(ContextPreferences.isSticky(key) ? "Remove Sticky" : "Make Sticky") {
                 @Override
                 public void run() {
                     if (ContextPreferences.isSticky(key)) {
@@ -141,23 +142,23 @@ public class ContextView extends ViewPart {
                         ContextPreferences.addToStickylist(key);
                         showMessage("Made sticky: " + entry.getLabel());
                     }
-                    viewer.refresh(entry);
+                    ContextView.this.viewer.refresh(entry);
                 }
             };
-            
-            Action previewAction = new Action("Preview Content") {
+
+            final Action previewAction = new Action("Preview Content") {
                 @Override
                 public void run() {
                     showContentPreview(entry);
                 }
             };
-            
+
             manager.add(blacklistAction);
             manager.add(stickyAction);
             manager.add(previewAction);
             manager.add(new Separator());
         }
-        
+
         this.drillDownAdapter.addNavigationActions(manager);
         manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
     }
@@ -179,47 +180,47 @@ public class ContextView extends ViewPart {
             }
         };
     }
-    
+
     private void showContentPreview(ContextEntry entry) {
-        Shell shell = viewer.getControl().getShell();
-        Dialog dialog = new Dialog(shell) {
+        final Shell shell = this.viewer.getControl().getShell();
+        final Dialog dialog = new Dialog(shell) {
             private Text textArea;
-            
+
             @Override
             protected Control createDialogArea(Composite parent) {
-                Composite container = (Composite) super.createDialogArea(parent);
-                
-                textArea = new Text(container, SWT.MULTI | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
-                textArea.setLayoutData(new GridData(GridData.FILL_BOTH));
-                
+                final Composite container = (Composite) super.createDialogArea(parent);
+
+                this.textArea = new Text(container, SWT.MULTI | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
+                this.textArea.setLayoutData(new GridData(GridData.FILL_BOTH));
+
                 // Get the content
-                StringBuilder content = new StringBuilder();
+                final StringBuilder content = new StringBuilder();
                 entry.apply(content, new TokenCounter(Integer.MAX_VALUE));
-                textArea.setText(content.toString());
-                
+                this.textArea.setText(content.toString());
+
                 // Make the text read-only
-                textArea.setEditable(false);
-                
+                this.textArea.setEditable(false);
+
                 // Set a reasonable size
-                GridData gd = (GridData) textArea.getLayoutData();
+                final GridData gd = (GridData) this.textArea.getLayoutData();
                 gd.widthHint = 600;
                 gd.heightHint = 400;
-                
+
                 return container;
             }
-            
+
             @Override
             protected void configureShell(Shell newShell) {
                 super.configureShell(newShell);
                 newShell.setText("Content Preview - " + entry.getLabel());
             }
-            
+
             @Override
             protected boolean isResizable() {
                 return true;
             }
         };
-        
+
         dialog.open();
     }
 
@@ -298,8 +299,8 @@ public class ContextView extends ViewPart {
 		public String getText(Object obj) {
 			if (obj instanceof final ContextEntry contextEntry) {
 				String label = contextEntry.getLabel();
-				String key = contextEntry.getKey();
-				
+				final String key = contextEntry.getKey();
+
 				// Add indicators for blacklisted and sticky items
 				if (ContextPreferences.isBlacklisted(key)) {
 					label += " [Blacklisted]";
@@ -323,10 +324,10 @@ public class ContextView extends ViewPart {
 		@Override
 		public Color getForeground(Object element) {
 			if (element instanceof final ContextEntry contextEntry) {
-				String key = contextEntry.getKey();
+				final String key = contextEntry.getKey();
 				if (ContextPreferences.isBlacklisted(key)) {
 					// Use a gray color for blacklisted items
-					return viewer.getControl().getDisplay().getSystemColor(SWT.COLOR_GRAY);
+					return ContextView.this.viewer.getControl().getDisplay().getSystemColor(SWT.COLOR_GRAY);
 				}
 			}
 			return null;
@@ -335,10 +336,10 @@ public class ContextView extends ViewPart {
 		@Override
 		public Color getBackground(Object element) {
 			if (element instanceof final ContextEntry contextEntry) {
-				String key = contextEntry.getKey();
+				final String key = contextEntry.getKey();
 				if (ContextPreferences.isSticky(key)) {
 					// Use a light yellow background for sticky items
-					return viewer.getControl().getDisplay().getSystemColor(SWT.COLOR_INFO_BACKGROUND);
+					return ContextView.this.viewer.getControl().getDisplay().getSystemColor(SWT.COLOR_INFO_BACKGROUND);
 				}
 			}
 			return null;
@@ -347,7 +348,7 @@ public class ContextView extends ViewPart {
 		@Override
 		public Font getFont(Object element) {
 			if (element instanceof final ContextEntry contextEntry) {
-				String key = contextEntry.getKey();
+				final String key = contextEntry.getKey();
 				if (ContextPreferences.isSticky(key)) {
 					// Make sticky items bold
 					return JFaceResources.getFontRegistry().getBold(JFaceResources.DEFAULT_FONT);

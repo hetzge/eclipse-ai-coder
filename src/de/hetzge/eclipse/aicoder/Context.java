@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 
 import org.eclipse.jdt.core.Flags;
 import org.eclipse.jdt.core.ICompilationUnit;
@@ -46,11 +48,43 @@ import org.eclipse.ui.PlatformUI;
 
 public final class Context {
 
+	public static Optional<? extends ContextEntry> create(ContextEntryKey key) {
+		final List<? extends Function<ContextEntryKey, Optional<? extends ContextEntry>>> factories = List.of(
+				TypeMemberContextEntry::create,
+				EmptyContextEntry::create,
+				ScopeContextEntry::create,
+				PrefixContextEntry::create,
+				SuffixContextEntry::create,
+				CurrentPackageContextEntry::create,
+				ImportsContextEntry::create,
+				ClipboardContextEntry::create,
+				RootContextEntry::create,
+				TypeContextEntry::create);
+		return factories.stream().flatMap(factory -> factory.apply(key).stream()).findFirst();
+	}
+
+	public static record ContextEntryKey(
+			String prefix,
+			String value) {
+
+		public String getKeyString() {
+			return String.format("%s::%s", this.prefix, this.value);
+		}
+
+		public static ContextEntryKey parseKeyString(String keyString) {
+			final String[] parts = keyString.split("::");
+			if (parts.length != 2) {
+				throw new IllegalArgumentException("Invalid key string format");
+			}
+			return new ContextEntryKey(parts[0], parts[1]);
+		}
+	}
+
 	public static class TokenCounter {
 		private final int maxTokenCount;
 		private int tokenCount;
 		private final StringBuilder builder;
-		private final Set<String> allKeys; // used to prevent duplicates
+		private final Set<ContextEntryKey> allKeys; // used to prevent duplicates
 
 		public TokenCounter(int maxTokenCount) {
 			this.maxTokenCount = maxTokenCount;
@@ -117,7 +151,7 @@ public final class Context {
 			this.tokenCount = tokenCount;
 		}
 
-		public abstract String getKey();
+		public abstract ContextEntryKey getKey();
 
 		public void apply(StringBuilder builder, TokenCounter counter) {
 			for (final ContextEntry entry : this.childContextEntries) {
@@ -146,6 +180,8 @@ public final class Context {
 
 	public static class EmptyContextEntry extends ContextEntry {
 
+		public static final String PREFIX = "EMPTY";
+
 		public EmptyContextEntry() {
 			super(List.of());
 		}
@@ -156,12 +192,21 @@ public final class Context {
 		}
 
 		@Override
-		public String getKey() {
-			return "EMPTY";
+		public ContextEntryKey getKey() {
+			return new ContextEntryKey(PREFIX, "EMPTY");
+		}
+
+		public static Optional<EmptyContextEntry> create(ContextEntryKey key) {
+			if (!key.prefix().equals(PREFIX)) {
+				return Optional.empty();
+			}
+			return Optional.of(new EmptyContextEntry());
 		}
 	}
 
 	public static class ScopeContextEntry extends ContextEntry {
+
+		public static final String PREFIX = "SCOPE";
 
 		public ScopeContextEntry(List<? extends ContextEntry> childContextEntries) {
 			super(childContextEntries);
@@ -173,8 +218,8 @@ public final class Context {
 		}
 
 		@Override
-		public String getKey() {
-			return "SCOPE";
+		public ContextEntryKey getKey() {
+			return new ContextEntryKey(PREFIX, "SCOPE");
 		}
 
 		@Override
@@ -213,9 +258,18 @@ public final class Context {
 		private static List<IBinding> getBindingsInScope(CompilationUnit compilationUnit, int position) {
 			return Arrays.asList(new ScopeAnalyzer(compilationUnit).getDeclarationsInScope(position, ScopeAnalyzer.VARIABLES | ScopeAnalyzer.TYPES | ScopeAnalyzer.CHECK_VISIBILITY));
 		}
+
+		public static Optional<ScopeContextEntry> create(ContextEntryKey key) {
+			if (!key.prefix().equals(PREFIX)) {
+				return Optional.empty();
+			}
+			return Optional.of(new ScopeContextEntry(List.of()));
+		}
 	}
 
 	public static class PrefixContextEntry extends ContextEntry {
+		public static final String PREFIX = "PREFIX";
+
 		private final String content;
 
 		private PrefixContextEntry(String content) {
@@ -224,8 +278,8 @@ public final class Context {
 		}
 
 		@Override
-		public String getKey() {
-			return "PREFIX_" + this.content.hashCode();
+		public ContextEntryKey getKey() {
+			return new ContextEntryKey(PREFIX, this.content.hashCode() + "");
 		}
 
 		@Override
@@ -249,11 +303,20 @@ public final class Context {
 			final String prefix = document.get(document.getLineOffset(firstLine), modelOffset - document.getLineOffset(firstLine));
 			return new PrefixContextEntry(prefix);
 		}
+
+		public static Optional<PrefixContextEntry> create(ContextEntryKey key) {
+			if (!key.prefix().equals(PREFIX)) {
+				return Optional.empty();
+			}
+			return Optional.of(new PrefixContextEntry(""));
+		}
 	}
 
 	public static class SuffixContextEntry extends ContextEntry {
 		public static final String FILL_HERE_PLACEHOLDER = "<<FILL_HERE>>";
 		private final String content;
+
+		public static final String PREFIX = "SUFFIX";
 
 		public SuffixContextEntry(String content) {
 			super(List.of());
@@ -261,8 +324,8 @@ public final class Context {
 		}
 
 		@Override
-		public String getKey() {
-			return "SUFFIX_" + this.content.hashCode();
+		public ContextEntryKey getKey() {
+			return new ContextEntryKey(PREFIX, "SUFFIX_" + this.content.hashCode());
 		}
 
 		@Override
@@ -287,9 +350,18 @@ public final class Context {
 			final String suffix = document.get(modelOffset, document.getLineOffset(lastLine) - modelOffset);
 			return new SuffixContextEntry(suffix);
 		}
+
+		public static Optional<SuffixContextEntry> create(ContextEntryKey key) {
+			if (!key.prefix().equals(PREFIX)) {
+				return Optional.empty();
+			}
+			return Optional.of(new SuffixContextEntry(""));
+		}
 	}
 
 	public static class CurrentPackageContextEntry extends ContextEntry {
+
+		public static final String PREFIX = "PACKAGE";
 
 		private final String name;
 
@@ -304,8 +376,8 @@ public final class Context {
 		}
 
 		@Override
-		public String getKey() {
-			return "PACKAGE_" + this.name;
+		public ContextEntryKey getKey() {
+			return new ContextEntryKey(PREFIX, "PACKAGE_" + this.name);
 		}
 
 		@Override
@@ -320,9 +392,18 @@ public final class Context {
 					.map(TypeContextEntry::create)
 					.toList());
 		}
+
+		public static Optional<CurrentPackageContextEntry> create(ContextEntryKey key) {
+			if (!key.prefix().equals(PREFIX)) {
+				return Optional.empty();
+			}
+			return Optional.of(new CurrentPackageContextEntry("", List.of()));
+		}
 	}
 
 	public static class ImportsContextEntry extends ContextEntry {
+		public static final String PREFIX = "IMPORTS";
+
 		public ImportsContextEntry(List<TypeContextEntry> childContextEntries) {
 			super(childContextEntries);
 		}
@@ -333,8 +414,8 @@ public final class Context {
 		}
 
 		@Override
-		public String getKey() {
-			return "IMPORTS";
+		public ContextEntryKey getKey() {
+			return new ContextEntryKey(PREFIX, "IMPORTS");
 		}
 
 		public static ImportsContextEntry create(ICompilationUnit unit) throws JavaModelException {
@@ -352,9 +433,18 @@ public final class Context {
 			}
 			return new ImportsContextEntry(entries);
 		}
+
+		public static Optional<ImportsContextEntry> create(ContextEntryKey key) {
+			if (!key.prefix().equals(PREFIX)) {
+				return Optional.empty();
+			}
+			return Optional.of(new ImportsContextEntry(List.of()));
+		}
 	}
 
 	public static class ClipboardContextEntry extends ContextEntry {
+
+		public static final String PREFIX = "CLIPBOARD";
 
 		public ClipboardContextEntry() {
 			super(List.of());
@@ -371,8 +461,8 @@ public final class Context {
 		}
 
 		@Override
-		public String getKey() {
-			return "CLIPBOARD";
+		public ContextEntryKey getKey() {
+			return new ContextEntryKey(PREFIX, "CLIPBOARD");
 		}
 
 		@Override
@@ -388,9 +478,18 @@ public final class Context {
 		public static ClipboardContextEntry create() {
 			return new ClipboardContextEntry();
 		}
+
+		public static Optional<ClipboardContextEntry> create(ContextEntryKey key) {
+			if (!key.prefix().equals(PREFIX)) {
+				return Optional.empty();
+			}
+			return Optional.of(new ClipboardContextEntry());
+		}
 	}
 
 	public static class RootContextEntry extends ContextEntry {
+		public static final String PREFIX = "ROOT";
+
 		public RootContextEntry(List<? extends ContextEntry> childContextEntries) {
 			super(childContextEntries);
 		}
@@ -401,8 +500,8 @@ public final class Context {
 		}
 
 		@Override
-		public String getKey() {
-			return "ROOT";
+		public ContextEntryKey getKey() {
+			return new ContextEntryKey(PREFIX, "ROOT");
 		}
 
 		public static RootContextEntry create(IDocument document, ICompilationUnit unit, int offset) throws JavaModelException, BadLocationException {
@@ -414,9 +513,18 @@ public final class Context {
 					PrefixContextEntry.create(document, offset),
 					SuffixContextEntry.create(document, offset)));
 		}
+
+		public static Optional<RootContextEntry> create(ContextEntryKey key) {
+			if (!key.prefix().equals(PREFIX)) {
+				return Optional.empty();
+			}
+			return Optional.of(new RootContextEntry(List.of()));
+		}
 	}
 
 	public static class TypeMemberContextEntry extends ContextEntry {
+		public static final String PREFIX = "TYPE_MEMBER";
+
 		private final IJavaElement element;
 		private final String signature;
 		private final String javadoc; // TODO javadoc as child
@@ -434,8 +542,8 @@ public final class Context {
 		}
 
 		@Override
-		public String getKey() {
-			return this.signature;
+		public ContextEntryKey getKey() {
+			return new ContextEntryKey(PREFIX, this.signature);
 		}
 
 		@Override
@@ -464,9 +572,18 @@ public final class Context {
 				throw new IllegalStateException(String.format("IJavaElement with type %s is not supported", element.getClass().getSimpleName()));
 			}
 		}
+
+		public static Optional<TypeMemberContextEntry> create(ContextEntryKey key) {
+			if (!key.prefix().equals(PREFIX)) {
+				return Optional.empty();
+			}
+			return null; // TODO
+		}
 	}
 
 	public static class TypeContextEntry extends ContextEntry {
+		public static final String PREFIX = "TYPE";
+
 		private final String signature;
 
 		private TypeContextEntry(String signature, List<TypeMemberContextEntry> members) {
@@ -480,8 +597,8 @@ public final class Context {
 		}
 
 		@Override
-		public String getKey() {
-			return this.signature;
+		public ContextEntryKey getKey() {
+			return new ContextEntryKey(PREFIX, this.signature);
 		}
 
 		@Override
@@ -514,6 +631,13 @@ public final class Context {
 			} catch (final JavaModelException exception) {
 				throw new RuntimeException("Failed to expand type context entry", exception);
 			}
+		}
+
+		public static Optional<TypeContextEntry> create(ContextEntryKey key) {
+			if (!key.prefix().equals(PREFIX)) {
+				return Optional.empty();
+			}
+			return Optional.of(new TypeContextEntry("", List.of()));
 		}
 	}
 }
