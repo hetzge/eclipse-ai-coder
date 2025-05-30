@@ -1,2 +1,4 @@
 * Use `exception` or more specific for exception variable names (never `e` or `ex`)
 * Use `find` command instead of `rg` to search in files
+* Do not catch IllegalArgumentException
+* Do not use `str` in String variable names

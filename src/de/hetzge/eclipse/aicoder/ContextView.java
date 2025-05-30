@@ -113,116 +113,116 @@ public class ContextView extends ViewPart {
 	}
 
 	private void fillContextMenu(IMenuManager manager) {
-        final IStructuredSelection selection = this.viewer.getStructuredSelection();
-        if (!selection.isEmpty() && selection.getFirstElement() instanceof ContextEntry) {
-            final ContextEntry entry = (ContextEntry) selection.getFirstElement();
-            final ContextEntryKey key = entry.getKey();
+		final IStructuredSelection selection = this.viewer.getStructuredSelection();
+		if (!selection.isEmpty() && selection.getFirstElement() instanceof ContextEntry) {
+			final ContextEntry entry = (ContextEntry) selection.getFirstElement();
+			final ContextEntryKey key = entry.getKey();
 
-            final Action blacklistAction = new Action(ContextPreferences.isBlacklisted(key) ? "Remove from Blacklist" : "Add to Blacklist") {
-                @Override
-                public void run() {
-                    if (ContextPreferences.isBlacklisted(key)) {
-                        ContextPreferences.removeFromBlacklist(key);
-                        showMessage("Removed from blacklist: " + entry.getLabel());
-                    } else {
-                        ContextPreferences.addToBlacklist(key);
-                        showMessage("Added to blacklist: " + entry.getLabel());
-                    }
-                    ContextView.this.viewer.refresh(entry);
-                }
-            };
+			final Action blacklistAction = new Action(ContextPreferences.isBlacklisted(key) ? "Remove from Blacklist" : "Add to Blacklist") {
+				@Override
+				public void run() {
+					if (ContextPreferences.isBlacklisted(key)) {
+						ContextPreferences.removeFromBlacklist(key);
+						showMessage("Removed from blacklist: " + entry.getLabel());
+					} else {
+						ContextPreferences.addToBlacklist(key);
+						showMessage("Added to blacklist: " + entry.getLabel());
+					}
+					ContextView.this.viewer.refresh(entry);
+				}
+			};
 
-            final Action stickyAction = new Action(ContextPreferences.isSticky(key) ? "Remove Sticky" : "Make Sticky") {
-                @Override
-                public void run() {
-                    if (ContextPreferences.isSticky(key)) {
-                        ContextPreferences.removeFromStickylist(key);
-                        showMessage("Removed sticky: " + entry.getLabel());
-                    } else {
-                        ContextPreferences.addToStickylist(key);
-                        showMessage("Made sticky: " + entry.getLabel());
-                    }
-                    ContextView.this.viewer.refresh(entry);
-                }
-            };
+			final Action stickyAction = new Action(ContextPreferences.isSticky(key) ? "Remove Sticky" : "Make Sticky") {
+				@Override
+				public void run() {
+					if (ContextPreferences.isSticky(key)) {
+						ContextPreferences.removeFromStickylist(key);
+						showMessage("Removed sticky: " + entry.getLabel());
+					} else {
+						ContextPreferences.addToStickylist(key);
+						showMessage("Made sticky: " + entry.getLabel());
+					}
+					ContextView.this.viewer.refresh(entry);
+				}
+			};
 
-            final Action previewAction = new Action("Preview Content") {
-                @Override
-                public void run() {
-                    showContentPreview(entry);
-                }
-            };
+			final Action previewAction = new Action("Preview Content") {
+				@Override
+				public void run() {
+					showContentPreview(entry);
+				}
+			};
 
-            manager.add(blacklistAction);
-            manager.add(stickyAction);
-            manager.add(previewAction);
-            manager.add(new Separator());
-        }
+			manager.add(blacklistAction);
+			manager.add(stickyAction);
+			manager.add(previewAction);
+			manager.add(new Separator());
+		}
 
-        this.drillDownAdapter.addNavigationActions(manager);
-        manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
-    }
+		this.drillDownAdapter.addNavigationActions(manager);
+		manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
+	}
 
 	private void fillLocalToolBar(IToolBarManager manager) {
 		this.drillDownAdapter.addNavigationActions(manager);
 	}
 
-    private void makeActions() {
-        // Double click action shows preview
-        this.doubleClickAction = new Action() {
-            @Override
-            public void run() {
-                final IStructuredSelection selection = ContextView.this.viewer.getStructuredSelection();
-                if (!selection.isEmpty() && selection.getFirstElement() instanceof ContextEntry) {
-                    final ContextEntry entry = (ContextEntry) selection.getFirstElement();
-                    showContentPreview(entry);
-                }
-            }
-        };
-    }
+	private void makeActions() {
+		// Double click action shows preview
+		this.doubleClickAction = new Action() {
+			@Override
+			public void run() {
+				final IStructuredSelection selection = ContextView.this.viewer.getStructuredSelection();
+				if (!selection.isEmpty() && selection.getFirstElement() instanceof ContextEntry) {
+					final ContextEntry entry = (ContextEntry) selection.getFirstElement();
+					showContentPreview(entry);
+				}
+			}
+		};
+	}
 
-    private void showContentPreview(ContextEntry entry) {
-        final Shell shell = this.viewer.getControl().getShell();
-        final Dialog dialog = new Dialog(shell) {
-            private Text textArea;
+	private void showContentPreview(ContextEntry entry) {
+		final Shell shell = this.viewer.getControl().getShell();
+		final Dialog dialog = new Dialog(shell) {
+			private Text textArea;
 
-            @Override
-            protected Control createDialogArea(Composite parent) {
-                final Composite container = (Composite) super.createDialogArea(parent);
+			@Override
+			protected Control createDialogArea(Composite parent) {
+				final Composite container = (Composite) super.createDialogArea(parent);
 
-                this.textArea = new Text(container, SWT.MULTI | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
-                this.textArea.setLayoutData(new GridData(GridData.FILL_BOTH));
+				this.textArea = new Text(container, SWT.MULTI | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL | SWT.READ_ONLY);
+				this.textArea.setLayoutData(new GridData(GridData.FILL_BOTH));
 
-                // Get the content
-                final StringBuilder content = new StringBuilder();
-                entry.apply(content, new TokenCounter(Integer.MAX_VALUE));
-                this.textArea.setText(content.toString());
+				// Get the content
+				final StringBuilder content = new StringBuilder();
+				entry.apply(content, new TokenCounter(Integer.MAX_VALUE));
+				this.textArea.setText(content.toString());
 
-                // Make the text read-only
-                this.textArea.setEditable(false);
+				// Make the text read-only
+				this.textArea.setEditable(false);
 
-                // Set a reasonable size
-                final GridData gd = (GridData) this.textArea.getLayoutData();
-                gd.widthHint = 600;
-                gd.heightHint = 400;
+				// Set a reasonable size
+				final GridData gd = (GridData) this.textArea.getLayoutData();
+				gd.widthHint = 600;
+				gd.heightHint = 400;
 
-                return container;
-            }
+				return container;
+			}
 
-            @Override
-            protected void configureShell(Shell newShell) {
-                super.configureShell(newShell);
-                newShell.setText("Content Preview - " + entry.getLabel());
-            }
+			@Override
+			protected void configureShell(Shell newShell) {
+				super.configureShell(newShell);
+				newShell.setText("Content Preview - " + entry.getLabel());
+			}
 
-            @Override
-            protected boolean isResizable() {
-                return true;
-            }
-        };
+			@Override
+			protected boolean isResizable() {
+				return true;
+			}
+		};
 
-        dialog.open();
-    }
+		dialog.open();
+	}
 
 	private void hookDoubleClickAction() {
 		this.viewer.addDoubleClickListener(new IDoubleClickListener() {
@@ -295,11 +295,19 @@ public class ContextView extends ViewPart {
 	}
 
 	private class ViewLabelProvider extends LabelProvider implements IColorProvider, IFontProvider {
+
+		private static final Color BLACKLISTED_BACKGROUND_COLOR = new Color(255, 240, 240);
+		private static final Color BLACKLISTED_FOREGROUND_COLOR = new Color(100, 100, 100);
+		private static final Color STICKY_BACKGROUND_COLOR = new Color(240, 255, 240);
+		private static final Color STICKY_FOREGROUND_COLOR = new Color(0, 0, 0);
+		private static final Color SKIPPED_BACKGROUND_COLOR = new Color(0, 0, 0, 0);
+		private static final Color SKIPPED_FOREGROUND_COLOR = new Color(200, 200, 200);
+
 		@Override
 		public String getText(Object obj) {
 			if (obj instanceof final ContextEntry contextEntry) {
 				String label = contextEntry.getLabel();
-				final String key = contextEntry.getKey();
+				final ContextEntryKey key = contextEntry.getKey();
 
 				// Add indicators for blacklisted and sticky items
 				if (ContextPreferences.isBlacklisted(key)) {
@@ -324,10 +332,13 @@ public class ContextView extends ViewPart {
 		@Override
 		public Color getForeground(Object element) {
 			if (element instanceof final ContextEntry contextEntry) {
-				final String key = contextEntry.getKey();
+				final ContextEntryKey key = contextEntry.getKey();
 				if (ContextPreferences.isBlacklisted(key)) {
-					// Use a gray color for blacklisted items
-					return ContextView.this.viewer.getControl().getDisplay().getSystemColor(SWT.COLOR_GRAY);
+					return BLACKLISTED_FOREGROUND_COLOR;
+				} else if (contextEntry.getTokenCount() == 0) {
+					return SKIPPED_FOREGROUND_COLOR;
+				} else if (ContextPreferences.isSticky(key)) {
+					return STICKY_FOREGROUND_COLOR;
 				}
 			}
 			return null;
@@ -336,10 +347,13 @@ public class ContextView extends ViewPart {
 		@Override
 		public Color getBackground(Object element) {
 			if (element instanceof final ContextEntry contextEntry) {
-				final String key = contextEntry.getKey();
-				if (ContextPreferences.isSticky(key)) {
-					// Use a light yellow background for sticky items
-					return ContextView.this.viewer.getControl().getDisplay().getSystemColor(SWT.COLOR_INFO_BACKGROUND);
+				final ContextEntryKey key = contextEntry.getKey();
+				if (ContextPreferences.isBlacklisted(key)) {
+					return BLACKLISTED_BACKGROUND_COLOR;
+				} else if (contextEntry.getTokenCount() == 0) {
+					return SKIPPED_BACKGROUND_COLOR;
+				} else if (ContextPreferences.isSticky(key)) {
+					return STICKY_BACKGROUND_COLOR;
 				}
 			}
 			return null;
@@ -348,9 +362,12 @@ public class ContextView extends ViewPart {
 		@Override
 		public Font getFont(Object element) {
 			if (element instanceof final ContextEntry contextEntry) {
-				final String key = contextEntry.getKey();
-				if (ContextPreferences.isSticky(key)) {
-					// Make sticky items bold
+				final ContextEntryKey key = contextEntry.getKey();
+				if (ContextPreferences.isBlacklisted(key)) {
+					return JFaceResources.getFontRegistry().getItalic(JFaceResources.DEFAULT_FONT);
+				} else if (contextEntry.getTokenCount() == 0) {
+					return JFaceResources.getFontRegistry().getItalic(JFaceResources.DEFAULT_FONT);
+				} else if (ContextPreferences.isSticky(key)) {
 					return JFaceResources.getFontRegistry().getBold(JFaceResources.DEFAULT_FONT);
 				}
 			}

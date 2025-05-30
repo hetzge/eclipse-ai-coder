@@ -1,5 +1,6 @@
 package de.hetzge.eclipse.aicoder;
 
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -9,7 +10,6 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jdt.core.ICompilationUnit;
-import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.DocumentEvent;
 import org.eclipse.jface.text.IDocument;
@@ -131,7 +131,7 @@ public final class InlineCompletionController {
 					});
 
 				}
-			} catch (final JavaModelException e) {
+			} catch (final CoreException | UnsupportedFlavorException | IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}

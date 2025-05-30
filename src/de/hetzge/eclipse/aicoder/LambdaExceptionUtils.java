@@ -77,9 +77,9 @@ public final class LambdaExceptionUtils {
 		};
 	}
 
-	public static void uncheck(Runnable_WithExceptions t) {
+	public static void uncheck(Runnable_WithExceptions<?> runnable) {
 		try {
-			t.run();
+			runnable.run();
 		} catch (final Exception exception) {
 			throwAsUnchecked(exception);
 		}

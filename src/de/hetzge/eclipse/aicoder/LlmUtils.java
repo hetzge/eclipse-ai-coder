@@ -64,7 +64,7 @@ public final class LlmUtils {
 			}
 			return Json.read(responseBody.toString()).at("choices").at(0).at("message").at("content").asString().trim();
 		} else {
-			AiCoderActivator.getDefault().getLog().log(
+			AiCoderActivator.log().log(
 					new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, "Error: " + connection.getResponseMessage()));
 			return "";
 		}
@@ -108,7 +108,7 @@ public final class LlmUtils {
 			}
 			return Json.read(responseBody.toString()).at("choices").at(0).at("message").at("content").asString().trim();
 		} else {
-			AiCoderActivator.getDefault().getLog().log(
+			AiCoderActivator.log().log(
 					new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, "Error: " + connection.getResponseMessage()));
 			return "";
 		}

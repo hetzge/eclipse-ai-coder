@@ -1,22 +1,29 @@
 package de.hetzge.eclipse.aicoder;
 
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jdt.core.Flags;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IField;
 import org.eclipse.jdt.core.IImportDeclaration;
 import org.eclipse.jdt.core.IJavaElement;
+import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.ILocalVariable;
 import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.IPackageFragment;
 import org.eclipse.jdt.core.IType;
+import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.Signature;
 import org.eclipse.jdt.core.dom.AST;
@@ -27,7 +34,10 @@ import org.eclipse.jdt.internal.corext.dom.ScopeAnalyzer;
 import org.eclipse.jdt.ui.JavaElementLabels;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.swt.dnd.Clipboard;
+import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
 
@@ -41,25 +51,18 @@ import org.eclipse.ui.PlatformUI;
  * TODO sticky types
  * TODO ignore items (ignore-file and storage)
  * TODO prevent duplicates
+ * TODO mark duplicates
  * TODO prevent jdk
  * TODO add java/maven metadata (Java Version, Dependencies)
- * TODO prefix/suffix context entry
  */
 
 public final class Context {
 
-	public static Optional<? extends ContextEntry> create(ContextEntryKey key) {
+	public static Optional<? extends ContextEntry> create(ContextEntryKey key) throws CoreException {
 		final List<? extends Function<ContextEntryKey, Optional<? extends ContextEntry>>> factories = List.of(
-				TypeMemberContextEntry::create,
-				EmptyContextEntry::create,
-				ScopeContextEntry::create,
-				PrefixContextEntry::create,
-				SuffixContextEntry::create,
-				CurrentPackageContextEntry::create,
-				ImportsContextEntry::create,
-				ClipboardContextEntry::create,
-				RootContextEntry::create,
-				TypeContextEntry::create);
+				LambdaExceptionUtils.rethrowFunction(TypeMemberContextEntry::create),
+				LambdaExceptionUtils.rethrowFunction(PackageContextEntry::create),
+				LambdaExceptionUtils.rethrowFunction(TypeContextEntry::create));
 		return factories.stream().flatMap(factory -> factory.apply(key).stream()).findFirst();
 	}
 
@@ -68,15 +71,15 @@ public final class Context {
 			String value) {
 
 		public String getKeyString() {
-			return String.format("%s::%s", this.prefix, this.value);
+			return String.format("%s::%s", this.prefix, Base64.getEncoder().encodeToString(this.value.getBytes(StandardCharsets.UTF_8)));
 		}
 
-		public static ContextEntryKey parseKeyString(String keyString) {
+		public static Optional<ContextEntryKey> parseKeyString(String keyString) {
 			final String[] parts = keyString.split("::");
 			if (parts.length != 2) {
-				throw new IllegalArgumentException("Invalid key string format");
+				return Optional.empty();
 			}
-			return new ContextEntryKey(parts[0], parts[1]);
+			return Optional.of(new ContextEntryKey(parts[0], new String(Base64.getDecoder().decode(parts[1]), StandardCharsets.UTF_8)));
 		}
 	}
 
@@ -171,9 +174,11 @@ public final class Context {
 
 		public static void apply(StringBuilder builder, TokenCounter counter, final ContextEntry entry) {
 			final int beforeTokenCount = counter.tokenCount;
-			if (counter.canAdd(entry)) {
+			if (!ContextPreferences.isBlacklisted(entry.getKey()) && counter.canAdd(entry)) {
 				entry.apply(builder, counter);
 				entry.setTokenCount(counter.tokenCount - beforeTokenCount);
+			} else {
+				entry.setTokenCount(0);
 			}
 		}
 	}
@@ -193,14 +198,7 @@ public final class Context {
 
 		@Override
 		public ContextEntryKey getKey() {
-			return new ContextEntryKey(PREFIX, "EMPTY");
-		}
-
-		public static Optional<EmptyContextEntry> create(ContextEntryKey key) {
-			if (!key.prefix().equals(PREFIX)) {
-				return Optional.empty();
-			}
-			return Optional.of(new EmptyContextEntry());
+			return new ContextEntryKey(PREFIX, PREFIX);
 		}
 	}
 
@@ -219,7 +217,7 @@ public final class Context {
 
 		@Override
 		public ContextEntryKey getKey() {
-			return new ContextEntryKey(PREFIX, "SCOPE");
+			return new ContextEntryKey(PREFIX, PREFIX);
 		}
 
 		@Override
@@ -258,13 +256,6 @@ public final class Context {
 		private static List<IBinding> getBindingsInScope(CompilationUnit compilationUnit, int position) {
 			return Arrays.asList(new ScopeAnalyzer(compilationUnit).getDeclarationsInScope(position, ScopeAnalyzer.VARIABLES | ScopeAnalyzer.TYPES | ScopeAnalyzer.CHECK_VISIBILITY));
 		}
-
-		public static Optional<ScopeContextEntry> create(ContextEntryKey key) {
-			if (!key.prefix().equals(PREFIX)) {
-				return Optional.empty();
-			}
-			return Optional.of(new ScopeContextEntry(List.of()));
-		}
 	}
 
 	public static class PrefixContextEntry extends ContextEntry {
@@ -279,7 +270,7 @@ public final class Context {
 
 		@Override
 		public ContextEntryKey getKey() {
-			return new ContextEntryKey(PREFIX, this.content.hashCode() + "");
+			return new ContextEntryKey(PREFIX, PREFIX);
 		}
 
 		@Override
@@ -303,13 +294,6 @@ public final class Context {
 			final String prefix = document.get(document.getLineOffset(firstLine), modelOffset - document.getLineOffset(firstLine));
 			return new PrefixContextEntry(prefix);
 		}
-
-		public static Optional<PrefixContextEntry> create(ContextEntryKey key) {
-			if (!key.prefix().equals(PREFIX)) {
-				return Optional.empty();
-			}
-			return Optional.of(new PrefixContextEntry(""));
-		}
 	}
 
 	public static class SuffixContextEntry extends ContextEntry {
@@ -325,7 +309,7 @@ public final class Context {
 
 		@Override
 		public ContextEntryKey getKey() {
-			return new ContextEntryKey(PREFIX, "SUFFIX_" + this.content.hashCode());
+			return new ContextEntryKey(PREFIX, PREFIX);
 		}
 
 		@Override
@@ -350,22 +334,15 @@ public final class Context {
 			final String suffix = document.get(modelOffset, document.getLineOffset(lastLine) - modelOffset);
 			return new SuffixContextEntry(suffix);
 		}
-
-		public static Optional<SuffixContextEntry> create(ContextEntryKey key) {
-			if (!key.prefix().equals(PREFIX)) {
-				return Optional.empty();
-			}
-			return Optional.of(new SuffixContextEntry(""));
-		}
 	}
 
-	public static class CurrentPackageContextEntry extends ContextEntry {
+	public static class PackageContextEntry extends ContextEntry {
 
 		public static final String PREFIX = "PACKAGE";
 
 		private final String name;
 
-		public CurrentPackageContextEntry(String name, List<? extends ContextEntry> entries) {
+		public PackageContextEntry(String name, List<? extends ContextEntry> entries) {
 			super(entries);
 			this.name = name;
 		}
@@ -377,7 +354,7 @@ public final class Context {
 
 		@Override
 		public ContextEntryKey getKey() {
-			return new ContextEntryKey(PREFIX, "PACKAGE_" + this.name);
+			return new ContextEntryKey(PREFIX, this.name);
 		}
 
 		@Override
@@ -385,19 +362,34 @@ public final class Context {
 			return AiCoderActivator.getImage(AiCoderImageKey.PACKAGE_ICON);
 		}
 
-		public static CurrentPackageContextEntry create(ICompilationUnit unit) throws JavaModelException {
-			final IPackageFragment packageFragment = (IPackageFragment) unit.getAncestor(IJavaElement.PACKAGE_FRAGMENT);
-			return new CurrentPackageContextEntry(packageFragment.getElementName(), Arrays.stream(packageFragment.getCompilationUnits())
-					.flatMap(LambdaExceptionUtils.rethrowFunction(it -> Arrays.stream(it.getAllTypes())))
-					.map(TypeContextEntry::create)
-					.toList());
+		public static PackageContextEntry create(ICompilationUnit unit) throws JavaModelException {
+			return create((IPackageFragment) unit.getAncestor(IJavaElement.PACKAGE_FRAGMENT));
 		}
 
-		public static Optional<CurrentPackageContextEntry> create(ContextEntryKey key) {
+		public static Optional<PackageContextEntry> create(ContextEntryKey key) throws JavaModelException, CoreException {
 			if (!key.prefix().equals(PREFIX)) {
 				return Optional.empty();
 			}
-			return Optional.of(new CurrentPackageContextEntry("", List.of()));
+			// Require java project
+			final Optional<IJavaProject> javaProjectOptional = JavaProjectUtils.getCurrentJavaProject();
+			if (javaProjectOptional.isEmpty()) {
+				return Optional.empty();
+			}
+			final IJavaProject javaProject = javaProjectOptional.get();
+			// Require package fragment
+			final Optional<IPackageFragment> packageOptional = JavaProjectUtils.findPackageFragment(javaProject, key.value());
+			if (packageOptional.isEmpty()) {
+				return Optional.empty();
+			}
+			final IPackageFragment packageFragment = packageOptional.get();
+			return Optional.of(create(packageFragment));
+		}
+
+		private static PackageContextEntry create(final IPackageFragment packageFragment) throws JavaModelException {
+			return new PackageContextEntry(packageFragment.getElementName(), Arrays.stream(packageFragment.getCompilationUnits())
+					.flatMap(LambdaExceptionUtils.rethrowFunction(it -> Arrays.stream(it.getAllTypes())))
+					.map(TypeContextEntry::create)
+					.toList());
 		}
 	}
 
@@ -414,8 +406,13 @@ public final class Context {
 		}
 
 		@Override
+		public Image getImage() {
+			return AiCoderActivator.getImage(AiCoderImageKey.IMPORT_ICON);
+		}
+
+		@Override
 		public ContextEntryKey getKey() {
-			return new ContextEntryKey(PREFIX, "IMPORTS");
+			return new ContextEntryKey(PREFIX, PREFIX);
 		}
 
 		public static ImportsContextEntry create(ICompilationUnit unit) throws JavaModelException {
@@ -428,17 +425,10 @@ public final class Context {
 						entries.add(TypeContextEntry.create(type));
 					}
 				} catch (final JavaModelException exception) {
-					AiCoderActivator.getDefault().getLog().error("Failed to resolve import: " + elementName, exception);
+					AiCoderActivator.log().error("Failed to resolve import: " + elementName, exception);
 				}
 			}
 			return new ImportsContextEntry(entries);
-		}
-
-		public static Optional<ImportsContextEntry> create(ContextEntryKey key) {
-			if (!key.prefix().equals(PREFIX)) {
-				return Optional.empty();
-			}
-			return Optional.of(new ImportsContextEntry(List.of()));
 		}
 	}
 
@@ -446,13 +436,19 @@ public final class Context {
 
 		public static final String PREFIX = "CLIPBOARD";
 
-		public ClipboardContextEntry() {
+		private final String content;
+
+		public ClipboardContextEntry(String content) {
 			super(List.of());
+			this.content = content;
 		}
 
 		@Override
 		public void apply(StringBuilder builder, TokenCounter counter) {
-			// TODO
+			builder
+					.append("Clipboard content:\n")
+					.append(this.content)
+					.append("\n\n");
 		}
 
 		@Override
@@ -462,7 +458,7 @@ public final class Context {
 
 		@Override
 		public ContextEntryKey getKey() {
-			return new ContextEntryKey(PREFIX, "CLIPBOARD");
+			return new ContextEntryKey(PREFIX, PREFIX);
 		}
 
 		@Override
@@ -475,15 +471,9 @@ public final class Context {
 			return List.of();
 		}
 
-		public static ClipboardContextEntry create() {
-			return new ClipboardContextEntry();
-		}
-
-		public static Optional<ClipboardContextEntry> create(ContextEntryKey key) {
-			if (!key.prefix().equals(PREFIX)) {
-				return Optional.empty();
-			}
-			return Optional.of(new ClipboardContextEntry());
+		public static ClipboardContextEntry create() throws UnsupportedFlavorException, IOException {
+			final String clipboardContent = (String) new Clipboard(Display.getDefault()).getContents(TextTransfer.getInstance());
+			return new ClipboardContextEntry(clipboardContent != null ? clipboardContent : "");
 		}
 	}
 
@@ -504,21 +494,16 @@ public final class Context {
 			return new ContextEntryKey(PREFIX, "ROOT");
 		}
 
-		public static RootContextEntry create(IDocument document, ICompilationUnit unit, int offset) throws JavaModelException, BadLocationException {
+		public static RootContextEntry create(IDocument document, ICompilationUnit unit, int offset) throws BadLocationException, UnsupportedFlavorException, IOException, CoreException {
 			return new RootContextEntry(List.of(
+					StickyContextEntry.create(),
 					ScopeContextEntry.create(unit, offset),
 					ImportsContextEntry.create(unit),
-					CurrentPackageContextEntry.create(unit),
+					PackageContextEntry.create(unit),
 					ClipboardContextEntry.create(),
 					PrefixContextEntry.create(document, offset),
-					SuffixContextEntry.create(document, offset)));
-		}
-
-		public static Optional<RootContextEntry> create(ContextEntryKey key) {
-			if (!key.prefix().equals(PREFIX)) {
-				return Optional.empty();
-			}
-			return Optional.of(new RootContextEntry(List.of()));
+					SuffixContextEntry.create(document, offset),
+					BlacklistedContextEntry.create()));
 		}
 	}
 
@@ -543,7 +528,7 @@ public final class Context {
 
 		@Override
 		public ContextEntryKey getKey() {
-			return new ContextEntryKey(PREFIX, this.signature);
+			return new ContextEntryKey(PREFIX, this.element.getHandleIdentifier());
 		}
 
 		@Override
@@ -573,21 +558,24 @@ public final class Context {
 			}
 		}
 
-		public static Optional<TypeMemberContextEntry> create(ContextEntryKey key) {
+		public static Optional<TypeMemberContextEntry> create(ContextEntryKey key) throws JavaModelException {
 			if (!key.prefix().equals(PREFIX)) {
 				return Optional.empty();
 			}
-			return null; // TODO
+			return Optional.ofNullable(JavaCore.create(key.value()))
+					.map(LambdaExceptionUtils.rethrowFunction(TypeMemberContextEntry::create));
 		}
 	}
 
 	public static class TypeContextEntry extends ContextEntry {
 		public static final String PREFIX = "TYPE";
 
+		private final IType type;
 		private final String signature;
 
-		private TypeContextEntry(String signature, List<TypeMemberContextEntry> members) {
+		private TypeContextEntry(IType type, String signature, List<TypeMemberContextEntry> members) {
 			super(members);
+			this.type = type;
 			this.signature = signature;
 		}
 
@@ -598,7 +586,7 @@ public final class Context {
 
 		@Override
 		public ContextEntryKey getKey() {
-			return new ContextEntryKey(PREFIX, this.signature);
+			return new ContextEntryKey(PREFIX, this.type.getHandleIdentifier());
 		}
 
 		@Override
@@ -627,17 +615,81 @@ public final class Context {
 						members.add(TypeMemberContextEntry.create(method));
 					}
 				}
-				return new TypeContextEntry(typeSignature, members);
+				return new TypeContextEntry(type, typeSignature, members);
 			} catch (final JavaModelException exception) {
 				throw new RuntimeException("Failed to expand type context entry", exception);
 			}
 		}
 
-		public static Optional<TypeContextEntry> create(ContextEntryKey key) {
+		public static Optional<TypeContextEntry> create(ContextEntryKey key) throws CoreException {
 			if (!key.prefix().equals(PREFIX)) {
 				return Optional.empty();
 			}
-			return Optional.of(new TypeContextEntry("", List.of()));
+			return Optional.ofNullable(JavaCore.create(key.value()))
+					.filter(IType.class::isInstance)
+					.map(IType.class::cast)
+					.map(LambdaExceptionUtils.rethrowFunction(TypeContextEntry::create));
+		}
+	}
+
+	public static class StickyContextEntry extends ContextEntry {
+
+		private StickyContextEntry(List<? extends ContextEntry> childContextEntries) {
+			super(childContextEntries);
+		}
+
+		public static final String PREFIX = "STICKY";
+
+		@Override
+		public ContextEntryKey getKey() {
+			return new ContextEntryKey(PREFIX, PREFIX);
+		}
+
+		@Override
+		String getLabel() {
+			return "Sticky";
+		}
+
+		@Override
+		public Image getImage() {
+			return AiCoderActivator.getImage(AiCoderImageKey.PIN_ICON);
+		}
+
+		public static StickyContextEntry create() throws CoreException {
+			return new StickyContextEntry(ContextPreferences.getStickylist().stream()
+					.map(LambdaExceptionUtils.rethrowFunction(Context::create))
+					.flatMap(Optional::stream)
+					.toList());
+		}
+	}
+
+	public static class BlacklistedContextEntry extends ContextEntry {
+		private BlacklistedContextEntry(List<? extends ContextEntry> childContextEntries) {
+			super(childContextEntries);
+		}
+
+		public static final String PREFIX = "BLACKLISTED";
+
+		@Override
+		public ContextEntryKey getKey() {
+			return new ContextEntryKey(PREFIX, PREFIX);
+		}
+
+		@Override
+		String getLabel() {
+			return "Blacklist";
+		}
+
+		@Override
+		public Image getImage() {
+			return AiCoderActivator.getImage(AiCoderImageKey.BLACKLIST_ICON);
+		}
+
+		public static BlacklistedContextEntry create() throws CoreException {
+			return new BlacklistedContextEntry(ContextPreferences.getBlacklist().stream()
+					.map(LambdaExceptionUtils.rethrowFunction(Context::create))
+					.flatMap(Optional::stream)
+					.toList());
 		}
 	}
 }

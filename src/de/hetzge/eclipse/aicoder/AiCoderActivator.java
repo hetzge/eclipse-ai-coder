@@ -3,6 +3,7 @@ package de.hetzge.eclipse.aicoder;
 import java.net.MalformedURLException;
 import java.net.URI;
 
+import org.eclipse.core.runtime.ILog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.swt.graphics.Image;
@@ -51,6 +52,9 @@ public class AiCoderActivator extends AbstractUIPlugin {
 			registerImage(registry, AiCoderImageKey.COPY_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/etool16/copy_edit.png").toURL()));
 			registerImage(registry, AiCoderImageKey.BEFORE_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.jdt.ui/icons/full/etool16/shift_l_edit.png").toURL()));
 			registerImage(registry, AiCoderImageKey.AFTER_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.jdt.ui/icons/full/etool16/shift_r_edit.png").toURL()));
+			registerImage(registry, AiCoderImageKey.PIN_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/ovr16/pinned_ovr@2x.png").toURL()));
+			registerImage(registry, AiCoderImageKey.IMPORT_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/etool16/import_wiz.png").toURL()));
+			registerImage(registry, AiCoderImageKey.BLACKLIST_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/elcl16/trash.png").toURL()));
 		} catch (final MalformedURLException exception) {
 			throw new RuntimeException(exception);
 		}
@@ -66,6 +70,10 @@ public class AiCoderActivator extends AbstractUIPlugin {
 
 	public static ImageDescriptor getImageDescriptor(AiCoderImageKey imageKey) {
 		return AiCoderActivator.getDefault().getImageRegistry().getDescriptor(imageKey.name());
+	}
+
+	public static ILog log() {
+		return getDefault().getLog();
 	}
 
 }
