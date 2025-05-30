@@ -10,6 +10,7 @@ import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
+import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.DecoratingLabelProvider;
 import org.eclipse.jface.viewers.DoubleClickEvent;
@@ -27,8 +28,12 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.IActionBars;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.IWorkbench;
@@ -51,8 +56,6 @@ public class ContextView extends ViewPart {
 
 	private TreeViewer viewer;
 	private DrillDownAdapter drillDownAdapter;
-	private Action action1;
-	private Action action2;
 	private Action doubleClickAction;
 
 	private ContextEntry rootContextEntry;
@@ -65,7 +68,6 @@ public class ContextView extends ViewPart {
 
 	@Override
 	public void createPartControl(Composite parent) {
-
 		this.rootContextEntry = new EmptyContextEntry();
 
 		this.viewer = new TreeViewer(parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL);
@@ -105,60 +107,109 @@ public class ContextView extends ViewPart {
 	}
 
 	private void fillLocalPullDown(IMenuManager manager) {
-		manager.add(this.action1);
-		manager.add(new Separator());
-		manager.add(this.action2);
+		// Empty as we don't need any pull-down menu items
 	}
 
 	private void fillContextMenu(IMenuManager manager) {
-		manager.add(this.action1);
-		manager.add(this.action2);
-		manager.add(new Separator());
-		this.drillDownAdapter.addNavigationActions(manager);
-		// Other plug-ins can contribute there actions here
-		manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
-	}
+        IStructuredSelection selection = viewer.getStructuredSelection();
+        if (!selection.isEmpty() && selection.getFirstElement() instanceof ContextEntry) {
+            ContextEntry entry = (ContextEntry) selection.getFirstElement();
+            
+            Action blacklistAction = new Action("Add to Blacklist") {
+                @Override
+                public void run() {
+                    // TODO: Implement blacklist functionality
+                    // This should be connected to the blacklist system
+                    showMessage("Added to blacklist: " + entry.getLabel());
+                }
+            };
+            
+            Action stickyAction = new Action("Make Sticky") {
+                @Override
+                public void run() {
+                    // TODO: Implement sticky functionality
+                    // This should be connected to the sticky entries system
+                    showMessage("Made sticky: " + entry.getLabel());
+                }
+            };
+            
+            Action previewAction = new Action("Preview Content") {
+                @Override
+                public void run() {
+                    showContentPreview(entry);
+                }
+            };
+            
+            manager.add(blacklistAction);
+            manager.add(stickyAction);
+            manager.add(previewAction);
+            manager.add(new Separator());
+        }
+        
+        this.drillDownAdapter.addNavigationActions(manager);
+        manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
+    }
 
 	private void fillLocalToolBar(IToolBarManager manager) {
-		manager.add(this.action1);
-		manager.add(this.action2);
-		manager.add(new Separator());
 		this.drillDownAdapter.addNavigationActions(manager);
 	}
 
-	private void makeActions() {
-		this.action1 = new Action() {
-			@Override
-			public void run() {
-				showMessage("Action 1 executed");
-			}
-		};
-		this.action1.setText("Action 1");
-		this.action1.setToolTipText("Action 1 tooltip");
-		this.action1.setImageDescriptor(PlatformUI.getWorkbench().getSharedImages().getImageDescriptor(ISharedImages.IMG_OBJS_INFO_TSK));
-
-		this.action2 = new Action() {
-			@Override
-			public void run() {
-				showMessage("Action 2 executed");
-			}
-		};
-		this.action2.setText("Action 2");
-		this.action2.setToolTipText("Action 2 tooltip");
-		this.action2.setImageDescriptor(this.workbench.getSharedImages().getImageDescriptor(ISharedImages.IMG_OBJS_INFO_TSK));
-		this.doubleClickAction = new Action() {
-			@Override
-			public void run() {
-				final IStructuredSelection selection = ContextView.this.viewer.getStructuredSelection();
-				final ContextEntry obj = (ContextEntry) selection.getFirstElement();
-
-				final StringBuilder builder = new StringBuilder();
-				obj.apply(builder, new TokenCounter(Integer.MAX_VALUE));
-
-				showMessage("Double-click detected on " + builder);
-			}
-		};
-	}
+    private void makeActions() {
+        // Double click action shows preview
+        this.doubleClickAction = new Action() {
+            @Override
+            public void run() {
+                final IStructuredSelection selection = ContextView.this.viewer.getStructuredSelection();
+                if (!selection.isEmpty() && selection.getFirstElement() instanceof ContextEntry) {
+                    final ContextEntry entry = (ContextEntry) selection.getFirstElement();
+                    showContentPreview(entry);
+                }
+            }
+        };
+    }
+    
+    private void showContentPreview(ContextEntry entry) {
+        Shell shell = viewer.getControl().getShell();
+        Dialog dialog = new Dialog(shell) {
+            private Text textArea;
+            
+            @Override
+            protected Control createDialogArea(Composite parent) {
+                Composite container = (Composite) super.createDialogArea(parent);
+                
+                textArea = new Text(container, SWT.MULTI | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
+                textArea.setLayoutData(new GridData(GridData.FILL_BOTH));
+                
+                // Get the content
+                StringBuilder content = new StringBuilder();
+                entry.apply(content, new TokenCounter(Integer.MAX_VALUE));
+                textArea.setText(content.toString());
+                
+                // Make the text read-only
+                textArea.setEditable(false);
+                
+                // Set a reasonable size
+                GridData gd = (GridData) textArea.getLayoutData();
+                gd.widthHint = 600;
+                gd.heightHint = 400;
+                
+                return container;
+            }
+            
+            @Override
+            protected void configureShell(Shell newShell) {
+                super.configureShell(newShell);
+                newShell.setText("Content Preview - " + entry.getLabel());
+            }
+            
+            @Override
+            protected boolean isResizable() {
+                return true;
+            }
+        };
+        
+        dialog.open();
+    }
 
 	private void hookDoubleClickAction() {
 		this.viewer.addDoubleClickListener(new IDoubleClickListener() {
@@ -200,7 +251,6 @@ public class ContextView extends ViewPart {
 	}
 
 	private class ViewContentProvider implements ITreeContentProvider {
-
 		@Override
 		public Object[] getElements(Object parent) {
 			if (parent.equals(getViewSite())) {
@@ -232,7 +282,6 @@ public class ContextView extends ViewPart {
 	}
 
 	private class ViewLabelProvider extends LabelProvider implements IColorProvider, IFontProvider {
-
 		@Override
 		public String getText(Object obj) {
 			if (obj instanceof final ContextEntry contextEntry) {
