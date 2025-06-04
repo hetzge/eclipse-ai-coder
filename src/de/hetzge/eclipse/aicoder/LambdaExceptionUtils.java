@@ -3,6 +3,7 @@ package de.hetzge.eclipse.aicoder;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public final class LambdaExceptionUtils {
@@ -28,6 +29,11 @@ public final class LambdaExceptionUtils {
 	@FunctionalInterface
 	public interface Supplier_WithExceptions<T, E extends Exception> {
 		T get() throws E;
+	}
+
+	@FunctionalInterface
+	public interface Predicate_WithExceptions<T, E extends Exception> {
+		boolean test(T t) throws E;
 	}
 
 	@FunctionalInterface
@@ -62,6 +68,17 @@ public final class LambdaExceptionUtils {
 			} catch (final Exception exception) {
 				throwAsUnchecked(exception);
 				return null;
+			}
+		};
+	}
+
+	public static <T, E extends Exception>  Predicate<T> rethrowPredicate(Predicate_WithExceptions<T, E> predicate) throws E {
+		return (t) -> {
+			try {
+				return predicate.test(t);
+			} catch (final Exception exception) {
+				throwAsUnchecked(exception);
+				return false;
 			}
 		};
 	}

@@ -229,7 +229,7 @@ public final class Context {
 			final List<TypeContextEntry> entries = new ArrayList<>();
 			final CompilationUnit parsedUnit = parseUnit(unit);
 			for (final IBinding binding : getBindingsInScope(parsedUnit, offset)) {
-				if (binding.getJavaElement() instanceof final IType type) {
+				if (binding.getJavaElement() instanceof final IType type && Utils.checkType(type)) {
 					entries.add(TypeContextEntry.create(type));
 				} else if (binding.getJavaElement() instanceof final ILocalVariable localVariable) {
 					final IType type = localVariable.getJavaProject().findType(Signature.toString(localVariable.getTypeSignature()));
@@ -390,6 +390,7 @@ public final class Context {
 		private static PackageContextEntry create(final IPackageFragment packageFragment) throws JavaModelException {
 			return new PackageContextEntry(packageFragment.getElementName(), Arrays.stream(packageFragment.getCompilationUnits())
 					.flatMap(LambdaExceptionUtils.rethrowFunction(it -> Arrays.stream(it.getAllTypes())))
+					.filter(Utils::checkType)
 					.map(TypeContextEntry::create)
 					.toList());
 		}
@@ -424,7 +425,9 @@ public final class Context {
 				try {
 					if (!importDeclaration.isOnDemand()) {
 						final IType type = unit.getJavaProject().findType(elementName);
-						entries.add(TypeContextEntry.create(type));
+						if (Utils.checkType(type)) {
+							entries.add(TypeContextEntry.create(type));
+						}
 					}
 				} catch (final JavaModelException exception) {
 					AiCoderActivator.log().error("Failed to resolve import: " + elementName, exception);
@@ -474,8 +477,10 @@ public final class Context {
 		}
 
 		public static ClipboardContextEntry create() throws UnsupportedFlavorException, IOException {
-			final String clipboardContent = (String) new Clipboard(Display.getDefault()).getContents(TextTransfer.getInstance());
-			return new ClipboardContextEntry(clipboardContent != null ? clipboardContent : "");
+			return Display.getDefault().syncCall(() -> {
+				final String clipboardContent = (String) new Clipboard(Display.getDefault()).getContents(TextTransfer.getInstance());
+				return new ClipboardContextEntry(clipboardContent != null ? clipboardContent : "");
+			});
 		}
 	}
 
@@ -630,6 +635,7 @@ public final class Context {
 			return Optional.ofNullable(JavaCore.create(key.value()))
 					.filter(IType.class::isInstance)
 					.map(IType.class::cast)
+					.filter(Utils::checkType)
 					.map(LambdaExceptionUtils.rethrowFunction(TypeContextEntry::create));
 		}
 	}

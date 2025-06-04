@@ -16,6 +16,7 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IDocumentListener;
 import org.eclipse.jface.text.IPaintPositionManager;
 import org.eclipse.jface.text.IPainter;
+import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.ITextViewerExtension2;
 import org.eclipse.jface.text.ITextViewerExtension5;
@@ -83,6 +84,7 @@ public final class InlineCompletionController {
 	private Completion completion;
 	private IContextActivation context;
 	private Job job;
+	private Runnable debounceRunnable;
 
 	private InlineCompletionController(ITextViewer textViewer, ITextEditor textEditor, Font font) {
 		this.textViewer = textViewer;
@@ -100,19 +102,21 @@ public final class InlineCompletionController {
 	}
 
 	public void trigger() {
-		try {
 
-			// Clipboard
-			// Filter JDK
-			// Prefer local
-			// Unresolved types?!
-			// Commenet complete (when newline after comment, calculate completion, optional
-			// remove comment)
-			// Comment complete "?!" trigger
+		// Clipboard
+		// Filter JDK
+		// Prefer local
+		// Unresolved types?!
+		// Commenet complete (when newline after comment, calculate completion, optional
+		// remove comment)
+		// Comment complete "?!" trigger
+		// Cache completion
 
-			final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
+		final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
+		final IDocument document = this.textViewer.getDocument();
 
-			final IDocument document = InlineCompletionController.this.textEditor.getDocumentProvider().getDocument(InlineCompletionController.this.textEditor.getEditorInput());
+		abort();
+		this.job = Job.create("AI inline completion", monitor -> {
 
 			final StringBuilder contextBuilder = new StringBuilder();
 			contextBuilder.append("# Available types (with fields and methods)\n");
@@ -120,7 +124,7 @@ public final class InlineCompletionController {
 				for (final ICompilationUnit unit : EclipseUtils.getCompilationUnit(this.textEditor).stream().toList()) {
 					final RootContextEntry rootContextEntry = RootContextEntry.create(document, unit, modelOffset);
 					ContextEntry.apply(contextBuilder, new TokenCounter(30_000), rootContextEntry);
-					Display.getCurrent().asyncExec(() -> {
+					Display.getDefault().asyncExec(() -> {
 						try {
 							ContextView.get().ifPresent(view -> {
 								view.setRootContextEntry(rootContextEntry);
@@ -131,51 +135,48 @@ public final class InlineCompletionController {
 					});
 
 				}
-			} catch (final CoreException | UnsupportedFlavorException | IOException e) {
+			} catch (final CoreException | UnsupportedFlavorException | IOException | BadLocationException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 
-			final int widgetLine = getWidgetLine(this.textViewer, modelOffset);
-			final int widgetOffset = getWidgetOffset(this.textViewer, modelOffset);
+			try {
+				final int widgetLine = getWidgetLine(modelOffset);
+				final int widgetOffset = getWidgetOffset(modelOffset);
 
-			final int lineHeight = InlineCompletionController.this.textViewer.getTextWidget().getLineHeight();
-			final int defaultLineSpacing = InlineCompletionController.this.textViewer.getTextWidget().getLineSpacing();
+				final int lineHeight = Display.getDefault().syncCall(() -> InlineCompletionController.this.textViewer.getTextWidget().getLineHeight());
+				final int defaultLineSpacing = Display.getDefault().syncCall(() -> InlineCompletionController.this.textViewer.getTextWidget().getLineSpacing());
 
-			if (this.job != null) {
-				this.job.cancel();
-			}
-			this.job = Job.create("AI inline completion", monitor -> {
-				try {
-					System.out.println("Context: " + contextBuilder.toString());
-					final String contextString = contextBuilder.toString();
-					final String[] contextParts = contextString.split(Context.SuffixContextEntry.FILL_HERE_PLACEHOLDER);
-					final String content = LlmUtils.execute(contextParts[0], contextParts[1]);
-					if (!content.isBlank()) {
-						setup(Completion.create(document, modelOffset, widgetOffset, widgetLine, content, lineHeight, defaultLineSpacing));
-					}
-				} catch (final IOException exception) {
-					throw new CoreException(Status.error("Failed to compute inline completion", exception));
-				} catch (final BadLocationException exception) {
-					throw new CoreException(Status.error("Failed to compute inline completion", exception));
+				if (monitor.isCanceled()) {
+					return;
 				}
-			});
-			this.job.schedule();
-		} catch (final BadLocationException exception) {
-			throw new RuntimeException(exception);
-		}
+
+//				System.out.println("Context: " + contextBuilder.toString());
+				final String contextString = contextBuilder.toString();
+				final String[] contextParts = contextString.split(Context.SuffixContextEntry.FILL_HERE_PLACEHOLDER);
+				final String content = LlmUtils.execute(contextParts[0], contextParts[1]);
+				if (!content.isBlank()) {
+					setup(Completion.create(document, modelOffset, widgetOffset, widgetLine, content, lineHeight, defaultLineSpacing));
+				}
+			} catch (final IOException exception) {
+				throw new CoreException(Status.error("Failed to compute inline completion", exception));
+			} catch (final BadLocationException exception) {
+				throw new CoreException(Status.error("Failed to compute inline completion", exception));
+			}
+		});
+		this.job.schedule();
 	}
 
-	private static int getWidgetLine(ITextViewer textViewer, int modelOffset) throws BadLocationException {
-		if (textViewer instanceof final ITextViewerExtension5 extension5) {
-			return extension5.modelLine2WidgetLine(textViewer.getDocument().getLineOfOffset(modelOffset));
+	private int getWidgetLine(int modelOffset) throws BadLocationException {
+		if (this.textViewer instanceof final ITextViewerExtension5 extension5) {
+			return extension5.modelLine2WidgetLine(this.textViewer.getDocument().getLineOfOffset(modelOffset));
 		} else {
-			return textViewer.getDocument().getLineOfOffset(modelOffset);
+			return this.textViewer.getDocument().getLineOfOffset(modelOffset);
 		}
 	}
 
-	private static int getWidgetOffset(ITextViewer textViewer, int modelOffset) {
-		if (textViewer instanceof final ITextViewerExtension5 extension5) {
+	private int getWidgetOffset(int modelOffset) {
+		if (this.textViewer instanceof final ITextViewerExtension5 extension5) {
 			return extension5.modelOffset2WidgetOffset(modelOffset);
 		} else {
 			return modelOffset;
@@ -189,6 +190,12 @@ public final class InlineCompletionController {
 	}
 
 	public void abort() {
+		if (this.job != null) {
+			this.job.cancel();
+		}
+		if (this.debounceRunnable != null) {
+			Display.getCurrent().timerExec(-1, this.debounceRunnable);
+		}
 		if (this.context != null) {
 			EclipseUtils.getContextService(this.textEditor).deactivateContext(this.context);
 			this.context = null;
@@ -201,7 +208,7 @@ public final class InlineCompletionController {
 		if (this.completion == null) {
 			return;
 		}
-		final IDocument document = InlineCompletionController.this.textEditor.getDocumentProvider().getDocument(InlineCompletionController.this.textEditor.getEditorInput());
+		final IDocument document = this.textViewer.getDocument();
 		try {
 			final Completion completion = this.completion;
 			document.replace(completion.modelRegion().getOffset(), completion.modelRegion().getLength(), this.completion.content()); // triggers document change -> triggers abort
@@ -223,13 +230,40 @@ public final class InlineCompletionController {
 	}
 
 	private class KeyListenerImplementation implements KeyListener {
+		private static final int DEBOUNCE_DELAY_IN_MILLISECONDS = 50;
+
 		@Override
 		public void keyPressed(KeyEvent event) {
 		}
 
 		@Override
 		public void keyReleased(KeyEvent event) {
+			abort();
+			if (AiCoderPreferences.isAutocompleteEnabled()) {
+				InlineCompletionController.this.debounceRunnable = () -> {
+					if (isNoSelectionActive() && isLineSuffixBlank()) {
+						trigger();
+					}
+				};
+				Display.getCurrent().timerExec(DEBOUNCE_DELAY_IN_MILLISECONDS, InlineCompletionController.this.debounceRunnable);
+			}
 		}
+
+		private boolean isNoSelectionActive() {
+			return InlineCompletionController.this.textViewer.getSelectedRange().y == 0;
+		}
+
+		private boolean isLineSuffixBlank() {
+			try {
+				final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
+				final IRegion lineRegion = InlineCompletionController.this.textViewer.getDocument().getLineInformationOfOffset(modelOffset);
+				final String lineString = InlineCompletionController.this.textViewer.getDocument().get(lineRegion.getOffset(), lineRegion.getLength());
+				return lineString.substring(modelOffset - lineRegion.getOffset()).replace(";", "").replace(")", "").replace("{", "").replace("{", "").isBlank();
+			} catch (final BadLocationException exception) {
+				throw new RuntimeException("Failed to check if line suffix is blank", exception);
+			}
+		}
+
 	}
 
 	private class StyledTextLineSpacingProviderImplementation implements StyledTextLineSpacingProvider {

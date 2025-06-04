@@ -64,13 +64,20 @@ public final class Utils {
 	}
 
 	private static int getFlags(IType type) {
-		int flags;
 		try {
-			flags = type.getFlags();
+			return type.getFlags();
 		} catch (final JavaModelException exception) {
 			throw new RuntimeException("Failed to get type flags for " + type, exception);
 		}
-		return flags;
+	}
+
+	public static boolean checkType(IType type) {
+		try {
+			type.getFlags();
+			return true;
+		} catch (final JavaModelException exception) {
+			return false;
+		}
 	}
 
 }
