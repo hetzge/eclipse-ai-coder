@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 
 import org.eclipse.core.runtime.CoreException;
@@ -41,6 +42,8 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
 
+import mjson.Json;
+
 /*
  * TODO lazy create methods
  * TODO Prio levels (High, Medium, Low)
@@ -54,6 +57,7 @@ import org.eclipse.ui.PlatformUI;
  * TODO mark duplicates
  * TODO prevent jdk
  * TODO add java/maven metadata (Java Version, Dependencies)
+ * TODO custom context
  */
 
 public final class Context {
@@ -237,7 +241,7 @@ public final class Context {
 						entries.add(TypeContextEntry.create(type));
 					}
 				} else {
-					System.out.println("Context.ScopeContextEntry.create() " + binding.getJavaElement().getClass());
+					AiCoderActivator.log().info("Skip binding: " + binding.getKey());
 				}
 			}
 			return new ScopeContextEntry(entries);
@@ -504,6 +508,7 @@ public final class Context {
 		public static RootContextEntry create(IDocument document, ICompilationUnit unit, int offset) throws BadLocationException, UnsupportedFlavorException, IOException, CoreException {
 			return new RootContextEntry(List.of(
 					StickyContextEntry.create(),
+					UserContextEntry.create(),
 					ScopeContextEntry.create(unit, offset),
 					ImportsContextEntry.create(unit),
 					PackageContextEntry.create(unit),
@@ -672,11 +677,11 @@ public final class Context {
 	}
 
 	public static class BlacklistedContextEntry extends ContextEntry {
+		public static final String PREFIX = "BLACKLISTED";
+
 		private BlacklistedContextEntry(List<? extends ContextEntry> childContextEntries) {
 			super(childContextEntries);
 		}
-
-		public static final String PREFIX = "BLACKLISTED";
 
 		@Override
 		public ContextEntryKey getKey() {
@@ -698,6 +703,91 @@ public final class Context {
 					.map(LambdaExceptionUtils.rethrowFunction(Context::create))
 					.flatMap(Optional::stream)
 					.toList());
+		}
+	}
+
+	public static class UserContextEntry extends ContextEntry {
+		public static final String PREFIX = "USER";
+
+		private UserContextEntry(List<CustomContextEntry> childContextEntries) {
+			super(childContextEntries);
+		}
+
+		@Override
+		public ContextEntryKey getKey() {
+			return new ContextEntryKey(PREFIX, PREFIX);
+		}
+
+		@Override
+		String getLabel() {
+			return "Custom";
+		}
+
+		public static UserContextEntry create() {
+			return new UserContextEntry(ContextPreferences.getCustomContextEntries());
+		}
+	}
+
+	public static class CustomContextEntry extends ContextEntry {
+		public static final String PREFIX = "CUSTOM";
+
+		private final List<CustomContextEntry> childContextEntries;
+		private final UUID id;
+		private final String title;
+		private final String content;
+		private final String glob;
+
+		public CustomContextEntry(List<CustomContextEntry> childContextEntries, UUID id, String title, String content, String glob) {
+			super(childContextEntries);
+			this.childContextEntries = childContextEntries;
+			this.id = id;
+			this.title = title;
+			this.content = content;
+			this.glob = glob;
+		}
+
+		@Override
+		public ContextEntryKey getKey() {
+			return new ContextEntryKey(PREFIX, this.id.toString());
+		}
+
+		@Override
+		String getLabel() {
+			return this.title;
+		}
+
+		public UUID getId() {
+			return this.id;
+		}
+
+		public String getTitle() {
+			return this.title;
+		}
+
+		public String getContent() {
+			return this.content;
+		}
+
+		public String getGlob() {
+			return this.glob;
+		}
+
+		public Json toJson() {
+			return Json.object()
+					.set("children", this.childContextEntries.stream().map(CustomContextEntry::toJson))
+					.set("id", this.id.toString())
+					.set("title", this.title)
+					.set("content", this.content)
+					.set("glob", this.glob);
+		}
+
+		public static CustomContextEntry createFromJson(Json json) {
+			final List<CustomContextEntry> childEntries = json.at("children").asJsonList().stream().map(CustomContextEntry::createFromJson).toList();
+			final UUID id = UUID.fromString(json.at("id").asString());
+			final String title = json.at("title").asString();
+			final String content = json.at("content").asString();
+			final String glob = json.at("glob").asString();
+			return new CustomContextEntry(childEntries, id, title, content, glob);
 		}
 	}
 }
