@@ -103,7 +103,6 @@ public final class InlineCompletionController {
 
 	public void trigger() {
 
-		// Clipboard
 		// Filter JDK
 		// Prefer local
 		// Unresolved types?!
@@ -117,9 +116,7 @@ public final class InlineCompletionController {
 
 		abort();
 		this.job = Job.create("AI inline completion", monitor -> {
-
 			final StringBuilder contextBuilder = new StringBuilder();
-			contextBuilder.append("# Available types (with fields and methods)\n");
 			try {
 				for (final ICompilationUnit unit : EclipseUtils.getCompilationUnit(this.textEditor).stream().toList()) {
 					final RootContextEntry rootContextEntry = RootContextEntry.create(document, unit, modelOffset);
@@ -133,7 +130,6 @@ public final class InlineCompletionController {
 							throw new RuntimeException(exception);
 						}
 					});
-
 				}
 			} catch (final CoreException | UnsupportedFlavorException | IOException | BadLocationException e) {
 				// TODO Auto-generated catch block
@@ -150,8 +146,6 @@ public final class InlineCompletionController {
 				if (monitor.isCanceled()) {
 					return;
 				}
-
-//				System.out.println("Context: " + contextBuilder.toString());
 				final String contextString = contextBuilder.toString();
 				final String[] contextParts = contextString.split(Context.SuffixContextEntry.FILL_HERE_PLACEHOLDER);
 				final String content = LlmUtils.execute(contextParts[0], contextParts[1]);
@@ -184,12 +178,13 @@ public final class InlineCompletionController {
 	}
 
 	private void setup(Completion completion) {
+		AiCoderActivator.log().info("Activate context");
 		this.context = EclipseUtils.getContextService(this.textEditor).activateContext("de.hetzge.eclipse.codestral.inlineCompletionVisible");
 		this.completion = completion;
-		System.out.println("setup: " + completion);
 	}
 
 	public void abort() {
+		AiCoderActivator.log().info("Abort");
 		if (this.job != null) {
 			this.job.cancel();
 		}
@@ -197,6 +192,7 @@ public final class InlineCompletionController {
 			Display.getCurrent().timerExec(-1, this.debounceRunnable);
 		}
 		if (this.context != null) {
+			AiCoderActivator.log().info("Deactivate context");
 			EclipseUtils.getContextService(this.textEditor).deactivateContext(this.context);
 			this.context = null;
 		}
@@ -239,6 +235,14 @@ public final class InlineCompletionController {
 		@Override
 		public void keyReleased(KeyEvent event) {
 			abort();
+			// Ignore "esc"
+			if(event.keyCode == 27) {
+				return;
+			}
+			// Handle "tab" only if no completion context is active
+			if(InlineCompletionController.this.context != null && event.keyCode == 9) {
+				return;
+			}
 			if (AiCoderPreferences.isAutocompleteEnabled()) {
 				InlineCompletionController.this.debounceRunnable = () -> {
 					if (isNoSelectionActive() && isLineSuffixBlank()) {

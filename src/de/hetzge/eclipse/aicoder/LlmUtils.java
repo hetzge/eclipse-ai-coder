@@ -37,8 +37,8 @@ public final class LlmUtils {
 		final boolean multilineEnabled = AiCoderPreferences.isMultilineEnabled();
 		final Json json = Json.object()
 				.set("model", "codestral-latest")
-				.set("prompt", prompt.trim())
-				.set("suffix", suffix.trim())
+				.set("prompt", prompt)
+				.set("suffix", suffix)
 				.set("max_tokens", 1024)
 				.set("stop", Json.array().add(multilineEnabled ? "\n\n" : "\n"))
 				.set("temperature", 0);
@@ -81,7 +81,7 @@ public final class LlmUtils {
 				.set("messages", Json.array()
 						.add(Json.object()
 								.set("role", "user")
-								.set("content", prompt.trim() + suffix.trim())))
+								.set("content", prompt + suffix)))
 				.set("max_tokens", 1024)
 				.set("stop", Json.array().add(multilineEnabled ? "\n\n" : "\n"))
 				.set("temperature", 0);
