@@ -128,4 +128,10 @@ public final class ContextPreferences {
 	public static List<CustomContextEntry> getCustomContextEntries() {
 		return CUSTOM_CONTEXT_ENTRIES;
 	}
+
+	public static void setCustomContextEntries(List<CustomContextEntry> newEntries) {
+		CUSTOM_CONTEXT_ENTRIES.clear();
+		CUSTOM_CONTEXT_ENTRIES.addAll(newEntries);
+		savePreferences();
+	}
 }

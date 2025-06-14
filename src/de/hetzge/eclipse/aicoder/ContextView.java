@@ -1,5 +1,6 @@
 package de.hetzge.eclipse.aicoder;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,6 +48,7 @@ import org.eclipse.ui.part.ViewPart;
 
 import de.hetzge.eclipse.aicoder.Context.ContextEntry;
 import de.hetzge.eclipse.aicoder.Context.ContextEntryKey;
+import de.hetzge.eclipse.aicoder.Context.CustomContextEntry;
 import de.hetzge.eclipse.aicoder.Context.EmptyContextEntry;
 import de.hetzge.eclipse.aicoder.Context.TokenCounter;
 import jakarta.inject.Inject;
@@ -119,6 +121,47 @@ public class ContextView extends ViewPart {
 			final List<ContextEntry> entries = selection.stream().filter(ContextEntry.class::isInstance).map(ContextEntry.class::cast).toList();
 			final ContextEntry firstEntry = (ContextEntry) selection.getFirstElement();
 			final ContextEntryKey key = firstEntry.getKey();
+
+			if (firstEntry instanceof Context.UserContextEntry) {
+				final Action newAction = new Action("New Custom Context") {
+					@Override
+					public void run() {
+						final CustomContextEntryDialog dialog = new CustomContextEntryDialog(ContextView.this.viewer.getControl().getShell(), null);
+						if (dialog.open() == Dialog.OK) {
+							final CustomContextEntry newEntry = dialog.createEntry();
+							final List<CustomContextEntry> currentEntries = ContextPreferences.getCustomContextEntries();
+							final List<CustomContextEntry> newEntries = new ArrayList<>(currentEntries);
+							newEntries.add(newEntry);
+							ContextPreferences.setCustomContextEntries(newEntries);
+							ContextView.this.viewer.refresh(firstEntry);
+						}
+					}
+				};
+				manager.add(newAction);
+			} else if (firstEntry instanceof Context.CustomContextEntry) {
+				final Action editAction = new Action("Edit Custom Context") {
+					@Override
+					public void run() {
+						final CustomContextEntry customEntry = (CustomContextEntry) firstEntry;
+						final CustomContextEntryDialog dialog = new CustomContextEntryDialog(ContextView.this.viewer.getControl().getShell(), customEntry);
+						if (dialog.open() == Dialog.OK) {
+							final CustomContextEntry editedEntry = dialog.createEntry();
+							final List<CustomContextEntry> currentEntries = ContextPreferences.getCustomContextEntries();
+							final List<CustomContextEntry> newEntries = new ArrayList<>(currentEntries);
+							// Replace the existing entry with the edited one
+							for (int i = 0; i < newEntries.size(); i++) {
+								if (newEntries.get(i).getId().equals(editedEntry.getId())) {
+									newEntries.set(i, editedEntry);
+									break;
+								}
+							}
+							ContextPreferences.setCustomContextEntries(newEntries);
+							ContextView.this.viewer.refresh(firstEntry);
+						}
+					}
+				};
+				manager.add(editAction);
+			}
 
 			final Action blacklistAction = new Action(ContextPreferences.isBlacklisted(key) ? "Remove from Blacklist" : "Add to Blacklist") {
 				@Override

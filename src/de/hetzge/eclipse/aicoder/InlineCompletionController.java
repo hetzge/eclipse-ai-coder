@@ -20,7 +20,11 @@ import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.ITextViewerExtension2;
 import org.eclipse.jface.text.ITextViewerExtension5;
+import org.eclipse.jface.viewers.ISelectionChangedListener;
+import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.CaretEvent;
+import org.eclipse.swt.custom.CaretListener;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.custom.StyledTextLineSpacingProvider;
@@ -66,6 +70,8 @@ public final class InlineCompletionController {
 				textViewer.getTextWidget().addPaintListener(controller.paintListener);
 				textViewer.getTextWidget().setLineSpacingProvider(controller.spacingProvider);
 				textViewer.getTextWidget().addKeyListener(controller.keyListener);
+				textViewer.getSelectionProvider().addSelectionChangedListener(controller.selectionListener);
+				textViewer.getTextWidget().addCaretListener(controller.caretListener);
 				textEditor.getDocumentProvider().getDocument(textEditor.getEditorInput()).addDocumentListener(controller.documentListener);
 			});
 			return controller;
@@ -80,6 +86,8 @@ public final class InlineCompletionController {
 	private final PaintListenerImplementation paintListener;
 	private final PainterImplementation painter;
 	private final KeyListenerImplementation keyListener;
+	private final ISelectionChangedListener selectionListener;
+	private final CaretListener caretListener;
 	private final Font font;
 	private Completion completion;
 	private IContextActivation context;
@@ -95,6 +103,8 @@ public final class InlineCompletionController {
 		this.paintListener = new PaintListenerImplementation();
 		this.painter = new PainterImplementation();
 		this.keyListener = new KeyListenerImplementation();
+		this.selectionListener = new SelectionListenerImplementation();
+		this.caretListener = new CaretListenerImplementation();
 		this.font = font;
 		this.completion = null;
 		this.context = null;
@@ -181,14 +191,16 @@ public final class InlineCompletionController {
 		AiCoderActivator.log().info("Activate context");
 		this.context = EclipseUtils.getContextService(this.textEditor).activateContext("de.hetzge.eclipse.codestral.inlineCompletionVisible");
 		this.completion = completion;
+		Display.getDefault().asyncExec(() -> this.textViewer.invalidateTextPresentation());
 	}
 
 	public void abort() {
-		AiCoderActivator.log().info("Abort");
 		if (this.job != null) {
+			AiCoderActivator.log().info("Abort job");
 			this.job.cancel();
 		}
 		if (this.debounceRunnable != null) {
+			AiCoderActivator.log().info("Abort debounce");
 			Display.getCurrent().timerExec(-1, this.debounceRunnable);
 		}
 		if (this.context != null) {
@@ -196,7 +208,10 @@ public final class InlineCompletionController {
 			EclipseUtils.getContextService(this.textEditor).deactivateContext(this.context);
 			this.context = null;
 		}
-		this.completion = null;
+		if (this.completion != null) {
+			AiCoderActivator.log().info("Unset completion");
+			this.completion = null;
+		}
 		this.textViewer.invalidateTextPresentation();
 	}
 
@@ -236,11 +251,11 @@ public final class InlineCompletionController {
 		public void keyReleased(KeyEvent event) {
 			abort();
 			// Ignore "esc"
-			if(event.keyCode == 27) {
+			if (event.keyCode == 27) {
 				return;
 			}
 			// Handle "tab" only if no completion context is active
-			if(InlineCompletionController.this.context != null && event.keyCode == 9) {
+			if (InlineCompletionController.this.context != null && event.keyCode == 9) {
 				return;
 			}
 			if (AiCoderPreferences.isAutocompleteEnabled()) {
@@ -330,6 +345,20 @@ public final class InlineCompletionController {
 
 		@Override
 		public void setPositionManager(IPaintPositionManager manager) {
+		}
+	}
+
+	private class SelectionListenerImplementation implements ISelectionChangedListener {
+		@Override
+		public void selectionChanged(SelectionChangedEvent event) {
+			abort();
+		}
+	}
+
+	private class CaretListenerImplementation implements CaretListener {
+		@Override
+		public void caretMoved(CaretEvent event) {
+			abort();
 		}
 	}
 

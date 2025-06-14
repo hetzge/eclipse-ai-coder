@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -58,6 +59,8 @@ import mjson.Json;
  * TODO prevent jdk
  * TODO add java/maven metadata (Java Version, Dependencies)
  * TODO custom context
+ * TODO last visited files
+ * TODO https://github.com/continuedev/continue/blob/main/core/autocomplete/postprocessing/index.ts
  */
 
 public final class Context {
@@ -66,7 +69,8 @@ public final class Context {
 		final List<? extends Function<ContextEntryKey, Optional<? extends ContextEntry>>> factories = List.of(
 				LambdaExceptionUtils.rethrowFunction(TypeMemberContextEntry::create),
 				LambdaExceptionUtils.rethrowFunction(PackageContextEntry::create),
-				LambdaExceptionUtils.rethrowFunction(TypeContextEntry::create));
+				LambdaExceptionUtils.rethrowFunction(TypeContextEntry::create),
+				LambdaExceptionUtils.rethrowFunction(CustomContextEntry::create));
 		return factories.stream().flatMap(factory -> factory.apply(key).stream()).findFirst();
 	}
 
@@ -747,6 +751,12 @@ public final class Context {
 		}
 
 		@Override
+		public void apply(StringBuilder builder, TokenCounter counter) {
+			builder.append(this.content).append("\n");
+			super.apply(builder, counter);
+		}
+
+		@Override
 		public ContextEntryKey getKey() {
 			return new ContextEntryKey(PREFIX, this.id.toString());
 		}
@@ -754,6 +764,11 @@ public final class Context {
 		@Override
 		String getLabel() {
 			return this.title;
+		}
+
+		@Override
+		public List<CustomContextEntry> getChildContextEntries() {
+			return this.childContextEntries;
 		}
 
 		public UUID getId() {
@@ -774,11 +789,15 @@ public final class Context {
 
 		public Json toJson() {
 			return Json.object()
-					.set("children", this.childContextEntries.stream().map(CustomContextEntry::toJson))
+					.set("children", this.childContextEntries.stream().map(CustomContextEntry::toJson).toList())
 					.set("id", this.id.toString())
 					.set("title", this.title)
 					.set("content", this.content)
 					.set("glob", this.glob);
+		}
+
+		public static Optional<CustomContextEntry> create(ContextEntryKey key) {
+			return ContextPreferences.getCustomContextEntries().stream().filter(it -> Objects.equals(it.getId().toString(), key.value())).findFirst();
 		}
 
 		public static CustomContextEntry createFromJson(Json json) {
