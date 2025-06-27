@@ -16,6 +16,7 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String ENABLE_AUTOCOMPLETE_KEY = "de.hetzge.eclipse.aicoder.enable_autocomplete";
 	public static final String MAX_PREFIX_SIZE_KEY = "de.hetzge.eclipse.aicoder.max_prefix_size";
 	public static final String MAX_SUFFIX_SIZE_KEY = "de.hetzge.eclipse.aicoder.max_suffix_size";
+	public static final String MAX_TOKENS_KEY = "de.hetzge.eclipse.aicoder.max_tokens";
 
 	@Override
 	public void initializeDefaultPreferences() {
@@ -30,6 +31,7 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(ENABLE_AUTOCOMPLETE_KEY, true);
 		store.setDefault(MAX_PREFIX_SIZE_KEY, 1000);
 		store.setDefault(MAX_SUFFIX_SIZE_KEY, 1000);
+		store.setDefault(MAX_TOKENS_KEY, 1024);
 	}
 
 	public static AiProvider getAiProvider() {
@@ -71,5 +73,9 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 
 	public static int getMaxSuffixSize() {
 		return AiCoderActivator.getDefault().getPreferenceStore().getInt(MAX_SUFFIX_SIZE_KEY);
+	}
+
+	public static int getMaxTokens() {
+		return AiCoderActivator.getDefault().getPreferenceStore().getInt(MAX_TOKENS_KEY);
 	}
 }

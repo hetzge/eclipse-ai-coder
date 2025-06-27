@@ -245,7 +245,7 @@ public final class Context {
 						entries.add(TypeContextEntry.create(type));
 					}
 				} else {
-					AiCoderActivator.log().info("Skip binding: " + binding.getKey());
+					AiCoderActivator.log().info("Skip binding: " + binding.getKey() + "/" + binding.getJavaElement() != null ? binding.getJavaElement().getClass().getName() : "-");
 				}
 			}
 			return new ScopeContextEntry(entries);
@@ -256,8 +256,7 @@ public final class Context {
 			parser.setKind(ASTParser.K_COMPILATION_UNIT);
 			parser.setSource(unit);
 			parser.setResolveBindings(true);
-			final CompilationUnit parsedUnit = (CompilationUnit) parser.createAST(null);
-			return parsedUnit;
+			return (CompilationUnit) parser.createAST(null);
 		}
 
 		@SuppressWarnings("restriction")
@@ -557,7 +556,7 @@ public final class Context {
 //			if (this.javadoc != null) {
 //				builder.append(this.javadoc);
 //			}
-			builder.append(this.signature).append("\n");
+			builder.append("  ").append(this.signature).append("\n");
 		}
 
 		public static TypeMemberContextEntry create(IJavaElement element) throws JavaModelException {

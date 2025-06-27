@@ -72,6 +72,9 @@ public final class Utils {
 	}
 
 	public static boolean checkType(IType type) {
+		if (type == null) {
+			return false;
+		}
 		try {
 			type.getFlags();
 			return true;

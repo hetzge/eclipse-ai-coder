@@ -2,12 +2,12 @@ package de.hetzge.eclipse.aicoder;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.action.Action;
-import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.action.MenuManager;
@@ -31,12 +31,9 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.IActionBars;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.IWorkbench;
@@ -92,17 +89,12 @@ public class ContextView extends ViewPart {
 	}
 
 	private void hookContextMenu() {
-		final MenuManager menuMgr = new MenuManager("#PopupMenu");
-		menuMgr.setRemoveAllWhenShown(true);
-		menuMgr.addMenuListener(new IMenuListener() {
-			@Override
-			public void menuAboutToShow(IMenuManager manager) {
-				ContextView.this.fillContextMenu(manager);
-			}
-		});
-		final Menu menu = menuMgr.createContextMenu(this.viewer.getControl());
+		final MenuManager menuManager = new MenuManager("#PopupMenu");
+		menuManager.setRemoveAllWhenShown(true);
+		menuManager.addMenuListener(ContextView.this::fillContextMenu);
+		final Menu menu = menuManager.createContextMenu(this.viewer.getControl());
 		this.viewer.getControl().setMenu(menu);
-		getSite().registerContextMenu(menuMgr, this.viewer);
+		getSite().registerContextMenu(menuManager, this.viewer);
 	}
 
 	private void contributeToActionBars() {
@@ -139,7 +131,7 @@ public class ContextView extends ViewPart {
 				};
 				manager.add(newAction);
 			} else if (firstEntry instanceof Context.CustomContextEntry) {
-				final Action editAction = new Action("Edit Custom Context") {
+				final Action editAction = new Action("Edit custom context") {
 					@Override
 					public void run() {
 						final CustomContextEntry customEntry = (CustomContextEntry) firstEntry;
@@ -157,10 +149,24 @@ public class ContextView extends ViewPart {
 							}
 							ContextPreferences.setCustomContextEntries(newEntries);
 							ContextView.this.viewer.refresh(firstEntry);
+							ContextView.this.viewer.refresh(editedEntry);
 						}
 					}
 				};
 				manager.add(editAction);
+				final Action removeAction = new Action("Remove custom context") {
+					@Override
+					public void run() {
+						final CustomContextEntry customEntry = (CustomContextEntry) firstEntry;
+						if (MessageDialog.openConfirm(ContextView.this.viewer.getControl().getShell(), "Confirm", "Are you sure?")) {
+							final List<CustomContextEntry> currentEntries = ContextPreferences.getCustomContextEntries();
+							final List<CustomContextEntry> newEntries = currentEntries.stream().filter(it -> !Objects.equals(customEntry, it)).toList();
+							ContextPreferences.setCustomContextEntries(newEntries);
+							ContextView.this.viewer.refresh(firstEntry);
+						}
+					}
+				};
+				manager.add(removeAction);
 			}
 
 			final Action blacklistAction = new Action(ContextPreferences.isBlacklisted(key) ? "Remove from Blacklist" : "Add to Blacklist") {
@@ -242,44 +248,11 @@ public class ContextView extends ViewPart {
 
 	private void showContentPreview(ContextEntry entry) {
 		final Shell shell = this.viewer.getControl().getShell();
-		final Dialog dialog = new Dialog(shell) {
-			private Text textArea;
 
-			@Override
-			protected Control createDialogArea(Composite parent) {
-				final Composite container = (Composite) super.createDialogArea(parent);
+		final StringBuilder content = new StringBuilder();
+		entry.apply(content, new TokenCounter(Integer.MAX_VALUE));
 
-				this.textArea = new Text(container, SWT.MULTI | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL | SWT.READ_ONLY);
-				this.textArea.setLayoutData(new GridData(GridData.FILL_BOTH));
-
-				// Get the content
-				final StringBuilder content = new StringBuilder();
-				entry.apply(content, new TokenCounter(Integer.MAX_VALUE));
-				this.textArea.setText(content.toString());
-
-				// Make the text read-only
-				this.textArea.setEditable(false);
-
-				// Set a reasonable size
-				final GridData gd = (GridData) this.textArea.getLayoutData();
-				gd.widthHint = 600;
-				gd.heightHint = 400;
-
-				return container;
-			}
-
-			@Override
-			protected void configureShell(Shell newShell) {
-				super.configureShell(newShell);
-				newShell.setText("Content Preview - " + entry.getLabel());
-			}
-
-			@Override
-			protected boolean isResizable() {
-				return true;
-			}
-		};
-
+		final Dialog dialog = new ContentPreviewDialog(shell, "Content Preview - " + entry.getLabel(), content.toString());
 		dialog.open();
 	}
 

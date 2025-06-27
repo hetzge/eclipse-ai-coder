@@ -45,7 +45,7 @@ public final class LlmUtils {
 				.set("model", "codestral-latest")
 				.set("prompt", prompt)
 				.set("suffix", suffix)
-				.set("max_tokens", 1024)
+				.set("max_tokens", AiCoderPreferences.getMaxTokens())
 				.set("stop", Json.array().add(multilineEnabled ? "\n\n" : "\n"))
 				.set("temperature", 0);
 		final URL url = URI.create(urlString).toURL();
@@ -101,7 +101,7 @@ public final class LlmUtils {
 						.add(Json.object()
 								.set("role", "user")
 								.set("content", "Here is the code:\n" + prompt + "{:FILL_HERE:}" + suffix)))
-				.set("max_tokens", 1024)
+				.set("max_tokens", AiCoderPreferences.getMaxTokens())
 				.set("stop", Json.array().add(multilineEnabled ? "\n\n" : "\n"))
 				.set("temperature", 0);
 

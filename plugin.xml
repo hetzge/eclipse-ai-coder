@@ -88,6 +88,14 @@
           inject="true"
           name="AI Coder Context">
     </view>
+    <view
+          category="de.hetzge.eclipse.aicoder"
+          class="de.hetzge.eclipse.aicoder.AiCoderHistoryView"
+          icon="icons/sample.png"
+          id="de.hetzge.eclipse.aicoder.AiCoderHistoryView"
+          inject="true"
+          name="AI Coder History">
+    </view>
  </extension>
  <extension
        point="org.eclipse.ui.perspectiveExtensions">
@@ -98,6 +106,12 @@
              ratio="0.5"
              relationship="right"
              relative="org.eclipse.ui.views.ProblemView">
+       </view>
+       <view
+             id="de.hetzge.eclipse.aicoder.AiCoderHistoryView"
+             ratio="0.5"
+             relationship="stack"
+             relative="de.hetzge.eclipse.aicoder.ContextView">
        </view>
     </perspectiveExtension>
  </extension>

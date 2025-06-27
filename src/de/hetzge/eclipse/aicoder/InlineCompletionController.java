@@ -2,6 +2,7 @@ package de.hetzge.eclipse.aicoder;
 
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -158,9 +159,17 @@ public final class InlineCompletionController {
 				}
 				final String contextString = contextBuilder.toString();
 				final String[] contextParts = contextString.split(Context.SuffixContextEntry.FILL_HERE_PLACEHOLDER);
-				final String content = LlmUtils.execute(contextParts[0], contextParts[1]);
+				final String input = contextString; // Use full context as input
+
+				final long startTime = System.currentTimeMillis();
+				final String prefix = contextParts[0];
+				final String suffix = contextParts.length > 1 ? contextParts[1] : "";
+				final String content = LlmUtils.execute(prefix, suffix);
+				final long duration = System.currentTimeMillis() - startTime;
+
 				if (!content.isBlank()) {
 					setup(Completion.create(document, modelOffset, widgetOffset, widgetLine, content, lineHeight, defaultLineSpacing));
+					addHistoryEntry(input, content, duration, EclipseUtils.getCompilationUnit(this.textEditor).get());
 				}
 			} catch (final IOException exception) {
 				throw new CoreException(Status.error("Failed to compute inline completion", exception));
@@ -187,6 +196,45 @@ public final class InlineCompletionController {
 		}
 	}
 
+	private void addHistoryEntry(String input, String output, long duration, ICompilationUnit unit) {
+		Display.getDefault().asyncExec(() -> {
+			try {
+				final String filePath = unit.getPath().toString();
+
+				// Calculate input stats
+				final String[] inputWords = input.split("\\s+");
+				final int inputWordCount = inputWords.length;
+				final long inputLineCount = input.lines().count();
+
+				// Calculate output stats
+				final String[] outputWords = output.split("\\s+");
+				final int outputWordCount = outputWords.length;
+				final long outputLineCount = output.lines().count();
+
+				final AiCoderHistoryEntry entry = new AiCoderHistoryEntry(
+						LocalDateTime.now(),
+						AiCoderPreferences.getAiProvider(),
+						filePath,
+						"Generated",
+						input,
+						input.length(),
+						inputWordCount,
+						(int) inputLineCount,
+						output,
+						output.length(),
+						outputWordCount,
+						(int) outputLineCount,
+						duration);
+
+				AiCoderHistoryView.get().ifPresent(view -> {
+					view.addHistoryEntry(entry);
+				});
+			} catch (final CoreException exception) {
+				AiCoderActivator.log().error("Failed to add history entry", exception);
+			}
+		});
+	}
+
 	private void setup(Completion completion) {
 		AiCoderActivator.log().info("Activate context");
 		this.context = EclipseUtils.getContextService(this.textEditor).activateContext("de.hetzge.eclipse.codestral.inlineCompletionVisible");
@@ -198,6 +246,7 @@ public final class InlineCompletionController {
 		if (this.job != null) {
 			AiCoderActivator.log().info("Abort job");
 			this.job.cancel();
+			this.job = null;
 		}
 		if (this.debounceRunnable != null) {
 			AiCoderActivator.log().info("Abort debounce");
@@ -224,6 +273,10 @@ public final class InlineCompletionController {
 			final Completion completion = this.completion;
 			document.replace(completion.modelRegion().getOffset(), completion.modelRegion().getLength(), this.completion.content()); // triggers document change -> triggers abort
 			this.textViewer.setSelectedRange(completion.modelRegion().getOffset() + completion.content().length(), 0);
+
+			AiCoderHistoryView.get().ifPresent(view -> {
+				view.setLatestAccepted();
+			});
 		} catch (final BadLocationException exception) {
 			throw new CoreException(Status.error("Failed to accept inline completion", exception));
 		}
@@ -282,7 +335,6 @@ public final class InlineCompletionController {
 				throw new RuntimeException("Failed to check if line suffix is blank", exception);
 			}
 		}
-
 	}
 
 	private class StyledTextLineSpacingProviderImplementation implements StyledTextLineSpacingProvider {
@@ -361,5 +413,4 @@ public final class InlineCompletionController {
 			abort();
 		}
 	}
-
 }
