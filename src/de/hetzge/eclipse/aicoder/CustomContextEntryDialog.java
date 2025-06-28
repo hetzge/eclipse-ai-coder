@@ -1,5 +1,6 @@
 package de.hetzge.eclipse.aicoder;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
@@ -110,7 +111,8 @@ public class CustomContextEntryDialog extends Dialog {
             id,
             this.title,
             this.content,
-            this.glob
+            this.glob,
+            Duration.ZERO
         );
     }
 }

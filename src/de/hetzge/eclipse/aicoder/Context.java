@@ -3,16 +3,16 @@ package de.hetzge.eclipse.aicoder;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jdt.core.Flags;
@@ -92,67 +92,16 @@ public final class Context {
 		}
 	}
 
-	public static class TokenCounter {
-		private final int maxTokenCount;
-		private int tokenCount;
-		private final StringBuilder builder;
-		private final Set<ContextEntryKey> allKeys; // used to prevent duplicates
-
-		public TokenCounter(int maxTokenCount) {
-			this.maxTokenCount = maxTokenCount;
-			this.tokenCount = 0;
-			this.builder = new StringBuilder();
-			this.allKeys = new HashSet<>();
-		}
-
-		public boolean canAdd(ContextEntry entry) {
-			if (this.allKeys.contains(entry.getKey())) {
-				return false;
-			}
-			final int beforeLength = this.builder.length();
-			final int beforeTokenCount = this.tokenCount;
-			count(entry);
-			final int afterTokenCount = this.tokenCount;
-			if (afterTokenCount > this.maxTokenCount) {
-				this.builder.setLength(beforeLength);
-				this.tokenCount = beforeTokenCount;
-				return false;
-			}
-			this.allKeys.add(entry.getKey());
-			return true;
-		}
-
-		public int count(ContextEntry entry) {
-			final int beforeLength = this.builder.length();
-			entry.apply(this.builder, new TokenCounter(Integer.MAX_VALUE)); // TODO
-			final int afterLength = this.builder.length();
-			final int newTokensCount = Utils.countApproximateTokens(this.builder.substring(beforeLength, afterLength));
-			this.tokenCount += newTokensCount;
-			return newTokensCount;
-		}
-
-		public int countWithReset(ContextEntry entry) {
-			reset();
-			return count(entry);
-		}
-
-		public void reset() {
-			this.tokenCount = 0;
-			this.builder.setLength(0);
-		}
-
-		public static int countTokens(ContextEntry entry) {
-			return new TokenCounter(Integer.MAX_VALUE).count(entry);
-		}
-	}
-
 	public static abstract class ContextEntry {
 
 		private int tokenCount;
 		protected final List<? extends ContextEntry> childContextEntries;
+		private final Duration creationDuration;
 
-		public ContextEntry(List<? extends ContextEntry> childContextEntries) {
+		public ContextEntry(List<? extends ContextEntry> childContextEntries, Duration creationDuration) {
+			this.tokenCount = 0;
 			this.childContextEntries = childContextEntries;
+			this.creationDuration = creationDuration;
 		}
 
 		public int getTokenCount() {
@@ -165,10 +114,10 @@ public final class Context {
 
 		public abstract ContextEntryKey getKey();
 
-		public void apply(StringBuilder builder, TokenCounter counter) {
-			for (final ContextEntry entry : this.childContextEntries) {
-				apply(builder, counter, entry);
-			}
+		public String getContent() {
+			return this.childContextEntries.stream()
+					.map(ContextEntry::apply)
+					.collect(Collectors.joining("\n"));
 		}
 
 		public List<? extends ContextEntry> getChildContextEntries() {
@@ -181,13 +130,18 @@ public final class Context {
 			return PlatformUI.getWorkbench().getSharedImages().getImage(ISharedImages.IMG_OBJ_ELEMENT);
 		}
 
-		public static void apply(StringBuilder builder, TokenCounter counter, final ContextEntry entry) {
-			final int beforeTokenCount = counter.tokenCount;
-			if (!ContextPreferences.isBlacklisted(entry.getKey()) && counter.canAdd(entry)) {
-				entry.apply(builder, counter);
-				entry.setTokenCount(counter.tokenCount - beforeTokenCount);
+		public Duration getCreationDuration() {
+			return this.creationDuration;
+		}
+
+		public static String apply(final ContextEntry entry) {
+			if (!ContextPreferences.isBlacklisted(entry.getKey())) { // TODO prevent duplication
+				final String content = entry.getContent();
+				entry.setTokenCount(content.length());
+				return content;
 			} else {
 				entry.setTokenCount(0);
+				return "";
 			}
 		}
 	}
@@ -197,7 +151,7 @@ public final class Context {
 		public static final String PREFIX = "EMPTY";
 
 		public EmptyContextEntry() {
-			super(List.of());
+			super(List.of(), Duration.ZERO);
 		}
 
 		@Override
@@ -215,8 +169,8 @@ public final class Context {
 
 		public static final String PREFIX = "SCOPE";
 
-		public ScopeContextEntry(List<? extends ContextEntry> childContextEntries) {
-			super(childContextEntries);
+		public ScopeContextEntry(List<? extends ContextEntry> childContextEntries, Duration creationDuration) {
+			super(childContextEntries, creationDuration);
 		}
 
 		@Override
@@ -235,11 +189,14 @@ public final class Context {
 		}
 
 		public static ScopeContextEntry create(ICompilationUnit unit, int offset) throws CoreException {
+			final long before = System.currentTimeMillis();
 			final List<TypeContextEntry> entries = new ArrayList<>();
 			final CompilationUnit parsedUnit = parseUnit(unit);
 			for (final IBinding binding : getBindingsInScope(parsedUnit, offset)) {
-				if (binding.getJavaElement() instanceof final IType type && Utils.checkType(type)) {
-					entries.add(TypeContextEntry.create(type));
+				if (binding.getJavaElement() instanceof final IType type) {
+					if (Utils.checkType(type)) {
+						entries.add(TypeContextEntry.create(type));
+					}
 				} else if (binding.getJavaElement() instanceof final ILocalVariable localVariable) {
 					final IType type = localVariable.getJavaProject().findType(Signature.toString(localVariable.getTypeSignature()));
 					if (type != null) {
@@ -249,7 +206,7 @@ public final class Context {
 					AiCoderActivator.log().info("Skip binding: " + binding.getKey() + "/" + (binding.getJavaElement() != null ? binding.getJavaElement().getClass().getName() : "-"));
 				}
 			}
-			return new ScopeContextEntry(entries);
+			return new ScopeContextEntry(entries, Duration.ofMillis(System.currentTimeMillis() - before));
 		}
 
 		private static CompilationUnit parseUnit(ICompilationUnit unit) {
@@ -271,8 +228,8 @@ public final class Context {
 
 		private final String content;
 
-		private PrefixContextEntry(String content) {
-			super(List.of());
+		private PrefixContextEntry(String content, Duration creationDuration) {
+			super(List.of(), creationDuration);
 			this.content = content;
 		}
 
@@ -292,16 +249,17 @@ public final class Context {
 		}
 
 		@Override
-		public void apply(StringBuilder builder, TokenCounter counter) {
-			builder.append(this.content);
+		public String getContent() {
+			return this.content;
 		}
 
 		public static PrefixContextEntry create(IDocument document, int modelOffset) throws BadLocationException {
+			final long before = System.currentTimeMillis();
 			final int modelLine = document.getLineOfOffset(modelOffset);
 			final int maxLines = AiCoderPreferences.getMaxPrefixSize();
 			final int firstLine = Math.max(0, modelLine - maxLines);
 			final String prefix = document.get(document.getLineOffset(firstLine), modelOffset - document.getLineOffset(firstLine));
-			return new PrefixContextEntry(prefix);
+			return new PrefixContextEntry(prefix, Duration.ofMillis(System.currentTimeMillis() - before));
 		}
 	}
 
@@ -311,8 +269,8 @@ public final class Context {
 
 		public static final String PREFIX = "SUFFIX";
 
-		public SuffixContextEntry(String content) {
-			super(List.of());
+		public SuffixContextEntry(String content, Duration creationDuration) {
+			super(List.of(), creationDuration);
 			this.content = content;
 		}
 
@@ -332,17 +290,17 @@ public final class Context {
 		}
 
 		@Override
-		public void apply(StringBuilder builder, TokenCounter counter) {
-			builder.append(FILL_HERE_PLACEHOLDER);
-			builder.append(this.content);
+		public String getContent() {
+			return FILL_HERE_PLACEHOLDER + this.content;
 		}
 
 		public static SuffixContextEntry create(IDocument document, int modelOffset) throws BadLocationException {
+			final long before = System.currentTimeMillis();
 			final int modelLine = document.getLineOfOffset(modelOffset);
 			final int maxLines = AiCoderPreferences.getMaxSuffixSize();
 			final int lastLine = Math.min(document.getNumberOfLines() - 1, modelLine + maxLines);
 			final String suffix = document.get(modelOffset, document.getLineOffset(lastLine) - modelOffset);
-			return new SuffixContextEntry(suffix);
+			return new SuffixContextEntry(suffix, Duration.ofMillis(System.currentTimeMillis() - before));
 		}
 	}
 
@@ -352,8 +310,8 @@ public final class Context {
 
 		private final String name;
 
-		public PackageContextEntry(String name, List<? extends ContextEntry> entries) {
-			super(entries);
+		public PackageContextEntry(String name, List<? extends ContextEntry> entries, Duration creationDuration) {
+			super(entries, creationDuration);
 			this.name = name;
 		}
 
@@ -396,19 +354,22 @@ public final class Context {
 		}
 
 		private static PackageContextEntry create(final IPackageFragment packageFragment) throws CoreException {
-			return new PackageContextEntry(packageFragment.getElementName(), Arrays.stream(packageFragment.getCompilationUnits())
+			final long before = System.currentTimeMillis();
+			final String elementName = packageFragment.getElementName();
+			final List<TypeContextEntry> entries = Arrays.stream(packageFragment.getCompilationUnits())
 					.flatMap(LambdaExceptionUtils.rethrowFunction(it -> Arrays.stream(it.getAllTypes())))
 					.filter(Utils::checkType)
 					.map(LambdaExceptionUtils.rethrowFunction(TypeContextEntry::create))
-					.toList());
+					.toList();
+			return new PackageContextEntry(elementName, entries, Duration.ofMillis(System.currentTimeMillis() - before));
 		}
 	}
 
 	public static class ImportsContextEntry extends ContextEntry {
 		public static final String PREFIX = "IMPORTS";
 
-		public ImportsContextEntry(List<TypeContextEntry> childContextEntries) {
-			super(childContextEntries);
+		public ImportsContextEntry(List<TypeContextEntry> childContextEntries, Duration creationDuration) {
+			super(childContextEntries, creationDuration);
 		}
 
 		@Override
@@ -427,6 +388,7 @@ public final class Context {
 		}
 
 		public static ImportsContextEntry create(ICompilationUnit unit) throws CoreException {
+			final long before = System.currentTimeMillis();
 			final List<TypeContextEntry> entries = new ArrayList<>();
 			for (final IImportDeclaration importDeclaration : unit.getImports()) {
 				final String elementName = importDeclaration.getElementName();
@@ -437,7 +399,7 @@ public final class Context {
 					}
 				}
 			}
-			return new ImportsContextEntry(entries);
+			return new ImportsContextEntry(entries, Duration.ofMillis(System.currentTimeMillis() - before));
 		}
 	}
 
@@ -447,17 +409,14 @@ public final class Context {
 
 		private final String content;
 
-		public ClipboardContextEntry(String content) {
-			super(List.of());
+		public ClipboardContextEntry(String content, Duration creationDuration) {
+			super(List.of(), creationDuration);
 			this.content = content;
 		}
 
 		@Override
-		public void apply(StringBuilder builder, TokenCounter counter) {
-			builder
-					.append("Clipboard content:\n")
-					.append(this.content)
-					.append("\n\n");
+		public String getContent() {
+			return "Clipboard content:\n" + this.content + "\n\n";
 		}
 
 		@Override
@@ -481,9 +440,10 @@ public final class Context {
 		}
 
 		public static ClipboardContextEntry create() throws UnsupportedFlavorException, IOException {
+			final long before = System.currentTimeMillis();
 			return Display.getDefault().syncCall(() -> {
 				final String clipboardContent = (String) new Clipboard(Display.getDefault()).getContents(TextTransfer.getInstance());
-				return new ClipboardContextEntry(clipboardContent != null ? clipboardContent : "");
+				return new ClipboardContextEntry(clipboardContent != null ? clipboardContent : "", Duration.ofMillis(System.currentTimeMillis() - before));
 			});
 		}
 	}
@@ -491,8 +451,8 @@ public final class Context {
 	public static class RootContextEntry extends ContextEntry {
 		public static final String PREFIX = "ROOT";
 
-		public RootContextEntry(List<? extends ContextEntry> childContextEntries) {
-			super(childContextEntries);
+		public RootContextEntry(List<? extends ContextEntry> childContextEntries, Duration creationDuration) {
+			super(childContextEntries, creationDuration);
 		}
 
 		@Override
@@ -506,6 +466,7 @@ public final class Context {
 		}
 
 		public static RootContextEntry create(IDocument document, IEditorInput editorInput, int offset) throws BadLocationException, UnsupportedFlavorException, IOException, CoreException {
+			final long before = System.currentTimeMillis();
 			final Optional<ICompilationUnit> compilationUnitOptional = EclipseUtils.getCompilationUnit(editorInput);
 			final List<ContextEntry> entries = new ArrayList<>();
 			entries.add(StickyContextEntry.create());
@@ -520,7 +481,7 @@ public final class Context {
 			entries.add(PrefixContextEntry.create(document, offset));
 			entries.add(SuffixContextEntry.create(document, offset));
 			entries.add(BlacklistedContextEntry.create());
-			return new RootContextEntry(entries);
+			return new RootContextEntry(entries, Duration.ofMillis(System.currentTimeMillis() - before));
 		}
 	}
 
@@ -531,8 +492,8 @@ public final class Context {
 		private final String signature;
 		private final String javadoc; // TODO javadoc as child
 
-		private TypeMemberContextEntry(IJavaElement element, String signature, String javadoc) {
-			super(List.of());
+		private TypeMemberContextEntry(IJavaElement element, String signature, String javadoc, Duration creationDuration) {
+			super(List.of(), creationDuration);
 			this.element = element;
 			this.signature = signature;
 			this.javadoc = javadoc;
@@ -554,22 +515,21 @@ public final class Context {
 		}
 
 		@Override
-		public void apply(StringBuilder builder, TokenCounter counter) {
-//			if (this.javadoc != null) {
-//				builder.append(this.javadoc);
-//			}
-			builder.append("  ").append(this.signature).append(";\n");
+		public String getContent() {
+			// TODO javadoc
+			return String.format("  %s;", this.signature);
 		}
 
 		public static TypeMemberContextEntry create(IJavaElement element) throws CoreException {
+			final long before = System.currentTimeMillis();
 			if (element instanceof final IField field) {
 				final String signature = (Flags.isStatic(field.getFlags()) ? "static " : "") + JavaElementLabels.getElementLabel(field, JavaElementLabels.ALL_DEFAULT | JavaElementLabels.F_PRE_TYPE_SIGNATURE);
 				final String javadoc = EclipseUtils.getJavadoc(field);
-				return new TypeMemberContextEntry(element, signature, javadoc);
+				return new TypeMemberContextEntry(element, signature, javadoc, Duration.ofMillis(System.currentTimeMillis() - before));
 			} else if (element instanceof final IMethod method) {
 				final String signature = (Flags.isStatic(method.getFlags()) ? "static " : "") + JavaElementLabels.getElementLabel(method, JavaElementLabels.M_PARAMETER_TYPES | JavaElementLabels.M_PARAMETER_NAMES | JavaElementLabels.M_PRE_RETURNTYPE | JavaElementLabels.M_EXCEPTIONS);
 				final String javadoc = EclipseUtils.getJavadoc(method);
-				return new TypeMemberContextEntry(element, signature, javadoc);
+				return new TypeMemberContextEntry(element, signature, javadoc, Duration.ofMillis(System.currentTimeMillis() - before));
 			} else {
 				throw new IllegalStateException(String.format("IJavaElement with type %s is not supported", element.getClass().getSimpleName()));
 			}
@@ -590,8 +550,8 @@ public final class Context {
 		private final IType type;
 		private final String signature;
 
-		private TypeContextEntry(IType type, String signature, List<TypeMemberContextEntry> members) {
-			super(members);
+		private TypeContextEntry(IType type, String signature, List<TypeMemberContextEntry> members, Duration creationDuration) {
+			super(members, creationDuration);
 			this.type = type;
 			this.signature = signature;
 		}
@@ -612,13 +572,12 @@ public final class Context {
 		}
 
 		@Override
-		public void apply(StringBuilder builder, TokenCounter counter) {
-			builder.append(this.signature).append("{\n");
-			super.apply(builder, counter);
-			builder.append("}\n");
+		public String getContent() {
+			return String.format("%s{\n%s\n}", this.signature, super.getContent());
 		}
 
 		public static TypeContextEntry create(IType type) throws CoreException {
+			final long before = System.currentTimeMillis();
 			final List<TypeMemberContextEntry> members = new ArrayList<>();
 			final String typeSignature = Utils.getTypeKeywordLabel(type) + " " + JavaElementLabels.getElementLabel(type, JavaElementLabels.T_FULLY_QUALIFIED);
 			for (final IField field : type.getFields()) {
@@ -631,7 +590,7 @@ public final class Context {
 					members.add(TypeMemberContextEntry.create(method));
 				}
 			}
-			return new TypeContextEntry(type, typeSignature, members);
+			return new TypeContextEntry(type, typeSignature, members, Duration.ofMillis(System.currentTimeMillis() - before));
 		}
 
 		public static Optional<TypeContextEntry> create(ContextEntryKey key) throws CoreException {
@@ -648,8 +607,8 @@ public final class Context {
 
 	public static class StickyContextEntry extends ContextEntry {
 
-		private StickyContextEntry(List<? extends ContextEntry> childContextEntries) {
-			super(childContextEntries);
+		private StickyContextEntry(List<? extends ContextEntry> childContextEntries, Duration creationDuration) {
+			super(childContextEntries, creationDuration);
 		}
 
 		public static final String PREFIX = "STICKY";
@@ -670,18 +629,20 @@ public final class Context {
 		}
 
 		public static StickyContextEntry create() throws CoreException {
-			return new StickyContextEntry(ContextPreferences.getStickylist().stream()
+			final long before = System.currentTimeMillis();
+			final List<? extends ContextEntry> entries = ContextPreferences.getStickylist().stream()
 					.map(LambdaExceptionUtils.rethrowFunction(Context::create))
 					.flatMap(Optional::stream)
-					.toList());
+					.toList();
+			return new StickyContextEntry(entries, Duration.ofMillis(System.currentTimeMillis() - before));
 		}
 	}
 
 	public static class BlacklistedContextEntry extends ContextEntry {
 		public static final String PREFIX = "BLACKLISTED";
 
-		private BlacklistedContextEntry(List<? extends ContextEntry> childContextEntries) {
-			super(childContextEntries);
+		private BlacklistedContextEntry(List<? extends ContextEntry> childContextEntries, Duration creationDuration) {
+			super(childContextEntries, creationDuration);
 		}
 
 		@Override
@@ -700,18 +661,20 @@ public final class Context {
 		}
 
 		public static BlacklistedContextEntry create() throws CoreException {
-			return new BlacklistedContextEntry(ContextPreferences.getBlacklist().stream()
+			final long before = System.currentTimeMillis();
+			final List<? extends ContextEntry> entries = ContextPreferences.getBlacklist().stream()
 					.map(LambdaExceptionUtils.rethrowFunction(Context::create))
 					.flatMap(Optional::stream)
-					.toList());
+					.toList();
+			return new BlacklistedContextEntry(entries, Duration.ofMillis(System.currentTimeMillis() - before));
 		}
 	}
 
 	public static class UserContextEntry extends ContextEntry {
 		public static final String PREFIX = "USER";
 
-		private UserContextEntry(List<CustomContextEntry> childContextEntries) {
-			super(childContextEntries);
+		private UserContextEntry(List<CustomContextEntry> childContextEntries, Duration creationDuration) {
+			super(childContextEntries, creationDuration);
 		}
 
 		@Override
@@ -725,7 +688,9 @@ public final class Context {
 		}
 
 		public static UserContextEntry create() {
-			return new UserContextEntry(ContextPreferences.getCustomContextEntries());
+			final long before = System.currentTimeMillis();
+			final List<CustomContextEntry> entries = ContextPreferences.getCustomContextEntries();
+			return new UserContextEntry(entries, Duration.ofMillis(System.currentTimeMillis() - before));
 		}
 	}
 
@@ -738,8 +703,8 @@ public final class Context {
 		private final String content;
 		private final String glob;
 
-		public CustomContextEntry(List<CustomContextEntry> childContextEntries, UUID id, String title, String content, String glob) {
-			super(childContextEntries);
+		public CustomContextEntry(List<CustomContextEntry> childContextEntries, UUID id, String title, String content, String glob, Duration creationDuration) {
+			super(childContextEntries, creationDuration);
 			this.childContextEntries = childContextEntries;
 			this.id = id;
 			this.title = title;
@@ -748,9 +713,8 @@ public final class Context {
 		}
 
 		@Override
-		public void apply(StringBuilder builder, TokenCounter counter) {
-			builder.append(this.content).append("\n");
-			super.apply(builder, counter);
+		public String getContent() {
+			return String.format("%s\n%s", this.content, super.getContent());
 		}
 
 		@Override
@@ -776,10 +740,6 @@ public final class Context {
 			return this.title;
 		}
 
-		public String getContent() {
-			return this.content;
-		}
-
 		public String getGlob() {
 			return this.glob;
 		}
@@ -798,12 +758,13 @@ public final class Context {
 		}
 
 		public static CustomContextEntry createFromJson(Json json) {
+			final long before = System.currentTimeMillis();
 			final List<CustomContextEntry> childEntries = json.at("children").asJsonList().stream().map(CustomContextEntry::createFromJson).toList();
 			final UUID id = UUID.fromString(json.at("id").asString());
 			final String title = json.at("title").asString();
 			final String content = json.at("content").asString();
 			final String glob = json.at("glob").asString();
-			return new CustomContextEntry(childEntries, id, title, content, glob);
+			return new CustomContextEntry(childEntries, id, title, content, glob, Duration.ofMillis(System.currentTimeMillis() - before));
 		}
 	}
 }

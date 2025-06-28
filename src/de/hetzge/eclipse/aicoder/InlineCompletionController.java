@@ -44,7 +44,6 @@ import org.eclipse.ui.texteditor.ITextEditor;
 
 import de.hetzge.eclipse.aicoder.Context.ContextEntry;
 import de.hetzge.eclipse.aicoder.Context.RootContextEntry;
-import de.hetzge.eclipse.aicoder.Context.TokenCounter;
 
 public final class InlineCompletionController {
 
@@ -128,19 +127,9 @@ public final class InlineCompletionController {
 
 		abort();
 		this.job = Job.create("AI inline completion", monitor -> {
-			final StringBuilder contextBuilder = new StringBuilder();
+			final RootContextEntry rootContextEntry;
 			try {
-				final RootContextEntry rootContextEntry = RootContextEntry.create(document, this.textEditor.getEditorInput(), modelOffset);
-				ContextEntry.apply(contextBuilder, new TokenCounter(30_000), rootContextEntry);
-				Display.getDefault().asyncExec(() -> {
-					try {
-						ContextView.get().ifPresent(view -> {
-							view.setRootContextEntry(rootContextEntry);
-						});
-					} catch (final CoreException exception) {
-						throw new RuntimeException(exception);
-					}
-				});
+				rootContextEntry = RootContextEntry.create(document, this.textEditor.getEditorInput(), modelOffset);
 			} catch (final CoreException | UnsupportedFlavorException | IOException | BadLocationException exception) {
 				final String stacktrace = Utils.getStacktraceString(exception);
 				addHistoryEntry("", stacktrace, "Error: " + exception.getMessage(), 0, 0);
@@ -164,7 +153,11 @@ public final class InlineCompletionController {
 			if (monitor.isCanceled()) {
 				return;
 			}
-			final String contextString = contextBuilder.toString();
+			final String contextString = ContextEntry.apply(rootContextEntry);
+
+			// IMPORTANT: DO this after ContextEntry.apply(...)
+			updateContextView(rootContextEntry);
+
 			final String[] contextParts = contextString.split(Context.SuffixContextEntry.FILL_HERE_PLACEHOLDER);
 			final String input = contextString; // Use full context as input
 
@@ -195,6 +188,18 @@ public final class InlineCompletionController {
 			}
 		});
 		this.job.schedule();
+	}
+
+	private void updateContextView(final RootContextEntry rootContextEntry) {
+		Display.getDefault().syncExec(() -> {
+			try {
+				ContextView.get().ifPresent(view -> {
+					view.setRootContextEntry(rootContextEntry);
+				});
+			} catch (final CoreException exception) {
+				throw new RuntimeException(exception);
+			}
+		});
 	}
 
 	private int getWidgetLine(int modelOffset) throws BadLocationException {

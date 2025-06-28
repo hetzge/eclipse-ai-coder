@@ -45,7 +45,6 @@ import de.hetzge.eclipse.aicoder.Context.ContextEntry;
 import de.hetzge.eclipse.aicoder.Context.ContextEntryKey;
 import de.hetzge.eclipse.aicoder.Context.CustomContextEntry;
 import de.hetzge.eclipse.aicoder.Context.EmptyContextEntry;
-import de.hetzge.eclipse.aicoder.Context.TokenCounter;
 import jakarta.inject.Inject;
 
 public class ContextView extends ViewPart {
@@ -233,12 +232,9 @@ public class ContextView extends ViewPart {
 
 	private void showContentPreview(ContextEntry entry) {
 		final Shell shell = this.viewer.getControl().getShell();
-
-		final StringBuilder content = new StringBuilder();
-		entry.apply(content, new TokenCounter(Integer.MAX_VALUE));
-
-		final Dialog dialog = new ContentPreviewDialog(shell, "Content Preview - " + entry.getLabel(), content.toString());
-		dialog.open();
+		final String title = "Content Preview - " + entry.getLabel();
+		final String content = ContextEntry.apply(entry);
+		new ContentPreviewDialog(shell, title, content).open();
 	}
 
 	private void hookDoubleClickAction() {
@@ -427,7 +423,7 @@ public class ContextView extends ViewPart {
 				if (ContextPreferences.isSticky(key)) {
 					tag += " [Sticky]";
 				}
-				return String.format("%s%s (%s)", text, tag, contextEntry.getTokenCount());
+				return String.format("%s%s (%s) [%s]", text, tag, contextEntry.getTokenCount(), contextEntry.getCreationDuration().toMillis());
 			}
 			return null;
 		}
