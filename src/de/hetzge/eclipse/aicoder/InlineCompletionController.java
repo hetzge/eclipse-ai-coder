@@ -117,8 +117,8 @@ public final class InlineCompletionController {
 		// Filter JDK
 		// Prefer local
 		// Unresolved types?!
-		// Commenet complete (when newline after comment, calculate completion, optional
-		// remove comment)
+		// Comment complete (when newline after comment, calculate completion, optional
+		// remove comment, always use multiline)
 		// Comment complete "?!" trigger
 		// Cache completion
 
@@ -370,28 +370,29 @@ public final class InlineCompletionController {
 		public void paintControl(PaintEvent event) {
 			final Completion completion = InlineCompletionController.this.completion;
 			final StyledText widget = InlineCompletionController.this.textViewer.getTextWidget();
-			if (completion != null) {
-				final List<String> lines = completion.content().lines().toList();
-				event.gc.setForeground(widget.getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
-				event.gc.setFont(InlineCompletionController.this.font);
-				final Point location = widget.getLocationAtOffset(completion.widgetOffset());
-				for (int i = 0; i < lines.size(); i++) {
-					final String line = lines.get(i);
-					if (i == 0) {
-						// first line
-						event.gc.drawText(completion.firstLineContent(), location.x, location.y, true);
-						if (completion.firstLineSuffixCharacter() != null) {
-							final int suffixCharacterWidth = event.gc.textExtent(completion.firstLineSuffixCharacter()).x;
-							final int contentWidth = event.gc.textExtent(completion.firstLineContent()).x;
-							final FontMetrics fontMetrics = event.gc.getFontMetrics();
-							final StyleRange styleRange = new StyleRange(completion.widgetOffset(), 1, null, null);
-							styleRange.metrics = new GlyphMetrics(fontMetrics.getAscent(), fontMetrics.getDescent(), contentWidth + suffixCharacterWidth);
-							widget.setStyleRange(styleRange);
-							event.gc.drawText(completion.firstLineSuffixCharacter(), location.x + contentWidth, location.y, false);
-						}
-					} else {
-						event.gc.drawText(line.replace("\t", " ".repeat(InlineCompletionController.this.widget.getTabs())), 0, location.y + i * completion.lineHeight(), true);
+			if (completion == null) {
+				return;
+			}
+			final List<String> lines = completion.content().lines().toList();
+			event.gc.setForeground(widget.getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
+			event.gc.setFont(InlineCompletionController.this.font);
+			final Point location = widget.getLocationAtOffset(completion.widgetOffset());
+			for (int i = 0; i < lines.size(); i++) {
+				final String line = lines.get(i);
+				if (i == 0) {
+					// first line
+					event.gc.drawText(completion.firstLineContent(), location.x, location.y, true);
+					if (completion.firstLineSuffixCharacter() != null) {
+						final int suffixCharacterWidth = event.gc.textExtent(completion.firstLineSuffixCharacter()).x;
+						final int contentWidth = event.gc.textExtent(completion.firstLineContent()).x;
+						final FontMetrics fontMetrics = event.gc.getFontMetrics();
+						final StyleRange styleRange = new StyleRange(completion.widgetOffset(), 1, null, null);
+						styleRange.metrics = new GlyphMetrics(fontMetrics.getAscent(), fontMetrics.getDescent(), contentWidth + suffixCharacterWidth);
+						widget.setStyleRange(styleRange);
+						event.gc.drawText(completion.firstLineSuffixCharacter(), location.x + contentWidth, location.y, false);
 					}
+				} else {
+					event.gc.drawText(line.replace("\t", " ".repeat(InlineCompletionController.this.widget.getTabs())), 0, location.y + i * completion.lineHeight(), true);
 				}
 			}
 		}

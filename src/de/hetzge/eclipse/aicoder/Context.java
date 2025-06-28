@@ -234,7 +234,7 @@ public final class Context {
 			return AiCoderActivator.getImage(AiCoderImageKey.SCOPE_ICON);
 		}
 
-		public static ScopeContextEntry create(ICompilationUnit unit, int offset) throws JavaModelException {
+		public static ScopeContextEntry create(ICompilationUnit unit, int offset) throws CoreException {
 			final List<TypeContextEntry> entries = new ArrayList<>();
 			final CompilationUnit parsedUnit = parseUnit(unit);
 			for (final IBinding binding : getBindingsInScope(parsedUnit, offset)) {
@@ -246,7 +246,7 @@ public final class Context {
 						entries.add(TypeContextEntry.create(type));
 					}
 				} else {
-					AiCoderActivator.log().info("Skip binding: " + binding.getKey() + "/" + binding.getJavaElement() != null ? binding.getJavaElement().getClass().getName() : "-");
+					AiCoderActivator.log().info("Skip binding: " + binding.getKey() + "/" + (binding.getJavaElement() != null ? binding.getJavaElement().getClass().getName() : "-"));
 				}
 			}
 			return new ScopeContextEntry(entries);
@@ -372,7 +372,7 @@ public final class Context {
 			return AiCoderActivator.getImage(AiCoderImageKey.PACKAGE_ICON);
 		}
 
-		public static PackageContextEntry create(ICompilationUnit unit) throws JavaModelException {
+		public static PackageContextEntry create(ICompilationUnit unit) throws CoreException {
 			return create((IPackageFragment) unit.getAncestor(IJavaElement.PACKAGE_FRAGMENT));
 		}
 
@@ -395,11 +395,11 @@ public final class Context {
 			return Optional.of(create(packageFragment));
 		}
 
-		private static PackageContextEntry create(final IPackageFragment packageFragment) throws JavaModelException {
+		private static PackageContextEntry create(final IPackageFragment packageFragment) throws CoreException {
 			return new PackageContextEntry(packageFragment.getElementName(), Arrays.stream(packageFragment.getCompilationUnits())
 					.flatMap(LambdaExceptionUtils.rethrowFunction(it -> Arrays.stream(it.getAllTypes())))
 					.filter(Utils::checkType)
-					.map(TypeContextEntry::create)
+					.map(LambdaExceptionUtils.rethrowFunction(TypeContextEntry::create))
 					.toList());
 		}
 	}
@@ -426,19 +426,15 @@ public final class Context {
 			return new ContextEntryKey(PREFIX, PREFIX);
 		}
 
-		public static ImportsContextEntry create(ICompilationUnit unit) throws JavaModelException {
+		public static ImportsContextEntry create(ICompilationUnit unit) throws CoreException {
 			final List<TypeContextEntry> entries = new ArrayList<>();
 			for (final IImportDeclaration importDeclaration : unit.getImports()) {
 				final String elementName = importDeclaration.getElementName();
-				try {
-					if (!importDeclaration.isOnDemand()) {
-						final IType type = unit.getJavaProject().findType(elementName);
-						if (Utils.checkType(type)) {
-							entries.add(TypeContextEntry.create(type));
-						}
+				if (!importDeclaration.isOnDemand()) {
+					final IType type = unit.getJavaProject().findType(elementName);
+					if (Utils.checkType(type)) {
+						entries.add(TypeContextEntry.create(type));
 					}
-				} catch (final JavaModelException exception) {
-					AiCoderActivator.log().error("Failed to resolve import: " + elementName, exception);
 				}
 			}
 			return new ImportsContextEntry(entries);
@@ -565,7 +561,7 @@ public final class Context {
 			builder.append("  ").append(this.signature).append(";\n");
 		}
 
-		public static TypeMemberContextEntry create(IJavaElement element) throws JavaModelException {
+		public static TypeMemberContextEntry create(IJavaElement element) throws CoreException {
 			if (element instanceof final IField field) {
 				final String signature = (Flags.isStatic(field.getFlags()) ? "static " : "") + JavaElementLabels.getElementLabel(field, JavaElementLabels.ALL_DEFAULT | JavaElementLabels.F_PRE_TYPE_SIGNATURE);
 				final String javadoc = EclipseUtils.getJavadoc(field);
@@ -579,7 +575,7 @@ public final class Context {
 			}
 		}
 
-		public static Optional<TypeMemberContextEntry> create(ContextEntryKey key) throws JavaModelException {
+		public static Optional<TypeMemberContextEntry> create(ContextEntryKey key) throws CoreException {
 			if (!key.prefix().equals(PREFIX)) {
 				return Optional.empty();
 			}
@@ -622,24 +618,20 @@ public final class Context {
 			builder.append("}\n");
 		}
 
-		public static TypeContextEntry create(IType type) {
+		public static TypeContextEntry create(IType type) throws CoreException {
 			final List<TypeMemberContextEntry> members = new ArrayList<>();
-			try {
-				final String typeSignature = Utils.getTypeKeywordLabel(type) + " " + JavaElementLabels.getElementLabel(type, JavaElementLabels.T_FULLY_QUALIFIED);
-				for (final IField field : type.getFields()) {
-					if (!Flags.isPrivate(field.getFlags())) {
-						members.add(TypeMemberContextEntry.create(field));
-					}
+			final String typeSignature = Utils.getTypeKeywordLabel(type) + " " + JavaElementLabels.getElementLabel(type, JavaElementLabels.T_FULLY_QUALIFIED);
+			for (final IField field : type.getFields()) {
+				if (!Flags.isPrivate(field.getFlags())) {
+					members.add(TypeMemberContextEntry.create(field));
 				}
-				for (final IMethod method : type.getMethods()) {
-					if (!Flags.isPrivate(method.getFlags())) {
-						members.add(TypeMemberContextEntry.create(method));
-					}
-				}
-				return new TypeContextEntry(type, typeSignature, members);
-			} catch (final JavaModelException exception) {
-				throw new RuntimeException("Failed to expand type context entry", exception);
 			}
+			for (final IMethod method : type.getMethods()) {
+				if (!Flags.isPrivate(method.getFlags())) {
+					members.add(TypeMemberContextEntry.create(method));
+				}
+			}
+			return new TypeContextEntry(type, typeSignature, members);
 		}
 
 		public static Optional<TypeContextEntry> create(ContextEntryKey key) throws CoreException {

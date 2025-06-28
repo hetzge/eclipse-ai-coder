@@ -140,11 +140,7 @@ public class EclipseUtils {
 		return Optional.empty();
 	}
 
-	public static String getJavadoc(final IJavaElement element) {
-		try {
-			return JavadocContentAccess2.getHTMLContent(element, true);
-		} catch (final CoreException exception) {
-			throw new RuntimeException("Failed to get javadoc for java element", exception);
-		}
+	public static String getJavadoc(final IJavaElement element) throws CoreException {
+		return JavadocContentAccess2.getHTMLContent(element, true);
 	}
 }
