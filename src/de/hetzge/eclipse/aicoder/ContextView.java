@@ -16,10 +16,8 @@ import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.viewers.DecoratingLabelProvider;
-import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IColorProvider;
 import org.eclipse.jface.viewers.IDecorationContext;
-import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.IFontProvider;
 import org.eclipse.jface.viewers.ILabelProviderListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -82,7 +80,6 @@ public class ContextView extends ViewPart {
 		// Create the help context id for the viewer's control
 		this.workbench.getHelpSystem().setHelp(this.viewer.getControl(), "de.hetzge.eclipse.aicoder.viewer");
 		getSite().setSelectionProvider(this.viewer);
-		makeActions();
 		hookContextMenu();
 		hookDoubleClickAction();
 		contributeToActionBars();
@@ -132,6 +129,7 @@ public class ContextView extends ViewPart {
 				manager.add(newAction);
 			} else if (firstEntry instanceof Context.CustomContextEntry) {
 				final Action editAction = new Action("Edit custom context") {
+
 					@Override
 					public void run() {
 						final CustomContextEntry customEntry = (CustomContextEntry) firstEntry;
@@ -154,6 +152,7 @@ public class ContextView extends ViewPart {
 					}
 				};
 				manager.add(editAction);
+
 				final Action removeAction = new Action("Remove custom context") {
 					@Override
 					public void run() {
@@ -232,20 +231,6 @@ public class ContextView extends ViewPart {
 		this.drillDownAdapter.addNavigationActions(manager);
 	}
 
-	private void makeActions() {
-		// Double click action shows preview
-		this.doubleClickAction = new Action() {
-			@Override
-			public void run() {
-				final IStructuredSelection selection = ContextView.this.viewer.getStructuredSelection();
-				if (!selection.isEmpty() && selection.getFirstElement() instanceof ContextEntry) {
-					final ContextEntry entry = (ContextEntry) selection.getFirstElement();
-					showContentPreview(entry);
-				}
-			}
-		};
-	}
-
 	private void showContentPreview(ContextEntry entry) {
 		final Shell shell = this.viewer.getControl().getShell();
 
@@ -257,10 +242,11 @@ public class ContextView extends ViewPart {
 	}
 
 	private void hookDoubleClickAction() {
-		this.viewer.addDoubleClickListener(new IDoubleClickListener() {
-			@Override
-			public void doubleClick(DoubleClickEvent event) {
-				ContextView.this.doubleClickAction.run();
+		this.viewer.addDoubleClickListener(event -> {
+			final IStructuredSelection selection = ContextView.this.viewer.getStructuredSelection();
+			if (!selection.isEmpty() && selection.getFirstElement() instanceof ContextEntry) {
+				final ContextEntry entry = (ContextEntry) selection.getFirstElement();
+				showContentPreview(entry);
 			}
 		});
 	}

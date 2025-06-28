@@ -10,7 +10,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
-import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.DocumentEvent;
 import org.eclipse.jface.text.IDocument;
@@ -39,6 +38,7 @@ import org.eclipse.swt.graphics.FontMetrics;
 import org.eclipse.swt.graphics.GlyphMetrics;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.contexts.IContextActivation;
 import org.eclipse.ui.texteditor.ITextEditor;
 
@@ -122,6 +122,7 @@ public final class InlineCompletionController {
 		// Comment complete "?!" trigger
 		// Cache completion
 
+		final long startTime = System.currentTimeMillis();
 		final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
 		final IDocument document = this.textViewer.getDocument();
 
@@ -129,52 +130,68 @@ public final class InlineCompletionController {
 		this.job = Job.create("AI inline completion", monitor -> {
 			final StringBuilder contextBuilder = new StringBuilder();
 			try {
-				for (final ICompilationUnit unit : EclipseUtils.getCompilationUnit(this.textEditor).stream().toList()) {
-					final RootContextEntry rootContextEntry = RootContextEntry.create(document, unit, modelOffset);
-					ContextEntry.apply(contextBuilder, new TokenCounter(30_000), rootContextEntry);
-					Display.getDefault().asyncExec(() -> {
-						try {
-							ContextView.get().ifPresent(view -> {
-								view.setRootContextEntry(rootContextEntry);
-							});
-						} catch (final CoreException exception) {
-							throw new RuntimeException(exception);
-						}
-					});
-				}
-			} catch (final CoreException | UnsupportedFlavorException | IOException | BadLocationException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				final RootContextEntry rootContextEntry = RootContextEntry.create(document, this.textEditor.getEditorInput(), modelOffset);
+				ContextEntry.apply(contextBuilder, new TokenCounter(30_000), rootContextEntry);
+				Display.getDefault().asyncExec(() -> {
+					try {
+						ContextView.get().ifPresent(view -> {
+							view.setRootContextEntry(rootContextEntry);
+						});
+					} catch (final CoreException exception) {
+						throw new RuntimeException(exception);
+					}
+				});
+			} catch (final CoreException | UnsupportedFlavorException | IOException | BadLocationException exception) {
+				final String stacktrace = Utils.getStacktraceString(exception);
+				addHistoryEntry("", stacktrace, "Error: " + exception.getMessage(), 0, 0);
+				return;
 			}
 
+			int widgetLine;
 			try {
-				final int widgetLine = getWidgetLine(modelOffset);
-				final int widgetOffset = getWidgetOffset(modelOffset);
+				widgetLine = getWidgetLine(modelOffset);
+			} catch (final BadLocationException exception) {
+				AiCoderActivator.log().error("AI Coder completion failed", exception);
+				final String stacktrace = Utils.getStacktraceString(exception);
+				addHistoryEntry("", stacktrace, "Error: " + exception.getMessage(), 0, 0);
+				return;
+			}
+			final int widgetOffset = getWidgetOffset(modelOffset);
 
-				final int lineHeight = Display.getDefault().syncCall(() -> InlineCompletionController.this.textViewer.getTextWidget().getLineHeight());
-				final int defaultLineSpacing = Display.getDefault().syncCall(() -> InlineCompletionController.this.textViewer.getTextWidget().getLineSpacing());
+			final int lineHeight = Display.getDefault().syncCall(() -> InlineCompletionController.this.textViewer.getTextWidget().getLineHeight());
+			final int defaultLineSpacing = Display.getDefault().syncCall(() -> InlineCompletionController.this.textViewer.getTextWidget().getLineSpacing());
 
-				if (monitor.isCanceled()) {
-					return;
-				}
-				final String contextString = contextBuilder.toString();
-				final String[] contextParts = contextString.split(Context.SuffixContextEntry.FILL_HERE_PLACEHOLDER);
-				final String input = contextString; // Use full context as input
+			if (monitor.isCanceled()) {
+				return;
+			}
+			final String contextString = contextBuilder.toString();
+			final String[] contextParts = contextString.split(Context.SuffixContextEntry.FILL_HERE_PLACEHOLDER);
+			final String input = contextString; // Use full context as input
 
-				final long startTime = System.currentTimeMillis();
+			try {
 				final String prefix = contextParts[0];
 				final String suffix = contextParts.length > 1 ? contextParts[1] : "";
+				final long llmStartTime = System.currentTimeMillis();
 				final String content = LlmUtils.execute(prefix, suffix);
 				final long duration = System.currentTimeMillis() - startTime;
-
+				final long llmDuration = System.currentTimeMillis() - llmStartTime;
 				if (!content.isBlank()) {
 					setup(Completion.create(document, modelOffset, widgetOffset, widgetLine, content, lineHeight, defaultLineSpacing));
-					addHistoryEntry(input, content, duration, EclipseUtils.getCompilationUnit(this.textEditor).get());
 				}
-			} catch (final IOException exception) {
-				throw new CoreException(Status.error("Failed to compute inline completion", exception));
-			} catch (final BadLocationException exception) {
-				throw new CoreException(Status.error("Failed to compute inline completion", exception));
+				String status;
+				if (modelOffset != EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor)) {
+					status = "Moved";
+				} else if (content.isBlank()) {
+					status = "Blank";
+				} else {
+					status = "Generated";
+				}
+				addHistoryEntry(input, content, status, duration, llmDuration);
+			} catch (final IOException | BadLocationException exception) {
+				AiCoderActivator.log().error("AI Coder completion failed", exception);
+				final long duration = System.currentTimeMillis() - startTime;
+				final String stacktrace = Utils.getStacktraceString(exception);
+				addHistoryEntry(input, stacktrace, "Error: " + exception.getMessage(), duration, 0);
 			}
 		});
 		this.job.schedule();
@@ -196,42 +213,40 @@ public final class InlineCompletionController {
 		}
 	}
 
-	private void addHistoryEntry(String input, String output, long duration, ICompilationUnit unit) {
+	private void addHistoryEntry(String input, String output, String status, long duration, long llmDuration) {
 		Display.getDefault().asyncExec(() -> {
-			try {
-				final String filePath = unit.getPath().toString();
+			final IEditorInput editorInput = this.textEditor.getEditorInput();
+			final String filePath = editorInput.getName();
 
-				// Calculate input stats
-				final String[] inputWords = input.split("\\s+");
-				final int inputWordCount = inputWords.length;
-				final long inputLineCount = input.lines().count();
+			// Calculate input stats
+			final String[] inputWords = input.split("\\s+");
+			final int inputWordCount = inputWords.length;
+			final long inputLineCount = input.lines().count();
 
-				// Calculate output stats
-				final String[] outputWords = output.split("\\s+");
-				final int outputWordCount = outputWords.length;
-				final long outputLineCount = output.lines().count();
+			// Calculate output stats
+			final String[] outputWords = output.split("\\s+");
+			final int outputWordCount = outputWords.length;
+			final long outputLineCount = output.lines().count();
 
-				final AiCoderHistoryEntry entry = new AiCoderHistoryEntry(
-						LocalDateTime.now(),
-						AiCoderPreferences.getAiProvider(),
-						filePath,
-						"Generated",
-						input,
-						input.length(),
-						inputWordCount,
-						(int) inputLineCount,
-						output,
-						output.length(),
-						outputWordCount,
-						(int) outputLineCount,
-						duration);
+			final AiCoderHistoryEntry entry = new AiCoderHistoryEntry(
+					LocalDateTime.now(),
+					AiCoderPreferences.getAiProvider(),
+					filePath,
+					status,
+					input,
+					input.length(),
+					inputWordCount,
+					(int) inputLineCount,
+					output,
+					output.length(),
+					outputWordCount,
+					(int) outputLineCount,
+					duration,
+					llmDuration);
 
-				AiCoderHistoryView.get().ifPresent(view -> {
-					view.addHistoryEntry(entry);
-				});
-			} catch (final CoreException exception) {
-				AiCoderActivator.log().error("Failed to add history entry", exception);
-			}
+			AiCoderHistoryView.get().ifPresent(view -> {
+				view.addHistoryEntry(entry);
+			});
 		});
 	}
 
@@ -242,7 +257,8 @@ public final class InlineCompletionController {
 		Display.getDefault().asyncExec(() -> this.textViewer.invalidateTextPresentation());
 	}
 
-	public void abort() {
+	public boolean abort() {
+		this.textViewer.invalidateTextPresentation();
 		if (this.job != null) {
 			AiCoderActivator.log().info("Abort job");
 			this.job.cancel();
@@ -260,8 +276,9 @@ public final class InlineCompletionController {
 		if (this.completion != null) {
 			AiCoderActivator.log().info("Unset completion");
 			this.completion = null;
+			return true;
 		}
-		this.textViewer.invalidateTextPresentation();
+		return false;
 	}
 
 	public void accept() throws CoreException {

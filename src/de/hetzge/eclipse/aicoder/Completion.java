@@ -12,15 +12,21 @@ public record Completion(
 		String firstLineContent,
 		String content,
 		/*
-		 * if the completion is not the end of the line, this contains the next letter
-		 * (otherwise null)
+		 * if the completion is not the end of the line, this contains the next letter (otherwise null)
 		 */
 		String firstLineSuffixCharacter,
 		int lineSpacing,
 		int lineHeight) {
 
 	public static Completion create(IDocument document, int modelOffset, int widgetOffset, int widgetLine, String content, int lineHeight, int defaultLineSpacing) throws BadLocationException {
-		final int lineSuffixLength = document.getLineOffset(document.getLineOfOffset(modelOffset) + 1) - modelOffset - 1; // -1 = "\n"
+		final int line = document.getLineOfOffset(modelOffset);
+		final int nextLine = line + 1;
+		final int lineSuffixLength;
+		if (nextLine < document.getNumberOfLines()) {
+			lineSuffixLength = document.getLineOffset(nextLine) - modelOffset - document.getLineDelimiter(line).length();
+		} else {
+			lineSuffixLength = document.getLength() - modelOffset;
+		}
 		final String lineSuffix = document.get(modelOffset, lineSuffixLength);
 		final String firstLineSuffixCharacter = !lineSuffix.isBlank() ? lineSuffix.substring(0, 1) : null;
 		String firstLineContent = content.lines().findFirst().orElse("");

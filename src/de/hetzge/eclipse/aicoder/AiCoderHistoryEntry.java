@@ -18,6 +18,7 @@ public class AiCoderHistoryEntry {
 	private final int outputWordCount;
 	private final int outputLineCount;
 	private final long durationMs;
+	private final long llmDurationMs;
 
 	public AiCoderHistoryEntry(
 			LocalDateTime timestamp,
@@ -32,7 +33,8 @@ public class AiCoderHistoryEntry {
 			int outputCharacterCount,
 			int outputWordCount,
 			int outputLineCount,
-			long durationMs) {
+			long durationMs,
+			long llmDurationMs) {
 		this.timestamp = timestamp;
 		this.provider = provider;
 		this.file = file;
@@ -46,6 +48,7 @@ public class AiCoderHistoryEntry {
 		this.outputWordCount = outputWordCount;
 		this.outputLineCount = outputLineCount;
 		this.durationMs = durationMs;
+		this.llmDurationMs = llmDurationMs;
 	}
 
 	public LocalDateTime getTimestamp() {
@@ -105,10 +108,18 @@ public class AiCoderHistoryEntry {
 	}
 
 	public String getFormattedDuration() {
-		if (this.durationMs < 1000) {
-			return this.durationMs + "ms";
+		return formattedDuration(this.durationMs);
+	}
+
+	public String getFormattedLlmDuration() {
+		return formattedDuration(this.llmDurationMs);
+	}
+
+	private static String formattedDuration(long milliseconds) {
+		if (milliseconds < 1000) {
+			return milliseconds + "ms";
 		} else {
-			return String.format("%.1fs", this.durationMs / 1000.0);
+			return String.format("%.1fs", milliseconds / 1000.0);
 		}
 	}
 

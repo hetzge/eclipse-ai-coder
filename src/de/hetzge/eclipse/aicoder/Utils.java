@@ -1,5 +1,8 @@
 package de.hetzge.eclipse.aicoder;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 import org.eclipse.jdt.core.Flags;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaModelException;
@@ -81,6 +84,13 @@ public final class Utils {
 		} catch (final JavaModelException exception) {
 			return false;
 		}
+	}
+
+	public static String getStacktraceString(final Throwable throwable) {
+		final StringWriter stringWriter = new StringWriter();
+		final PrintWriter printWriter = new PrintWriter(stringWriter);
+		throwable.printStackTrace(printWriter);
+		return stringWriter.toString();
 	}
 
 }

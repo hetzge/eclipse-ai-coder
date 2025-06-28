@@ -129,8 +129,7 @@ public class EclipseUtils {
 		return null;
 	}
 
-	public static Optional<ICompilationUnit> getCompilationUnit(ITextEditor textEditor) {
-		final IEditorInput editorInput = textEditor.getEditorInput();
+	public static Optional<ICompilationUnit> getCompilationUnit(IEditorInput editorInput) {
 		if (editorInput instanceof final FileEditorInput fileEditorInput) {
 			final IFile file = fileEditorInput.getFile();
 			final IJavaElement element = JavaCore.create(file);

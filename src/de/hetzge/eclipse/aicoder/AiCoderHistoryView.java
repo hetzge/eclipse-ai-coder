@@ -69,18 +69,18 @@ public class AiCoderHistoryView extends ViewPart {
 		this.viewer.setContentProvider(ArrayContentProvider.getInstance());
 
 		hookContextMenu();
+		hookDoubleClickAction();
 	}
 
 	private void hookContextMenu() {
-		final Shell shell = this.viewer.getControl().getShell();
+
 		final MenuManager menuManager = new MenuManager("#PopupMenu");
 		menuManager.setRemoveAllWhenShown(true);
 		menuManager.addMenuListener(manager -> {
 			manager.add(new Action("Input") {
 				@Override
 				public void run() {
-					new ContentPreviewDialog(shell, "Input", ((AiCoderHistoryEntry) AiCoderHistoryView.this.viewer.getStructuredSelection().getFirstElement()).getInput())
-							.open();
+					openInputDialog();
 				}
 			});
 		});
@@ -88,14 +88,31 @@ public class AiCoderHistoryView extends ViewPart {
 			manager.add(new Action("Output") {
 				@Override
 				public void run() {
-					new ContentPreviewDialog(shell, "Output", ((AiCoderHistoryEntry) AiCoderHistoryView.this.viewer.getStructuredSelection().getFirstElement()).getOutput())
-							.open();
+					openOutputDialog();
 				}
 			});
 		});
 		final Menu menu = menuManager.createContextMenu(this.viewer.getControl());
 		this.viewer.getControl().setMenu(menu);
 		getSite().registerContextMenu(menuManager, this.viewer);
+	}
+
+	private void hookDoubleClickAction() {
+		this.viewer.addDoubleClickListener(event -> {
+			openOutputDialog();
+		});
+	}
+
+	private void openInputDialog() {
+		final Shell shell = this.viewer.getControl().getShell();
+		new ContentPreviewDialog(shell, "Input", ((AiCoderHistoryEntry) AiCoderHistoryView.this.viewer.getStructuredSelection().getFirstElement()).getInput())
+				.open();
+	}
+
+	private void openOutputDialog() {
+		final Shell shell = this.viewer.getControl().getShell();
+		new ContentPreviewDialog(shell, "Output", ((AiCoderHistoryEntry) AiCoderHistoryView.this.viewer.getStructuredSelection().getFirstElement()).getOutput())
+				.open();
 	}
 
 	public void addHistoryEntry(AiCoderHistoryEntry entry) {
@@ -114,9 +131,17 @@ public class AiCoderHistoryView extends ViewPart {
 		this.viewer.refresh();
 	}
 
+	public void setLatestRejected() {
+		if (this.historyEntries.isEmpty()) {
+			return;
+		}
+		this.historyEntries.get(0).setStatus("Rejected");
+		this.viewer.refresh();
+	}
+
 	private void createColumns() {
 		// Timestamp column
-		TableViewerColumn column = createTableViewerColumn("Timestamp", 150);
+		TableViewerColumn column = createTableViewerColumn("Timestamp", 175);
 		column.setLabelProvider(new ColumnLabelProvider() {
 			@Override
 			public String getText(Object element) {
@@ -126,7 +151,7 @@ public class AiCoderHistoryView extends ViewPart {
 		});
 
 		// Provider column
-		column = createTableViewerColumn("Provider", 100);
+		column = createTableViewerColumn("Provider", 80);
 		column.setLabelProvider(new ColumnLabelProvider() {
 			@Override
 			public String getText(Object element) {
@@ -136,7 +161,7 @@ public class AiCoderHistoryView extends ViewPart {
 		});
 
 		// File column
-		column = createTableViewerColumn("File", 200);
+		column = createTableViewerColumn("File", 220);
 		column.setLabelProvider(new ColumnLabelProvider() {
 			@Override
 			public String getText(Object element) {
@@ -146,7 +171,7 @@ public class AiCoderHistoryView extends ViewPart {
 		});
 
 		// Input character count column
-		column = createTableViewerColumn("Input Chars", 80);
+		column = createTableViewerColumn("Input Chars", 60);
 		column.setLabelProvider(new ColumnLabelProvider() {
 			@Override
 			public String getText(Object element) {
@@ -156,7 +181,7 @@ public class AiCoderHistoryView extends ViewPart {
 		});
 
 		// Input word count column
-		column = createTableViewerColumn("Input Words", 80);
+		column = createTableViewerColumn("Input Words", 60);
 		column.setLabelProvider(new ColumnLabelProvider() {
 			@Override
 			public String getText(Object element) {
@@ -166,7 +191,7 @@ public class AiCoderHistoryView extends ViewPart {
 		});
 
 		// Input line count column
-		column = createTableViewerColumn("Input Lines", 80);
+		column = createTableViewerColumn("Input Lines", 60);
 		column.setLabelProvider(new ColumnLabelProvider() {
 			@Override
 			public String getText(Object element) {
@@ -176,7 +201,7 @@ public class AiCoderHistoryView extends ViewPart {
 		});
 
 		// Output character count column
-		column = createTableViewerColumn("Output Chars", 80);
+		column = createTableViewerColumn("Output Chars", 60);
 		column.setLabelProvider(new ColumnLabelProvider() {
 			@Override
 			public String getText(Object element) {
@@ -186,7 +211,7 @@ public class AiCoderHistoryView extends ViewPart {
 		});
 
 		// Output word count column
-		column = createTableViewerColumn("Output Words", 80);
+		column = createTableViewerColumn("Output Words", 60);
 		column.setLabelProvider(new ColumnLabelProvider() {
 			@Override
 			public String getText(Object element) {
@@ -196,7 +221,7 @@ public class AiCoderHistoryView extends ViewPart {
 		});
 
 		// Output line count column
-		column = createTableViewerColumn("Output Lines", 80);
+		column = createTableViewerColumn("Output Lines", 60);
 		column.setLabelProvider(new ColumnLabelProvider() {
 			@Override
 			public String getText(Object element) {
@@ -206,12 +231,22 @@ public class AiCoderHistoryView extends ViewPart {
 		});
 
 		// Duration column
-		column = createTableViewerColumn("Duration", 80);
+		column = createTableViewerColumn("Duration", 60);
 		column.setLabelProvider(new ColumnLabelProvider() {
 			@Override
 			public String getText(Object element) {
 				final AiCoderHistoryEntry entry = (AiCoderHistoryEntry) element;
 				return entry.getFormattedDuration();
+			}
+		});
+
+		// LLM duration column
+		column = createTableViewerColumn("LLM duration", 60);
+		column.setLabelProvider(new ColumnLabelProvider() {
+			@Override
+			public String getText(Object element) {
+				final AiCoderHistoryEntry entry = (AiCoderHistoryEntry) element;
+				return entry.getFormattedLlmDuration();
 			}
 		});
 
@@ -241,7 +276,7 @@ public class AiCoderHistoryView extends ViewPart {
 		this.viewer.getControl().setFocus();
 	}
 
-	public static Optional<AiCoderHistoryView> get() throws CoreException {
+	public static Optional<AiCoderHistoryView> get() {
 		final IWorkbench workbench = PlatformUI.getWorkbench();
 		return workbench.getDisplay().syncCall(() -> {
 			return Optional.ofNullable(workbench.getActiveWorkbenchWindow().getActivePage().findView(ID))

@@ -40,6 +40,7 @@ import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
 
@@ -508,17 +509,22 @@ public final class Context {
 			return new ContextEntryKey(PREFIX, "ROOT");
 		}
 
-		public static RootContextEntry create(IDocument document, ICompilationUnit unit, int offset) throws BadLocationException, UnsupportedFlavorException, IOException, CoreException {
-			return new RootContextEntry(List.of(
-					StickyContextEntry.create(),
-					UserContextEntry.create(),
-					ScopeContextEntry.create(unit, offset),
-					ImportsContextEntry.create(unit),
-					PackageContextEntry.create(unit),
-					ClipboardContextEntry.create(),
-					PrefixContextEntry.create(document, offset),
-					SuffixContextEntry.create(document, offset),
-					BlacklistedContextEntry.create()));
+		public static RootContextEntry create(IDocument document, IEditorInput editorInput, int offset) throws BadLocationException, UnsupportedFlavorException, IOException, CoreException {
+			final Optional<ICompilationUnit> compilationUnitOptional = EclipseUtils.getCompilationUnit(editorInput);
+			final List<ContextEntry> entries = new ArrayList<>();
+			entries.add(StickyContextEntry.create());
+			entries.add(UserContextEntry.create());
+			if (compilationUnitOptional.isPresent()) {
+				final ICompilationUnit unit = compilationUnitOptional.get();
+				entries.add(ScopeContextEntry.create(unit, offset));
+				entries.add(ImportsContextEntry.create(unit));
+				entries.add(PackageContextEntry.create(unit));
+			}
+			entries.add(ClipboardContextEntry.create());
+			entries.add(PrefixContextEntry.create(document, offset));
+			entries.add(SuffixContextEntry.create(document, offset));
+			entries.add(BlacklistedContextEntry.create());
+			return new RootContextEntry(entries);
 		}
 	}
 
@@ -556,7 +562,7 @@ public final class Context {
 //			if (this.javadoc != null) {
 //				builder.append(this.javadoc);
 //			}
-			builder.append("  ").append(this.signature).append("\n");
+			builder.append("  ").append(this.signature).append(";\n");
 		}
 
 		public static TypeMemberContextEntry create(IJavaElement element) throws JavaModelException {
