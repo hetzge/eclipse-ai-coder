@@ -75,6 +75,13 @@ public class AiCoderPreferencePage extends FieldEditorPreferencePage implements 
 		maxTokensEditor.setValidRange(0, 10000);
 		addField(maxTokensEditor);
 
+		final IntegerFieldEditor debounceInMsEditor = new IntegerFieldEditor(
+				AiCoderPreferences.DEBOUNCE_IN_MS_KEY,
+				"Debounce (in ms):",
+				generalGroup);
+		debounceInMsEditor.setValidRange(0, 10000);
+		addField(debounceInMsEditor);
+
 		// Create the main selection for AI Provider
 		final RadioGroupFieldEditor providerEditor = new RadioGroupFieldEditor(
 				AiCoderPreferences.AI_PROVIDER_PREFERENCE_KEY,

@@ -117,7 +117,8 @@ public final class Context {
 		public String getContent() {
 			return this.childContextEntries.stream()
 					.map(ContextEntry::apply)
-					.collect(Collectors.joining("\n"));
+					// not using "\n" here because prefix/suffix should not be separated by line break
+					.collect(Collectors.joining());
 		}
 
 		public List<? extends ContextEntry> getChildContextEntries() {
@@ -179,6 +180,11 @@ public final class Context {
 		}
 
 		@Override
+		public String getContent() {
+			return super.getContent() + "\n";
+		}
+
+		@Override
 		public ContextEntryKey getKey() {
 			return new ContextEntryKey(PREFIX, PREFIX);
 		}
@@ -226,10 +232,12 @@ public final class Context {
 	public static class PrefixContextEntry extends ContextEntry {
 		public static final String PREFIX = "PREFIX";
 
+		private final String filename;
 		private final String content;
 
-		private PrefixContextEntry(String content, Duration creationDuration) {
+		private PrefixContextEntry(String filename, String content, Duration creationDuration) {
 			super(List.of(), creationDuration);
+			this.filename = filename;
 			this.content = content;
 		}
 
@@ -250,16 +258,16 @@ public final class Context {
 
 		@Override
 		public String getContent() {
-			return this.content;
+			return String.format("File: %s\n%s", this.filename, this.content);
 		}
 
-		public static PrefixContextEntry create(IDocument document, int modelOffset) throws BadLocationException {
+		public static PrefixContextEntry create(String filename, IDocument document, int modelOffset) throws BadLocationException {
 			final long before = System.currentTimeMillis();
 			final int modelLine = document.getLineOfOffset(modelOffset);
 			final int maxLines = AiCoderPreferences.getMaxPrefixSize();
 			final int firstLine = Math.max(0, modelLine - maxLines);
 			final String prefix = document.get(document.getLineOffset(firstLine), modelOffset - document.getLineOffset(firstLine));
-			return new PrefixContextEntry(prefix, Duration.ofMillis(System.currentTimeMillis() - before));
+			return new PrefixContextEntry(filename, prefix, Duration.ofMillis(System.currentTimeMillis() - before));
 		}
 	}
 
@@ -291,15 +299,12 @@ public final class Context {
 
 		@Override
 		public String getContent() {
-			return FILL_HERE_PLACEHOLDER + this.content;
+			return FILL_HERE_PLACEHOLDER + this.content + "\n";
 		}
 
 		public static SuffixContextEntry create(IDocument document, int modelOffset) throws BadLocationException {
 			final long before = System.currentTimeMillis();
-			final int modelLine = document.getLineOfOffset(modelOffset);
-			final int maxLines = AiCoderPreferences.getMaxSuffixSize();
-			final int lastLine = Math.min(document.getNumberOfLines() - 1, modelLine + maxLines);
-			final String suffix = document.get(modelOffset, document.getLineOffset(lastLine) - modelOffset);
+			final String suffix = document.get(modelOffset, document.getLength() - modelOffset);
 			return new SuffixContextEntry(suffix, Duration.ofMillis(System.currentTimeMillis() - before));
 		}
 	}
@@ -318,6 +323,11 @@ public final class Context {
 		@Override
 		public String getLabel() {
 			return this.name;
+		}
+
+		@Override
+		public String getContent() {
+			return super.getContent() + "\n";
 		}
 
 		@Override
@@ -375,6 +385,11 @@ public final class Context {
 		@Override
 		public String getLabel() {
 			return "Imports";
+		}
+
+		@Override
+		public String getContent() {
+			return super.getContent() + "\n";
 		}
 
 		@Override
@@ -461,11 +476,17 @@ public final class Context {
 		}
 
 		@Override
+		public String getContent() {
+			return super.getContent() + "\n";
+		}
+
+		@Override
 		public ContextEntryKey getKey() {
 			return new ContextEntryKey(PREFIX, "ROOT");
 		}
 
 		public static RootContextEntry create(IDocument document, IEditorInput editorInput, int offset) throws BadLocationException, UnsupportedFlavorException, IOException, CoreException {
+			final String filename = EclipseUtils.getFilename(editorInput).orElse("Active File");
 			final long before = System.currentTimeMillis();
 			final Optional<ICompilationUnit> compilationUnitOptional = EclipseUtils.getCompilationUnit(editorInput);
 			final List<ContextEntry> entries = new ArrayList<>();
@@ -478,7 +499,7 @@ public final class Context {
 				entries.add(PackageContextEntry.create(unit));
 			}
 			entries.add(ClipboardContextEntry.create());
-			entries.add(PrefixContextEntry.create(document, offset));
+			entries.add(PrefixContextEntry.create(filename, document, offset));
 			entries.add(SuffixContextEntry.create(document, offset));
 			entries.add(BlacklistedContextEntry.create());
 			return new RootContextEntry(entries, Duration.ofMillis(System.currentTimeMillis() - before));
@@ -517,7 +538,7 @@ public final class Context {
 		@Override
 		public String getContent() {
 			// TODO javadoc
-			return String.format("  %s;", this.signature);
+			return String.format("  %s;\n", this.signature);
 		}
 
 		public static TypeMemberContextEntry create(IJavaElement element) throws CoreException {
@@ -573,7 +594,7 @@ public final class Context {
 
 		@Override
 		public String getContent() {
-			return String.format("%s{\n%s\n}", this.signature, super.getContent());
+			return String.format("%s{\n%s\n}\n", this.signature, super.getContent());
 		}
 
 		public static TypeContextEntry create(IType type) throws CoreException {
@@ -624,6 +645,11 @@ public final class Context {
 		}
 
 		@Override
+		public String getContent() {
+			return super.getContent() + "\n";
+		}
+
+		@Override
 		public Image getImage() {
 			return AiCoderActivator.getImage(AiCoderImageKey.PIN_ICON);
 		}
@@ -653,6 +679,11 @@ public final class Context {
 		@Override
 		String getLabel() {
 			return "Blacklist";
+		}
+
+		@Override
+		public String getContent() {
+			return super.getContent() + "\n";
 		}
 
 		@Override
@@ -687,6 +718,11 @@ public final class Context {
 			return "Custom";
 		}
 
+		@Override
+		public String getContent() {
+			return super.getContent() + "\n";
+		}
+
 		public static UserContextEntry create() {
 			final long before = System.currentTimeMillis();
 			final List<CustomContextEntry> entries = ContextPreferences.getCustomContextEntries();
@@ -714,7 +750,7 @@ public final class Context {
 
 		@Override
 		public String getContent() {
-			return String.format("%s\n%s", this.content, super.getContent());
+			return String.format("%s\n%s\n", this.content, super.getContent());
 		}
 
 		@Override

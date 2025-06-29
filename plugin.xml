@@ -9,10 +9,19 @@
    </extension>
 
 	<extension point="org.eclipse.ui.commands">
+  <command
+        categoryId="de.hetzge.eclipse.codestral.commands.inlineCompletion"
+        id="de.hetzge.eclipse.codestral.commands.toggleMultiline"
+        name="Multiline Completion">
+     <state
+           class="org.eclipse.jface.commands.ToggleState"
+           id="org.eclipse.ui.commands.toggleState">
+     </state>
+  </command>
 		<category
-			id="de.hetzge.eclipse.codestral.commands.inlineCompletion"
-			name="AI Code Completion">
-		</category>
+        id="de.hetzge.eclipse.codestral.commands.inlineCompletion"
+        name="AI Code Completion">
+  </category>
 		<command
 			categoryId="de.hetzge.eclipse.codestral.commands.inlineCompletion"
 			name="Trigger Inline Completion"
@@ -43,6 +52,10 @@
 			class="de.hetzge.eclipse.aicoder.handler.DismissHandler"
 			commandId="de.hetzge.eclipse.codestral.commands.inlineCompletion.dismiss">
 		</handler>
+  <handler
+        class="de.hetzge.eclipse.aicoder.handler.ToggleMultilineHandler"
+        commandId="de.hetzge.eclipse.codestral.commands.toggleMultiline">
+  </handler>
 	</extension>
 
 	<extension point="org.eclipse.ui.contexts">

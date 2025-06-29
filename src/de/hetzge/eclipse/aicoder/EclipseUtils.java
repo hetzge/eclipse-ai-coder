@@ -25,6 +25,14 @@ import org.eclipse.ui.part.FileEditorInput;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 public class EclipseUtils {
+
+	public static Optional<String> getFilename(IEditorInput editorInput) {
+		if (editorInput instanceof final FileEditorInput fileEditorInput) {
+			return Optional.of(fileEditorInput.getFile().getLocation().toPath().toString());
+		}
+		return Optional.empty();
+	}
+
 	public static IWorkbenchPage getActiveWorkbenchPage() {
 		final IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
 		if (window != null) {

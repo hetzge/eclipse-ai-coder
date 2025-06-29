@@ -3,8 +3,11 @@ package de.hetzge.eclipse.aicoder;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.core.runtime.CoreException;
@@ -131,8 +134,9 @@ public final class InlineCompletionController {
 			try {
 				rootContextEntry = RootContextEntry.create(document, this.textEditor.getEditorInput(), modelOffset);
 			} catch (final CoreException | UnsupportedFlavorException | IOException | BadLocationException exception) {
+				AiCoderActivator.log().error("AI Coder completion failed", exception);
 				final String stacktrace = Utils.getStacktraceString(exception);
-				addHistoryEntry("", stacktrace, "Error: " + exception.getMessage(), 0, 0);
+				addHistoryEntry("", stacktrace, "Error: " + Optional.ofNullable(exception.getMessage()).orElse("-"), 0, 0);
 				return;
 			}
 
@@ -142,7 +146,7 @@ public final class InlineCompletionController {
 			} catch (final BadLocationException exception) {
 				AiCoderActivator.log().error("AI Coder completion failed", exception);
 				final String stacktrace = Utils.getStacktraceString(exception);
-				addHistoryEntry("", stacktrace, "Error: " + exception.getMessage(), 0, 0);
+				addHistoryEntry("", stacktrace, "Error: " + Optional.ofNullable(exception.getMessage()).orElse("-"), 0, 0);
 				return;
 			}
 			final int widgetOffset = getWidgetOffset(modelOffset);
@@ -168,13 +172,16 @@ public final class InlineCompletionController {
 				final String content = LlmUtils.execute(prefix, suffix);
 				final long duration = System.currentTimeMillis() - startTime;
 				final long llmDuration = System.currentTimeMillis() - llmStartTime;
-				if (!content.isBlank()) {
+				final int currentModelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
+				final boolean isBlank = content.isBlank();
+				final boolean isMoved = currentModelOffset != modelOffset;
+				if (!isBlank && !isMoved) {
 					setup(Completion.create(document, modelOffset, widgetOffset, widgetLine, content, lineHeight, defaultLineSpacing));
 				}
 				String status;
-				if (modelOffset != EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor)) {
+				if (isMoved) {
 					status = "Moved";
-				} else if (content.isBlank()) {
+				} else if (isBlank) {
 					status = "Blank";
 				} else {
 					status = "Generated";
@@ -184,7 +191,7 @@ public final class InlineCompletionController {
 				AiCoderActivator.log().error("AI Coder completion failed", exception);
 				final long duration = System.currentTimeMillis() - startTime;
 				final String stacktrace = Utils.getStacktraceString(exception);
-				addHistoryEntry(input, stacktrace, "Error: " + exception.getMessage(), duration, 0);
+				addHistoryEntry(input, stacktrace, "Error: " + Optional.ofNullable(exception.getMessage()).orElse("-"), duration, 0);
 			}
 		});
 		this.job.schedule();
@@ -257,13 +264,14 @@ public final class InlineCompletionController {
 
 	private void setup(Completion completion) {
 		AiCoderActivator.log().info("Activate context");
-		this.context = EclipseUtils.getContextService(this.textEditor).activateContext("de.hetzge.eclipse.codestral.inlineCompletionVisible");
 		this.completion = completion;
-		Display.getDefault().asyncExec(() -> this.textViewer.invalidateTextPresentation());
+		Display.getDefault().syncExec(() -> {
+			this.context = EclipseUtils.getContextService(this.textEditor).activateContext("de.hetzge.eclipse.codestral.inlineCompletionVisible");
+		});
 	}
 
 	public boolean abort() {
-		this.textViewer.invalidateTextPresentation();
+		this.paintListener.resetMetrics();
 		if (this.job != null) {
 			AiCoderActivator.log().info("Abort job");
 			this.job.cancel();
@@ -316,17 +324,25 @@ public final class InlineCompletionController {
 	}
 
 	private class KeyListenerImplementation implements KeyListener {
-		private static final int DEBOUNCE_DELAY_IN_MILLISECONDS = 50;
+
+		private final Set<Integer> activeKeyCodes;
+
+		public KeyListenerImplementation() {
+			this.activeKeyCodes = new HashSet<>();
+		}
 
 		@Override
 		public void keyPressed(KeyEvent event) {
+			this.activeKeyCodes.add(event.keyCode);
 		}
 
 		@Override
 		public void keyReleased(KeyEvent event) {
+			final boolean isCommandDown = this.activeKeyCodes.stream().anyMatch(this::isCommandKey);
+			this.activeKeyCodes.remove(event.keyCode);
 			abort();
-			// Ignore "esc"
-			if (event.keyCode == 27) {
+			// Ignore command keys
+			if (isCommandDown) {
 				return;
 			}
 			// Handle "tab" only if no completion context is active
@@ -339,7 +355,7 @@ public final class InlineCompletionController {
 						trigger();
 					}
 				};
-				Display.getCurrent().timerExec(DEBOUNCE_DELAY_IN_MILLISECONDS, InlineCompletionController.this.debounceRunnable);
+				Display.getCurrent().timerExec((int) AiCoderPreferences.getDebounceDuration().toMillis(), InlineCompletionController.this.debounceRunnable);
 			}
 		}
 
@@ -357,6 +373,14 @@ public final class InlineCompletionController {
 				throw new RuntimeException("Failed to check if line suffix is blank", exception);
 			}
 		}
+
+		private boolean isCommandKey(int keyCode) {
+			return keyCode == SWT.CTRL
+					|| keyCode == SWT.ALT
+					|| keyCode == SWT.SHIFT
+					|| keyCode == SWT.COMMAND
+					|| keyCode == SWT.ESC;
+		}
 	}
 
 	private class StyledTextLineSpacingProviderImplementation implements StyledTextLineSpacingProvider {
@@ -371,6 +395,12 @@ public final class InlineCompletionController {
 	}
 
 	private class PaintListenerImplementation implements PaintListener {
+		private final Set<GlyphMetrics> modifiedMetrics;
+
+		public PaintListenerImplementation() {
+			this.modifiedMetrics = new HashSet<>();
+		}
+
 		@Override
 		public void paintControl(PaintEvent event) {
 			final Completion completion = InlineCompletionController.this.completion;
@@ -390,16 +420,41 @@ public final class InlineCompletionController {
 					if (completion.firstLineSuffixCharacter() != null) {
 						final int suffixCharacterWidth = event.gc.textExtent(completion.firstLineSuffixCharacter()).x;
 						final int contentWidth = event.gc.textExtent(completion.firstLineContent()).x;
-						final FontMetrics fontMetrics = event.gc.getFontMetrics();
-						final StyleRange styleRange = new StyleRange(completion.widgetOffset(), 1, null, null);
-						styleRange.metrics = new GlyphMetrics(fontMetrics.getAscent(), fontMetrics.getDescent(), contentWidth + suffixCharacterWidth);
-						widget.setStyleRange(styleRange);
+						final StyleRange styleRange = widget.getStyleRangeAtOffset(completion.widgetOffset());
+						final int metricWidth = contentWidth + suffixCharacterWidth;
+						if (needMetricUpdate(styleRange, metricWidth)) {
+							updateMetrics(event, completion, widget, metricWidth);
+						}
 						event.gc.drawText(completion.firstLineSuffixCharacter(), location.x + contentWidth, location.y, false);
 					}
 				} else {
 					event.gc.drawText(line.replace("\t", " ".repeat(InlineCompletionController.this.widget.getTabs())), 0, location.y + i * completion.lineHeight(), true);
 				}
 			}
+		}
+
+		private boolean needMetricUpdate(final StyleRange styleRange, final int metricWidth) {
+			return styleRange == null || styleRange.metrics == null || styleRange.metrics.width != metricWidth;
+		}
+
+		private void updateMetrics(PaintEvent event, Completion completion, StyledText widget, int metricWidth) {
+			final FontMetrics fontMetrics = event.gc.getFontMetrics();
+			final StyleRange newStyleRange = new StyleRange(completion.widgetOffset(), 1, null, null);
+			newStyleRange.metrics = new GlyphMetrics(fontMetrics.getAscent(), fontMetrics.getDescent(), metricWidth);
+			widget.setStyleRange(newStyleRange);
+			this.modifiedMetrics.add(newStyleRange.metrics);
+		}
+
+		public void resetMetrics() {
+			final StyledText widget = InlineCompletionController.this.textViewer.getTextWidget();
+			final StyleRange[] styleRanges = widget.getStyleRanges();
+			for (final StyleRange styleRange : styleRanges) {
+				if (this.modifiedMetrics.contains(styleRange.metrics)) {
+					styleRange.metrics = null;
+					widget.setStyleRange(styleRange);
+				}
+			}
+			this.modifiedMetrics.clear();
 		}
 	}
 

@@ -1,5 +1,7 @@
 package de.hetzge.eclipse.aicoder;
 
+import java.time.Duration;
+
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
 import org.eclipse.jface.preference.IPreferenceStore;
 
@@ -17,6 +19,7 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String MAX_PREFIX_SIZE_KEY = "de.hetzge.eclipse.aicoder.max_prefix_size";
 	public static final String MAX_SUFFIX_SIZE_KEY = "de.hetzge.eclipse.aicoder.max_suffix_size";
 	public static final String MAX_TOKENS_KEY = "de.hetzge.eclipse.aicoder.max_tokens";
+	public static final String DEBOUNCE_IN_MS_KEY = "de.hetzge.eclipse.aicoder.debounce_in_ms";
 
 	@Override
 	public void initializeDefaultPreferences() {
@@ -32,6 +35,7 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(MAX_PREFIX_SIZE_KEY, 1000);
 		store.setDefault(MAX_SUFFIX_SIZE_KEY, 1000);
 		store.setDefault(MAX_TOKENS_KEY, 1024);
+		store.setDefault(DEBOUNCE_IN_MS_KEY, 400);
 	}
 
 	public static AiProvider getAiProvider() {
@@ -49,6 +53,10 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 
 	public static boolean isMultilineEnabled() {
 		return AiCoderActivator.getDefault().getPreferenceStore().getBoolean(ENABLE_MULTILINE_PREFERENCE_KEY);
+	}
+
+	public static void setMultilineEnabled(boolean enabled) {
+		AiCoderActivator.getDefault().getPreferenceStore().setValue(ENABLE_MULTILINE_PREFERENCE_KEY, enabled);
 	}
 
 	public static String getOpenAiBaseUrl() {
@@ -77,5 +85,9 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 
 	public static int getMaxTokens() {
 		return AiCoderActivator.getDefault().getPreferenceStore().getInt(MAX_TOKENS_KEY);
+	}
+
+	public static Duration getDebounceDuration() {
+		return Duration.ofMillis(AiCoderActivator.getDefault().getPreferenceStore().getInt(DEBOUNCE_IN_MS_KEY));
 	}
 }

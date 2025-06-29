@@ -38,6 +38,8 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.menus.CommandContributionItem;
+import org.eclipse.ui.menus.CommandContributionItemParameter;
 import org.eclipse.ui.part.DrillDownAdapter;
 import org.eclipse.ui.part.ViewPart;
 
@@ -45,6 +47,7 @@ import de.hetzge.eclipse.aicoder.Context.ContextEntry;
 import de.hetzge.eclipse.aicoder.Context.ContextEntryKey;
 import de.hetzge.eclipse.aicoder.Context.CustomContextEntry;
 import de.hetzge.eclipse.aicoder.Context.EmptyContextEntry;
+import de.hetzge.eclipse.aicoder.handler.ToggleMultilineHandler;
 import jakarta.inject.Inject;
 
 public class ContextView extends ViewPart {
@@ -55,8 +58,6 @@ public class ContextView extends ViewPart {
 
 	private TreeViewer viewer;
 	private DrillDownAdapter drillDownAdapter;
-	private Action doubleClickAction;
-
 	private ContextEntry rootContextEntry;
 
 	public void setRootContextEntry(ContextEntry rootContextEntry) {
@@ -82,6 +83,14 @@ public class ContextView extends ViewPart {
 		hookContextMenu();
 		hookDoubleClickAction();
 		contributeToActionBars();
+
+		final IMenuManager menuManager = getViewSite().getActionBars().getMenuManager();
+		menuManager.add(new CommandContributionItem(
+				new CommandContributionItemParameter(
+						PlatformUI.getWorkbench(),
+						null,
+						ToggleMultilineHandler.COMMAND_ID,
+						CommandContributionItem.STYLE_CHECK)));
 	}
 
 	private void hookContextMenu() {
