@@ -113,6 +113,7 @@ public final class InlineCompletionController {
 		this.completion = null;
 		this.context = null;
 		this.job = null;
+		this.debounceRunnable = null;
 	}
 
 	private void triggerAutocomplete() {

@@ -200,14 +200,24 @@ public final class Context {
 			final CompilationUnit parsedUnit = parseUnit(unit);
 			for (final IBinding binding : getBindingsInScope(parsedUnit, offset)) {
 				if (binding.getJavaElement() instanceof final IType type) {
-					if (Utils.checkType(type)) {
-						entries.add(TypeContextEntry.create(type));
+					final String fullyQualifiedName = type.getFullyQualifiedName();
+					if (AiCoderPreferences.isIgnoreJreClasses() && JdkUtils.isJREPackage(fullyQualifiedName)) {
+						continue;
 					}
+					if (!Utils.checkType(type)) {
+						continue;
+					}
+					entries.add(TypeContextEntry.create(type));
 				} else if (binding.getJavaElement() instanceof final ILocalVariable localVariable) {
 					final IType type = localVariable.getJavaProject().findType(Signature.toString(localVariable.getTypeSignature()));
-					if (type != null) {
-						entries.add(TypeContextEntry.create(type));
+					if (!Utils.checkType(type)) {
+						continue;
 					}
+					final String fullyQualifiedName = type.getFullyQualifiedName();
+					if (AiCoderPreferences.isIgnoreJreClasses() && JdkUtils.isJREPackage(fullyQualifiedName)) {
+						continue;
+					}
+					entries.add(TypeContextEntry.create(type));
 				} else {
 					AiCoderActivator.log().info("Skip binding: " + binding.getKey() + "/" + (binding.getJavaElement() != null ? binding.getJavaElement().getClass().getName() : "-"));
 				}
@@ -407,12 +417,17 @@ public final class Context {
 			final List<TypeContextEntry> entries = new ArrayList<>();
 			for (final IImportDeclaration importDeclaration : unit.getImports()) {
 				final String elementName = importDeclaration.getElementName();
-				if (!importDeclaration.isOnDemand()) {
-					final IType type = unit.getJavaProject().findType(elementName);
-					if (Utils.checkType(type)) {
-						entries.add(TypeContextEntry.create(type));
-					}
+				if (AiCoderPreferences.isIgnoreJreClasses() && JdkUtils.isJREPackage(elementName)) {
+					continue;
 				}
+				if (!importDeclaration.isOnDemand()) {
+					continue;
+				}
+				final IType type = unit.getJavaProject().findType(elementName);
+				if (!Utils.checkType(type)) {
+					continue;
+				}
+				entries.add(TypeContextEntry.create(type));
 			}
 			return new ImportsContextEntry(entries, Duration.ofMillis(System.currentTimeMillis() - before));
 		}

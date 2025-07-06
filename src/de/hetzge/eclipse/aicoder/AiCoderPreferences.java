@@ -19,6 +19,7 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String MAX_PREFIX_SIZE_KEY = "de.hetzge.eclipse.aicoder.max_prefix_size";
 	public static final String MAX_SUFFIX_SIZE_KEY = "de.hetzge.eclipse.aicoder.max_suffix_size";
 	public static final String MAX_TOKENS_KEY = "de.hetzge.eclipse.aicoder.max_tokens";
+	public static final String IGNORE_JRE_CLASSES_KEY = "de.hetzge.eclipse.aicoder.ignore_jre_classes";
 	public static final String DEBOUNCE_IN_MS_KEY = "de.hetzge.eclipse.aicoder.debounce_in_ms";
 
 	@Override
@@ -35,6 +36,7 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(MAX_PREFIX_SIZE_KEY, 1000);
 		store.setDefault(MAX_SUFFIX_SIZE_KEY, 1000);
 		store.setDefault(MAX_TOKENS_KEY, 1024);
+		store.setDefault(IGNORE_JRE_CLASSES_KEY, true);
 		store.setDefault(DEBOUNCE_IN_MS_KEY, 400);
 	}
 
@@ -85,6 +87,10 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 
 	public static int getMaxTokens() {
 		return AiCoderActivator.getDefault().getPreferenceStore().getInt(MAX_TOKENS_KEY);
+	}
+
+	public static boolean isIgnoreJreClasses() {
+		return AiCoderActivator.getDefault().getPreferenceStore().getBoolean(IGNORE_JRE_CLASSES_KEY);
 	}
 
 	public static Duration getDebounceDuration() {

@@ -53,6 +53,13 @@ public class AiCoderPreferencePage extends FieldEditorPreferencePage implements 
 				"Enable autocomplete",
 				generalGroup));
 
+		// Ignore jre/jdk classes
+		final BooleanFieldEditor ignoreJreClassesEditor = new BooleanFieldEditor(
+				AiCoderPreferences.IGNORE_JRE_CLASSES_KEY,
+				"Ignore JRE classes",
+				generalGroup);
+		addField(ignoreJreClassesEditor);
+
 		// Context size settings
 		final IntegerFieldEditor maxPrefixSizeEditor = new IntegerFieldEditor(
 				AiCoderPreferences.MAX_PREFIX_SIZE_KEY,
