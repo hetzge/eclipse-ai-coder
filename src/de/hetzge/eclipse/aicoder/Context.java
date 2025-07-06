@@ -13,12 +13,12 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jdt.core.Flags;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IField;
-import org.eclipse.jdt.core.IImportDeclaration;
 import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.ILocalVariable;
@@ -53,15 +53,13 @@ import mjson.Json;
  * TODO last edited files
  * TODO last viewed files
  * TODO manually ranked files
- * TODO sticky types
  * TODO ignore items (ignore-file and storage)
- * TODO prevent duplicates
- * TODO mark duplicates
- * TODO prevent jdk
  * TODO add java/maven metadata (Java Version, Dependencies)
- * TODO custom context
- * TODO last visited files
  * TODO https://github.com/continuedev/continue/blob/main/core/autocomplete/postprocessing/index.ts
+ * TODO ContentContextEntry (full file content, example/reference content)
+ * TODO Resource context menu to add sticky type/content
+ * TODO if in overriden method add super javadoc
+ * TODO super class context entry
  */
 
 public final class Context {
@@ -196,32 +194,64 @@ public final class Context {
 
 		public static ScopeContextEntry create(ICompilationUnit unit, int offset) throws CoreException {
 			final long before = System.currentTimeMillis();
-			final List<TypeContextEntry> entries = new ArrayList<>();
 			final CompilationUnit parsedUnit = parseUnit(unit);
-			for (final IBinding binding : getBindingsInScope(parsedUnit, offset)) {
-				if (binding.getJavaElement() instanceof final IType type) {
-					final String fullyQualifiedName = type.getFullyQualifiedName();
-					if (AiCoderPreferences.isIgnoreJreClasses() && JdkUtils.isJREPackage(fullyQualifiedName)) {
-						continue;
-					}
-					if (!Utils.checkType(type)) {
-						continue;
-					}
-					entries.add(TypeContextEntry.create(type));
-				} else if (binding.getJavaElement() instanceof final ILocalVariable localVariable) {
-					final IType type = localVariable.getJavaProject().findType(Signature.toString(localVariable.getTypeSignature()));
-					if (!Utils.checkType(type)) {
-						continue;
-					}
-					final String fullyQualifiedName = type.getFullyQualifiedName();
-					if (AiCoderPreferences.isIgnoreJreClasses() && JdkUtils.isJREPackage(fullyQualifiedName)) {
-						continue;
-					}
-					entries.add(TypeContextEntry.create(type));
-				} else {
-					AiCoderActivator.log().info("Skip binding: " + binding.getKey() + "/" + (binding.getJavaElement() != null ? binding.getJavaElement().getClass().getName() : "-"));
-				}
-			}
+
+			final List<TypeContextEntry> entries = getBindingsInScope(parsedUnit, offset).stream()
+					.parallel()
+					.flatMap(LambdaExceptionUtils.rethrowFunction(binding -> {
+						if (binding.getJavaElement() instanceof final IType type) {
+							final String fullyQualifiedName = type.getFullyQualifiedName();
+							if (AiCoderPreferences.isIgnoreJreClasses() && JdkUtils.isJREPackage(fullyQualifiedName)) {
+								return Stream.empty();
+							}
+							if (!Utils.checkType(type)) {
+								return Stream.empty();
+							}
+							return Stream.of(TypeContextEntry.create(type));
+						} else if (binding.getJavaElement() instanceof final ILocalVariable localVariable) {
+							final IType type = localVariable.getJavaProject().findType(Signature.toString(localVariable.getTypeSignature()));
+							if (!Utils.checkType(type)) {
+								return Stream.empty();
+							}
+							final String fullyQualifiedName = type.getFullyQualifiedName();
+							if (AiCoderPreferences.isIgnoreJreClasses() && JdkUtils.isJREPackage(fullyQualifiedName)) {
+								return Stream.empty();
+							}
+							return Stream.of(TypeContextEntry.create(type));
+						} else {
+							AiCoderActivator.log().info("Skip binding: " + binding.getKey() + "/" +
+									(binding.getJavaElement() != null ? binding.getJavaElement().getClass().getName() : "-"));
+							return Stream.empty();
+						}
+					}))
+					.collect(Collectors.toList());
+
+//			final List<TypeContextEntry> entries = new ArrayList<>();
+//			for (final IBinding binding : getBindingsInScope(parsedUnit, offset)) {
+//				if (binding.getJavaElement() instanceof final IType type) {
+//					final String fullyQualifiedName = type.getFullyQualifiedName();
+//					if (AiCoderPreferences.isIgnoreJreClasses() && JdkUtils.isJREPackage(fullyQualifiedName)) {
+//						continue;
+//					}
+//					if (!Utils.checkType(type)) {
+//						continue;
+//					}
+//					entries.add(TypeContextEntry.create(type));
+//				} else if (binding.getJavaElement() instanceof final ILocalVariable localVariable) {
+//					final IType type = localVariable.getJavaProject().findType(Signature.toString(localVariable.getTypeSignature()));
+//					if (!Utils.checkType(type)) {
+//						continue;
+//					}
+//					final String fullyQualifiedName = type.getFullyQualifiedName();
+//					if (AiCoderPreferences.isIgnoreJreClasses() && JdkUtils.isJREPackage(fullyQualifiedName)) {
+//						continue;
+//					}
+//					entries.add(TypeContextEntry.create(type));
+//				} else {
+//					AiCoderActivator.log().info("Skip binding: " + binding.getKey() + "/" + (binding.getJavaElement() != null ? binding.getJavaElement().getClass().getName() : "-"));
+//				}
+//			}
+
 			return new ScopeContextEntry(entries, Duration.ofMillis(System.currentTimeMillis() - before));
 		}
 
@@ -414,21 +444,30 @@ public final class Context {
 
 		public static ImportsContextEntry create(ICompilationUnit unit) throws CoreException {
 			final long before = System.currentTimeMillis();
-			final List<TypeContextEntry> entries = new ArrayList<>();
-			for (final IImportDeclaration importDeclaration : unit.getImports()) {
-				final String elementName = importDeclaration.getElementName();
-				if (AiCoderPreferences.isIgnoreJreClasses() && JdkUtils.isJREPackage(elementName)) {
-					continue;
-				}
-				if (!importDeclaration.isOnDemand()) {
-					continue;
-				}
-				final IType type = unit.getJavaProject().findType(elementName);
-				if (!Utils.checkType(type)) {
-					continue;
-				}
-				entries.add(TypeContextEntry.create(type));
-			}
+			final List<TypeContextEntry> entries = Stream.of(unit.getImports())
+					.parallel()
+					.filter(importDeclaration -> !importDeclaration.isOnDemand())
+					.map(importDeclaration -> importDeclaration.getElementName())
+					.filter(elementName -> !AiCoderPreferences.isIgnoreJreClasses() || !JdkUtils.isJREPackage(elementName))
+					.map(LambdaExceptionUtils.rethrowFunction(unit.getJavaProject()::findType))
+					.filter(Utils::checkType)
+					.map(LambdaExceptionUtils.rethrowFunction(TypeContextEntry::create))
+					.toList();
+
+//			for (final IImportDeclaration importDeclaration : unit.getImports()) {
+//				final String elementName = importDeclaration.getElementName();
+//				if (AiCoderPreferences.isIgnoreJreClasses() && JdkUtils.isJREPackage(elementName)) {
+//					continue;
+//				}
+//				if (!importDeclaration.isOnDemand()) {
+//					continue;
+//				}
+//				final IType type = unit.getJavaProject().findType(elementName);
+//				if (!Utils.checkType(type)) {
+//					continue;
+//				}
+//				entries.add(TypeContextEntry.create(type));
+//			}
 			return new ImportsContextEntry(entries, Duration.ofMillis(System.currentTimeMillis() - before));
 		}
 	}
@@ -609,7 +648,7 @@ public final class Context {
 
 		@Override
 		public String getContent() {
-			return String.format("%s{\n%s\n}\n", this.signature, super.getContent());
+			return String.format("%s{\n%s}\n", this.signature, super.getContent());
 		}
 
 		public static TypeContextEntry create(IType type) throws CoreException {
