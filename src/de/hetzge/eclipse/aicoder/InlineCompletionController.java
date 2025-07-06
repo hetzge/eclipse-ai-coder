@@ -20,9 +20,11 @@ import org.eclipse.jface.text.IDocumentListener;
 import org.eclipse.jface.text.IPaintPositionManager;
 import org.eclipse.jface.text.IPainter;
 import org.eclipse.jface.text.IRegion;
+import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.ITextViewerExtension2;
 import org.eclipse.jface.text.ITextViewerExtension5;
+import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.swt.SWT;
@@ -80,7 +82,6 @@ public final class InlineCompletionController {
 			return controller;
 		});
 	}
-
 	private final ITextViewer textViewer;
 	private final ITextEditor textEditor;
 	private final StyledText widget;
@@ -114,7 +115,19 @@ public final class InlineCompletionController {
 		this.job = null;
 	}
 
+	private void triggerAutocomplete() {
+		if (AiCoderPreferences.isAutocompleteEnabled()) {
+			InlineCompletionController.this.debounceRunnable = () -> {
+				if (isNoSelectionActive() && isLineSuffixBlank()) {
+					trigger();
+				}
+			};
+			Display.getCurrent().timerExec((int) AiCoderPreferences.getDebounceDuration().toMillis(), InlineCompletionController.this.debounceRunnable);
+		}
+	}
+
 	public void trigger() {
+		AiCoderActivator.log().info("Trigger");
 
 		// Filter JDK
 		// Prefer local
@@ -128,7 +141,7 @@ public final class InlineCompletionController {
 		final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
 		final IDocument document = this.textViewer.getDocument();
 
-		abort();
+		abort("Trigger");
 		this.job = Job.create("AI inline completion", monitor -> {
 			final RootContextEntry rootContextEntry;
 			try {
@@ -195,6 +208,21 @@ public final class InlineCompletionController {
 			}
 		});
 		this.job.schedule();
+	}
+
+	private boolean isNoSelectionActive() {
+		return InlineCompletionController.this.textViewer.getSelectedRange().y == 0;
+	}
+
+	private boolean isLineSuffixBlank() {
+		try {
+			final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
+			final IRegion lineRegion = InlineCompletionController.this.textViewer.getDocument().getLineInformationOfOffset(modelOffset);
+			final String lineString = InlineCompletionController.this.textViewer.getDocument().get(lineRegion.getOffset(), lineRegion.getLength());
+			return lineString.substring(modelOffset - lineRegion.getOffset()).replace(";", "").replace(")", "").replace("{", "").replace("{", "").isBlank();
+		} catch (final BadLocationException exception) {
+			throw new RuntimeException("Failed to check if line suffix is blank", exception);
+		}
 	}
 
 	private void updateContextView(final RootContextEntry rootContextEntry) {
@@ -270,24 +298,24 @@ public final class InlineCompletionController {
 		});
 	}
 
-	public boolean abort() {
+	public boolean abort(String reason) {
 		this.paintListener.resetMetrics();
 		if (this.job != null) {
-			AiCoderActivator.log().info("Abort job");
+			AiCoderActivator.log().info(String.format("Abort job (reason: '%s')", reason));
 			this.job.cancel();
 			this.job = null;
 		}
 		if (this.debounceRunnable != null) {
-			AiCoderActivator.log().info("Abort debounce");
+			AiCoderActivator.log().info(String.format("Abort debounce (reason: '%s')", reason));
 			Display.getCurrent().timerExec(-1, this.debounceRunnable);
 		}
 		if (this.context != null) {
-			AiCoderActivator.log().info("Deactivate context");
+			AiCoderActivator.log().info(String.format("Deactivate context (reason: '%s')", reason));
 			EclipseUtils.getContextService(this.textEditor).deactivateContext(this.context);
 			this.context = null;
 		}
 		if (this.completion != null) {
-			AiCoderActivator.log().info("Unset completion");
+			AiCoderActivator.log().info(String.format("Unset completion (reason: '%s')", reason));
 			this.completion = null;
 			return true;
 		}
@@ -319,7 +347,7 @@ public final class InlineCompletionController {
 
 		@Override
 		public void documentChanged(DocumentEvent event) {
-			abort();
+			abort("Document changed");
 		}
 	}
 
@@ -340,7 +368,7 @@ public final class InlineCompletionController {
 		public void keyReleased(KeyEvent event) {
 			final boolean isCommandDown = this.activeKeyCodes.stream().anyMatch(this::isCommandKey);
 			this.activeKeyCodes.remove(event.keyCode);
-			abort();
+			abort("Key released");
 			// Ignore command keys
 			if (isCommandDown) {
 				return;
@@ -349,29 +377,7 @@ public final class InlineCompletionController {
 			if (InlineCompletionController.this.context != null && event.keyCode == 9) {
 				return;
 			}
-			if (AiCoderPreferences.isAutocompleteEnabled()) {
-				InlineCompletionController.this.debounceRunnable = () -> {
-					if (isNoSelectionActive() && isLineSuffixBlank()) {
-						trigger();
-					}
-				};
-				Display.getCurrent().timerExec((int) AiCoderPreferences.getDebounceDuration().toMillis(), InlineCompletionController.this.debounceRunnable);
-			}
-		}
-
-		private boolean isNoSelectionActive() {
-			return InlineCompletionController.this.textViewer.getSelectedRange().y == 0;
-		}
-
-		private boolean isLineSuffixBlank() {
-			try {
-				final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
-				final IRegion lineRegion = InlineCompletionController.this.textViewer.getDocument().getLineInformationOfOffset(modelOffset);
-				final String lineString = InlineCompletionController.this.textViewer.getDocument().get(lineRegion.getOffset(), lineRegion.getLength());
-				return lineString.substring(modelOffset - lineRegion.getOffset()).replace(";", "").replace(")", "").replace("{", "").replace("{", "").isBlank();
-			} catch (final BadLocationException exception) {
-				throw new RuntimeException("Failed to check if line suffix is blank", exception);
-			}
+			triggerAutocomplete();
 		}
 
 		private boolean isCommandKey(int keyCode) {
@@ -481,14 +487,22 @@ public final class InlineCompletionController {
 	private class SelectionListenerImplementation implements ISelectionChangedListener {
 		@Override
 		public void selectionChanged(SelectionChangedEvent event) {
-			abort();
+			final ISelection selection = event.getSelection();
+			if(!(selection instanceof ITextSelection)) {
+				return;
+			}
+			final ITextSelection textSelection = (ITextSelection) selection;
+			if(textSelection.getLength() <= 0) {
+				return;
+			}
+			abort("Selection changed");
 		}
 	}
 
 	private class CaretListenerImplementation implements CaretListener {
 		@Override
 		public void caretMoved(CaretEvent event) {
-			abort();
+			// Do nothing here
 		}
 	}
 }

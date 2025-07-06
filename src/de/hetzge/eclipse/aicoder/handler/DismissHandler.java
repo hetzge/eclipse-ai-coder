@@ -12,7 +12,7 @@ public class DismissHandler extends AbstractHandler {
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
-		final boolean aborted = InlineCompletionController.setup(EclipseUtils.getActiveTextEditor()).abort();
+		final boolean aborted = InlineCompletionController.setup(EclipseUtils.getActiveTextEditor()).abort("Dismiss");
 		if (aborted) {
 			AiCoderHistoryView.get().ifPresent(view -> {
 				view.setLatestRejected();
