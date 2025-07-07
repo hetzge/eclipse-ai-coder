@@ -43,7 +43,19 @@ public class TypeContextEntry extends ContextEntry {
 
 	@Override
 	public Image getImage() {
-		return AiCoderActivator.getImage(AiCoderImageKey.TYPE_ICON);
+		if (this.signature.startsWith("class")) {
+			return AiCoderActivator.getImage(AiCoderImageKey.TYPE_ICON);
+		} else if (this.signature.startsWith("interface")) {
+			return AiCoderActivator.getImage(AiCoderImageKey.INTERFACE_ICON);
+		} else if (this.signature.startsWith("enum")) {
+			return AiCoderActivator.getImage(AiCoderImageKey.ENUM_ICON);
+		} else if (this.signature.startsWith("record")) {
+			return AiCoderActivator.getImage(AiCoderImageKey.RECORD_ICON);
+		} else if (this.signature.startsWith("@interface")) {
+			return AiCoderActivator.getImage(AiCoderImageKey.ANNOTATION_ICON);
+		} else {
+			return AiCoderActivator.getImage(AiCoderImageKey.TYPE_ICON);
+		}
 	}
 
 	@Override

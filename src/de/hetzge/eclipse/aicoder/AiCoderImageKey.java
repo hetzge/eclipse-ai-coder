@@ -3,6 +3,10 @@ package de.hetzge.eclipse.aicoder;
 public enum AiCoderImageKey {
 	PACKAGE_ICON,
 	TYPE_ICON,
+	ENUM_ICON,
+	INTERFACE_ICON,
+	RECORD_ICON,
+	ANNOTATION_ICON,
 	RESOURCE_ICON,
 	SCOPE_ICON,
 	COPY_ICON,

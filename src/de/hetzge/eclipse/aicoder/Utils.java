@@ -58,7 +58,7 @@ public final class Utils {
 		} else if (Flags.isEnum(flags)) {
 			return "enum";
 		} else if (Flags.isAnnotation(flags)) {
-			return "annotation";
+			return "@interface";
 		} else if (Flags.isRecord(flags)) {
 			return "record";
 		} else {

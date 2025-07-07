@@ -47,6 +47,10 @@ public class AiCoderActivator extends AbstractUIPlugin {
 		try {
 			registerImage(registry, AiCoderImageKey.PACKAGE_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.jdt.ui/icons/full/obj16/package_obj.png").toURL()));
 			registerImage(registry, AiCoderImageKey.TYPE_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.jdt.ui/icons/full/elcl16/class_obj.png").toURL()));
+			registerImage(registry, AiCoderImageKey.ENUM_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.jdt.ui/icons/full/obj16/enum_obj.png").toURL()));
+			registerImage(registry, AiCoderImageKey.INTERFACE_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.jdt.ui/icons/full/obj16/innerinterface_public_obj.png").toURL()));
+			registerImage(registry, AiCoderImageKey.RECORD_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.jdt.ui/icons/full/obj16/record_obj.png").toURL()));
+			registerImage(registry, AiCoderImageKey.ANNOTATION_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.jdt.ui/icons/full/obj16/annotation_obj.png").toURL()));
 			registerImage(registry, AiCoderImageKey.RESOURCE_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui.navigator.resources/icons/full/obj16/otherprojects_workingsets.png").toURL()));
 			registerImage(registry, AiCoderImageKey.SCOPE_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.jdt.ui/icons/full/elcl16/javaassist_co.png").toURL()));
 			registerImage(registry, AiCoderImageKey.COPY_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/etool16/copy_edit.png").toURL()));
