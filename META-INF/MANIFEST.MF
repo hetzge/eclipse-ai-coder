@@ -5,12 +5,13 @@ Bundle-SymbolicName: de.hetzge.eclipse.aicoder;singleton:=true
 Bundle-Version: 1.0.0.qualifier
 Import-Package: jakarta.inject;version="[2.0.0,3.0.0)"
 Bundle-Activator: de.hetzge.eclipse.aicoder.AiCoderActivator
+Bundle-ClassPath: lib/mjson-1.4.2.jar,
+ .
 Require-Bundle: org.eclipse.ui,
  org.eclipse.core.runtime,
  org.eclipse.text,
  org.eclipse.jface.text,
  org.eclipse.ui.workbench.texteditor,
- org.sharegov-mjson,
  org.eclipse.core.resources,
  org.eclipse.jdt,
  org.eclipse.jdt.core,
