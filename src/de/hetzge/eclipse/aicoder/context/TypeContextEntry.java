@@ -72,6 +72,11 @@ public class TypeContextEntry extends ContextEntry {
 				members.add(TypeMemberContextEntry.create(field));
 			}
 		}
+		if (type.isRecord()) {
+			for (final IField field : type.getRecordComponents()) {
+				members.add(TypeMemberContextEntry.create(field));
+			}
+		}
 		for (final IMethod method : type.getMethods()) {
 			if (!Flags.isPrivate(method.getFlags())) {
 				members.add(TypeMemberContextEntry.create(method));
