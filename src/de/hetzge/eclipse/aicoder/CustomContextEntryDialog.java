@@ -15,7 +15,8 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
-import de.hetzge.eclipse.aicoder.Context.CustomContextEntry;
+import de.hetzge.eclipse.aicoder.context.ContextContext;
+import de.hetzge.eclipse.aicoder.context.CustomContextEntry;
 
 public class CustomContextEntryDialog extends Dialog {
 
@@ -34,7 +35,7 @@ public class CustomContextEntryDialog extends Dialog {
         this.existingEntry = existingEntry;
         if (existingEntry != null) {
             this.title = existingEntry.getTitle();
-            this.content = existingEntry.getContent();
+            this.content = existingEntry.getContent(new ContextContext());
             this.glob = existingEntry.getGlob();
         }
     }

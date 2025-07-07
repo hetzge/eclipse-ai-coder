@@ -10,8 +10,8 @@ import java.util.stream.Collectors;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.osgi.service.prefs.Preferences;
 
-import de.hetzge.eclipse.aicoder.Context.ContextEntryKey;
-import de.hetzge.eclipse.aicoder.Context.CustomContextEntry;
+import de.hetzge.eclipse.aicoder.context.ContextEntryKey;
+import de.hetzge.eclipse.aicoder.context.CustomContextEntry;
 import mjson.Json;
 
 public final class ContextPreferences {

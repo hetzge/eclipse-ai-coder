@@ -47,8 +47,10 @@ import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.contexts.IContextActivation;
 import org.eclipse.ui.texteditor.ITextEditor;
 
-import de.hetzge.eclipse.aicoder.Context.ContextEntry;
-import de.hetzge.eclipse.aicoder.Context.RootContextEntry;
+import de.hetzge.eclipse.aicoder.context.ContextContext;
+import de.hetzge.eclipse.aicoder.context.ContextEntry;
+import de.hetzge.eclipse.aicoder.context.RootContextEntry;
+import de.hetzge.eclipse.aicoder.context.SuffixContextEntry;
 
 public final class InlineCompletionController {
 
@@ -82,6 +84,7 @@ public final class InlineCompletionController {
 			return controller;
 		});
 	}
+
 	private final ITextViewer textViewer;
 	private final ITextEditor textEditor;
 	private final StyledText widget;
@@ -171,12 +174,12 @@ public final class InlineCompletionController {
 			if (monitor.isCanceled()) {
 				return;
 			}
-			final String contextString = ContextEntry.apply(rootContextEntry);
+			final String contextString = ContextEntry.apply(rootContextEntry, new ContextContext());
 
 			// IMPORTANT: DO this after ContextEntry.apply(...)
 			updateContextView(rootContextEntry);
 
-			final String[] contextParts = contextString.split(Context.SuffixContextEntry.FILL_HERE_PLACEHOLDER);
+			final String[] contextParts = contextString.split(SuffixContextEntry.FILL_HERE_PLACEHOLDER);
 			final String input = contextString; // Use full context as input
 
 			try {
@@ -489,11 +492,11 @@ public final class InlineCompletionController {
 		@Override
 		public void selectionChanged(SelectionChangedEvent event) {
 			final ISelection selection = event.getSelection();
-			if(!(selection instanceof ITextSelection)) {
+			if (!(selection instanceof ITextSelection)) {
 				return;
 			}
 			final ITextSelection textSelection = (ITextSelection) selection;
-			if(textSelection.getLength() <= 0) {
+			if (textSelection.getLength() <= 0) {
 				return;
 			}
 			abort("Selection changed");

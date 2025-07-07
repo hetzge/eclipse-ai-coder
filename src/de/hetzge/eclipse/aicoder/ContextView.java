@@ -43,10 +43,12 @@ import org.eclipse.ui.menus.CommandContributionItemParameter;
 import org.eclipse.ui.part.DrillDownAdapter;
 import org.eclipse.ui.part.ViewPart;
 
-import de.hetzge.eclipse.aicoder.Context.ContextEntry;
-import de.hetzge.eclipse.aicoder.Context.ContextEntryKey;
-import de.hetzge.eclipse.aicoder.Context.CustomContextEntry;
-import de.hetzge.eclipse.aicoder.Context.EmptyContextEntry;
+import de.hetzge.eclipse.aicoder.context.ContextContext;
+import de.hetzge.eclipse.aicoder.context.ContextEntry;
+import de.hetzge.eclipse.aicoder.context.ContextEntryKey;
+import de.hetzge.eclipse.aicoder.context.CustomContextEntry;
+import de.hetzge.eclipse.aicoder.context.EmptyContextEntry;
+import de.hetzge.eclipse.aicoder.context.UserContextEntry;
 import de.hetzge.eclipse.aicoder.handler.ToggleMultilineHandler;
 import jakarta.inject.Inject;
 
@@ -119,7 +121,7 @@ public class ContextView extends ViewPart {
 			final ContextEntry firstEntry = (ContextEntry) selection.getFirstElement();
 			final ContextEntryKey key = firstEntry.getKey();
 
-			if (firstEntry instanceof Context.UserContextEntry) {
+			if (firstEntry instanceof UserContextEntry) {
 				final Action newAction = new Action("New Custom Context") {
 					@Override
 					public void run() {
@@ -135,7 +137,7 @@ public class ContextView extends ViewPart {
 					}
 				};
 				manager.add(newAction);
-			} else if (firstEntry instanceof Context.CustomContextEntry) {
+			} else if (firstEntry instanceof CustomContextEntry) {
 				final Action editAction = new Action("Edit custom context") {
 
 					@Override
@@ -242,7 +244,7 @@ public class ContextView extends ViewPart {
 	private void showContentPreview(ContextEntry entry) {
 		final Shell shell = this.viewer.getControl().getShell();
 		final String title = "Content Preview - " + entry.getLabel();
-		final String content = ContextEntry.apply(entry);
+		final String content = ContextEntry.apply(entry, new ContextContext());
 		new ContentPreviewDialog(shell, title, content).open();
 	}
 
