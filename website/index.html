@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Eclipse AI Coder</title>
+	<style>
+		table {
+			border-collapse: collapse;
+			width: 100%;
+		}
+
+		th,
+		td {
+			border: 1px solid black;
+			padding: 8px;
+			text-align: left;
+		}
+
+		th {
+			background-color: #f2f2f2;
+		}
+
+
+		img {
+			box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px, rgba(60, 64, 67, 0.15) 0px 2px 6px 2px;
+			padding: 1rem;
+		}
+
+		.gallery {
+			display: flex;
+			flex-direction: row;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 1rem;
+			margin: 0 auto;
+		}
+
+		.gallery img {
+			height: 400px;
+			object-fit: contain;
+			border-radius: 10px;
+		}
+
+		.gallery::after {
+			content: "";
+			width: 350px;
+		}
+
+
+
+		main,
+		header {
+			margin: 0 auto;
+			padding: 1rem;
+			max-width: 1200px;
+			background-color: white;
+			box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px, rgba(60, 64, 67, 0.15) 0px 2px 6px 2px;
+			border-radius: 1rem;
+		}
+
+		header {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			border-bottom-left-radius: 0px;
+			border-bottom-right-radius: 0px;
+			background-color: black;
+			margin-top: 2rem;
+		}
+
+		main {
+			border-top-left-radius: 0px;
+			border-top-right-radius: 0px;
+			border-top: 4px solid greenyellow;
+			box-shadow: rgba(50, 50, 93, 0.25) 0px 30px 60px -12px inset, rgba(0, 0, 0, 0.3) 0px 18px 36px -18px inset;
+		}
+
+		body {
+			background: #2A7B9B;
+			background: linear-gradient(90deg, rgba(42, 123, 155, 1) 0%, rgba(87, 199, 133, 1) 50%, rgba(237, 221, 83, 1) 100%);
+		}
+	</style>
+</head>
+
+<body>
+	<header>
+		<img style="width: 400px;" src="images/title.webp" alt="Eclipse AI Coder Example">
+	</header>
+	<main>
+		<section>
+			<h2>About the project</h2>
+			<p>Eclipse AI Coder is an extension for the Eclipse IDE. It brings AI driven inline completion to the
+				editor.</p>
+		</section>
+		<section>
+			<h2>Features</h2>
+			<ul>
+				<li>Support for <b>Codestral</b> (by Mistral) large language model (<b>bring your own key</b>)</li>
+				<li>Triggers completion <b>automatically</b> or <b>by shortcut</b> (Ctrl + Shift + Space)</li>
+				<li><b>Controllable context</b>. See how the prompt is build and control its content</li>
+				<li><b>Insights</b> about each request: Word count, durations, status</li>
+				<li>Deep understanding of <b>Java</b> projects. Adds imports and variables in scope to the prompt</li>
+				<li>Toggle between <b>single</b> and <b>multiline</b> completion</li>
+			</ul>
+		</section>
+		<section>
+			<h2>Installation</h2>
+			<ul>
+				<li>Install from Eclipse Marketplace</li>
+				<li>Install from updatesite</li>
+			</ul>
+		</section>
+		<section>
+			<h2>Comparison with other tools</h2>
+			<table>
+				<tr>
+					<td style="border-top: 0px; border-left: 0px;"></td>
+					<th>Eclipse AI Coder</th>
+					<th><a href="https://www.tabnine.com">Tabnine</a></th>
+					<th><a href="https://github.com/features/copilot">GitHub Copilot</a></th>
+					<th><a href="https://www.genuitec.com/products/copilot4eclipse">Copilot4Eclipse</a></th>
+					<th><a href="https://www.jetbrains.com/ai">Jetbrains AI Assistant</a></th>
+					<th><a href="https://www.tabbyml.com">Tabby</a></th>
+				</tr>
+				<tr>
+					<th>Inline Completion</th>
+					<td>✅</td>
+					<td>✅</td>
+					<td>✅</td>
+					<td>✅</td>
+					<td>✅</td>
+					<td>✅</td>
+				</tr>
+				<tr>
+					<th>Open Source / Non-commercial</th>
+					<td>✅</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>✅</td>
+				</tr>
+				<tr>
+					<th>Eclipse Support</th>
+					<td>✅</td>
+					<td>✅</td>
+					<td>✅</td>
+					<td>✅</td>
+					<td>❌</td>
+					<td>✅</td>
+				</tr>
+				<tr>
+					<th>Manual Trigger</th>
+					<td>✅</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>✅</td>
+					<td>❌</td>
+					<td>?</td>
+				</tr>
+				<tr>
+					<th>Bring your own key</th>
+					<td>✅</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>✅</td>
+				</tr>
+				<tr>
+					<th>Next Edit Suggestion</th>
+					<td>❌</td>
+					<td>❌</td>
+					<td>✅</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
+				</tr>
+				<tr>
+					<th>Toggle Multiline Completion</th>
+					<td>✅</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
+				</tr>
+				<tr>
+					<th>Context Control</th>
+					<td>✅</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
+				</tr>
+				<tr>
+					<th>LLM Providers</th>
+					<td>Mistral</td>
+					<td>Tabnine</td>
+					<td>Github Copilot</td>
+					<td>Github Copilot</td>
+					<td>Jetbrains</td>
+					<td>Deepseek, Local, Mistral</td>
+				</tr>
+			</table>
+		</section>
+		<section>
+			<h2>Gallery</h2>
+			<div class="gallery">
+				<img src="images/example.png" alt="Example Screenshot">
+				<img src="images/context.png" alt="Context Screenshot">
+				<img src="images/history.png" alt="History Screenshot">
+				<img src="images/settings.png" alt="Settings Screenshot">
+			</div>
+		</section>
+		<section>
+			<h2>Interessting links</h2>
+			<a href="https://www.genuitec.com/products/copilot4eclipse/docs/basics/completions/">Copilot4Eclipse -
+				Inline Code Completions</a>
+		</section>
+	</main>
+	<footer>
+	</footer>
+</body>
+
+</html>
