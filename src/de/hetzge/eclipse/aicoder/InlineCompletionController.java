@@ -192,7 +192,8 @@ public final class InlineCompletionController {
 				final int currentModelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
 				final boolean isBlank = content.isBlank();
 				final boolean isMoved = currentModelOffset != modelOffset;
-				if (!isBlank && !isMoved) {
+				final boolean isSame = suffix.replaceAll("\\s", "").startsWith(content.replaceAll("\\s", ""));
+				if (!isBlank && !isMoved && !isSame) {
 					setup(Completion.create(document, modelOffset, widgetOffset, widgetLine, content, lineHeight, defaultLineSpacing));
 				}
 				String status;
@@ -200,6 +201,8 @@ public final class InlineCompletionController {
 					status = "Moved";
 				} else if (isBlank) {
 					status = "Blank";
+				} else if (isSame) {
+					status = "Same";
 				} else {
 					status = "Generated";
 				}

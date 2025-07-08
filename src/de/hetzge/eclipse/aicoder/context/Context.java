@@ -22,6 +22,9 @@ import de.hetzge.eclipse.aicoder.LambdaExceptionUtils;
  * TODO Resource context menu to add sticky type/content
  * TODO if in overriden method add super javadoc
  * TODO super class context entry
+ * TODO predictiv context ("new Typename(<complete>" ... lookup class "Typename" even if not imported)
+ * TODO open tabs context (same type)
+ * TODO configure last x entries (tabs, edited files, usw.)
  */
 
 public final class Context {
