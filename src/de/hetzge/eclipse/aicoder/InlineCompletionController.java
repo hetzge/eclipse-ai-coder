@@ -190,9 +190,10 @@ public final class InlineCompletionController {
 				final long duration = System.currentTimeMillis() - startTime;
 				final long llmDuration = System.currentTimeMillis() - llmStartTime;
 				final int currentModelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
+				final boolean isMultilineContent = content.contains("\n");
 				final boolean isBlank = content.isBlank();
 				final boolean isMoved = currentModelOffset != modelOffset;
-				final boolean isSame = suffix.replaceAll("\\s", "").startsWith(content.replaceAll("\\s", ""));
+				final boolean isSame = isMultilineContent && suffix.replaceAll("\\s", "").startsWith(content.replaceAll("\\s", ""));
 				if (!isBlank && !isMoved && !isSame) {
 					setup(Completion.create(document, modelOffset, widgetOffset, widgetLine, content, lineHeight, defaultLineSpacing));
 				}
