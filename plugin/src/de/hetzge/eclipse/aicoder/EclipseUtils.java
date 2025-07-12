@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.JavaCore;
@@ -28,6 +29,10 @@ public class EclipseUtils {
 
 	public static Optional<String> getFilename(IEditorInput editorInput) {
 		if (editorInput instanceof final FileEditorInput fileEditorInput) {
+			final IPath location = fileEditorInput.getFile().getLocation();
+			if (location == null) {
+				return Optional.of(fileEditorInput.getFile().getName());
+			}
 			return Optional.of(fileEditorInput.getFile().getLocation().toPath().toString());
 		}
 		return Optional.empty();

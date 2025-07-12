@@ -457,6 +457,7 @@ public final class InlineCompletionController {
 			newStyleRange.metrics = new GlyphMetrics(fontMetrics.getAscent(), fontMetrics.getDescent(), metricWidth);
 			widget.setStyleRange(newStyleRange);
 			this.modifiedMetrics.add(newStyleRange.metrics);
+			// TODO update style after font size zoom
 		}
 
 		public void resetMetrics() {
