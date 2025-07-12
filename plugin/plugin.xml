@@ -96,7 +96,7 @@
     <view
           category="de.hetzge.eclipse.aicoder"
           class="de.hetzge.eclipse.aicoder.ContextView"
-          icon="icons/sample.png"
+          icon="icons/icon16.png"
           id="de.hetzge.eclipse.aicoder.ContextView"
           inject="true"
           name="AI Coder Context">
@@ -104,7 +104,7 @@
     <view
           category="de.hetzge.eclipse.aicoder"
           class="de.hetzge.eclipse.aicoder.AiCoderHistoryView"
-          icon="icons/sample.png"
+          icon="icons/icon16.png"
           id="de.hetzge.eclipse.aicoder.AiCoderHistoryView"
           inject="true"
           name="AI Coder History">

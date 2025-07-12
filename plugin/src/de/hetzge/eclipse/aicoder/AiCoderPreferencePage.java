@@ -96,7 +96,7 @@ public class AiCoderPreferencePage extends FieldEditorPreferencePage implements 
 				1,
 				new String[][] {
 						{ "Mistral", AiProvider.MISTRAL.name() },
-						{ "OpenAI", AiProvider.OPENAI.name() }
+//						{ "OpenAI", AiProvider.OPENAI.name() }
 				},
 				getFieldEditorParent()) {
 			@Override

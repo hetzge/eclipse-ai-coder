@@ -4,6 +4,10 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+	<link rel="manifest" href="site.webmanifest">
 	<title>Eclipse AI Coder</title>
 	<style>
 		table {
@@ -79,6 +83,14 @@
 			background: #2A7B9B;
 			background: linear-gradient(90deg, rgba(42, 123, 155, 1) 0%, rgba(87, 199, 133, 1) 50%, rgba(237, 221, 83, 1) 100%);
 		}
+		
+		.key {
+			border: 1px solid #ccc;
+			border-radius: 4px;
+			padding: 2px 4px;
+			background-color: #f9f9f9;
+			font-family: monospace;
+		}
 	</style>
 </head>
 
@@ -89,14 +101,13 @@
 	<main>
 		<section>
 			<h2>About the project</h2>
-			<p>Eclipse AI Coder is an extension for the Eclipse IDE. It brings AI driven inline completion to the
-				editor.</p>
+			<p>Eclipse AI Coder is an extension for the <a href="https://eclipseide.org">Eclipse IDE</a>. It brings AI driven inline completion to the editor.</p>
 		</section>
 		<section>
 			<h2>Features</h2>
 			<ul>
 				<li>Support for <b>Codestral</b> (by Mistral) large language model (<b>bring your own key</b>)</li>
-				<li>Triggers completion <b>automatically</b> or <b>by shortcut</b> (Ctrl + Shift + Space)</li>
+				<li>Triggers completion <b>automatically</b> or <b>by shortcut</b> (<span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">Space</span>)</li>
 				<li><b>Controllable context</b>. See how the prompt is build and control its content</li>
 				<li><b>Insights</b> about each request: Word count, durations, status</li>
 				<li>Deep understanding of <b>Java</b> projects. Adds imports and variables in scope to the prompt</li>
@@ -104,14 +115,15 @@
 			</ul>
 		</section>
 		<section>
-			<h2>Installation</h2>
-			<ul>
-				<li>Install from Eclipse Marketplace</li>
-				<li>Install from updatesite</li>
-			</ul>
+			<h2>Screenshots</h2>
+			<div class="gallery">
+				<img src="images/example.png" alt="Example Screenshot">
+				<img src="images/context.png" alt="Context Screenshot">
+				<img src="images/history.png" alt="History Screenshot">
+			</div>
 		</section>
 		<section>
-			<h2>Comparison with other tools</h2>
+			<h2>Comparison with other solutions</h2>
 			<table>
 				<tr>
 					<td style="border-top: 0px; border-left: 0px;"></td>
@@ -119,8 +131,9 @@
 					<th><a href="https://www.tabnine.com">Tabnine</a></th>
 					<th><a href="https://github.com/features/copilot">GitHub Copilot</a></th>
 					<th><a href="https://www.genuitec.com/products/copilot4eclipse">Copilot4Eclipse</a></th>
-					<th><a href="https://www.jetbrains.com/ai">Jetbrains AI Assistant</a></th>
 					<th><a href="https://www.tabbyml.com">Tabby</a></th>
+					<th><a href="https://marketplace.eclipse.org/content/gitlab-eclipse">GitLab Duo</a></th>
+					<th><a href="https://marketplace.eclipse.org/content/amazon-q">Amazon Q</a></th>
 				</tr>
 				<tr>
 					<th>Inline Completion</th>
@@ -130,14 +143,6 @@
 					<td>✅</td>
 					<td>✅</td>
 					<td>✅</td>
-				</tr>
-				<tr>
-					<th>Open Source / Non-commercial</th>
-					<td>✅</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
 					<td>✅</td>
 				</tr>
 				<tr>
@@ -146,8 +151,29 @@
 					<td>✅</td>
 					<td>✅</td>
 					<td>✅</td>
+					<td>✅</td>
+					<td>✅</td>
+					<td>✅</td>
+				</tr>
+				<tr>
+					<th>Non-commercial</th>
+					<td>✅</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
+				</tr>
+				<tr>
+					<th>Open Source</th>
+					<td>✅</td>
+					<td>❌</td>
+					<td>❌</td>
 					<td>❌</td>
 					<td>✅</td>
+					<td>❌</td>
+					<td>❌</td>
 				</tr>
 				<tr>
 					<th>Manual Trigger</th>
@@ -155,8 +181,9 @@
 					<td>❌</td>
 					<td>❌</td>
 					<td>✅</td>
+					<td>✅</td>
 					<td>❌</td>
-					<td>?</td>
+					<td>❌</td>
 				</tr>
 				<tr>
 					<th>Bring your own key</th>
@@ -164,21 +191,14 @@
 					<td>❌</td>
 					<td>❌</td>
 					<td>❌</td>
-					<td>❌</td>
 					<td>✅</td>
-				</tr>
-				<tr>
-					<th>Next Edit Suggestion</th>
-					<td>❌</td>
-					<td>❌</td>
-					<td>✅</td>
-					<td>❌</td>
 					<td>❌</td>
 					<td>❌</td>
 				</tr>
 				<tr>
 					<th>Toggle Multiline Completion</th>
 					<td>✅</td>
+					<td>❌</td>
 					<td>❌</td>
 					<td>❌</td>
 					<td>❌</td>
@@ -193,6 +213,17 @@
 					<td>❌</td>
 					<td>❌</td>
 					<td>❌</td>
+					<td>❌</td>
+				</tr>
+				<tr>
+					<th>Next Edit Suggestion</th>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
 				</tr>
 				<tr>
 					<th>LLM Providers</th>
@@ -200,19 +231,32 @@
 					<td>Tabnine</td>
 					<td>Github Copilot</td>
 					<td>Github Copilot</td>
-					<td>Jetbrains</td>
 					<td>Deepseek, Local, Mistral</td>
+					<td>Gitlab</td>
+					<td>Amazon</td>
 				</tr>
 			</table>
 		</section>
 		<section>
-			<h2>Gallery</h2>
-			<div class="gallery">
-				<img src="images/example.png" alt="Example Screenshot">
-				<img src="images/context.png" alt="Context Screenshot">
-				<img src="images/history.png" alt="History Screenshot">
+			<h2>Installation</h2>
+			<ul>
+				<li>Option A: Install from <a href="TODO">Eclipse Marketplace</a></li>
+				<li>Option B: Install from updatesite: <input value="https://eclipse.hetzge.de/aicoder/repository" readonly onclick="this.select();" style="width: 320px" /></li>
+				<li>Option C: <a href="https://eclipse.hetzge.de/aicoder/repository/plugins/de.hetzge.eclipse.aicoder_1.0.0.202507121602.jar">Download</a> the JAR</li>
+			</ul>
+			<p>
+				You require a (currently free) Codestral API key. You can get one <a href="https://console.mistral.ai/codestral">here</a>.
+				<img src="images/codestral.png" alt="Screenshot Mistral Console" />
+			</p>
+			<p>
+				The Codestral API key can then be configured in the Eclipse preferences like in the following screenshot:
 				<img src="images/settings.png" alt="Settings Screenshot">
-			</div>
+			</p>
+		</section>
+		<section>
+			<h2>Feedback</h2>
+			<p>Report any issues or feature requests on <a href="https://github.com/hetzge/eclipse-ai-coder/issues">Github Issues</a></p>
+			<p>If you like the software please star the project on <a href="https://github.com/hetzge/eclipse-ai-coder">Github</a></p>
 		</section>
 		<section>
 			<h2>Interessting links</h2>
