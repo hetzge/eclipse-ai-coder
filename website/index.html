@@ -84,7 +84,7 @@
 			background: #2A7B9B;
 			background: linear-gradient(90deg, rgba(42, 123, 155, 1) 0%, rgba(87, 199, 133, 1) 50%, rgba(237, 221, 83, 1) 100%);
 		}
-		
+
 		.key {
 			border: 1px solid #ccc;
 			border-radius: 4px;
@@ -107,7 +107,8 @@
 		<section>
 			<h2>Features</h2>
 			<ul>
-				<li>Support for <b>Codestral</b> (by Mistral) large language model (<b>bring your own key</b>)</li>
+				<li>Use local running <a href="https://ollama.com">Ollama</a> models</li>
+				<li>Support for <b>Codestral</b> (by <a href="https://mistral.ai">Mistral</a>) large language model (<b>bring your own key</b>)</li>
 				<li>Triggers completion <b>automatically</b> or <b>by shortcut</b> (<span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">Space</span>)</li>
 				<li><b>Controllable context</b>. See how the prompt is build and control its content</li>
 				<li><b>Insights</b> about each request: Word count, durations, status</li>
@@ -197,6 +198,16 @@
 					<td>❌</td>
 				</tr>
 				<tr>
+					<th>Local LLMs</th>
+					<td>✅</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>❌</td>
+					<td>✅</td>
+					<td>❌</td>
+					<td>❌</td>
+				</tr>
+				<tr>
 					<th>Toggle Multiline Completion</th>
 					<td>✅</td>
 					<td>❌</td>
@@ -228,11 +239,11 @@
 				</tr>
 				<tr>
 					<th>LLM Providers</th>
-					<td>Mistral</td>
+					<td>Local,<br />Mistral</td>
 					<td>Tabnine</td>
 					<td>Github Copilot</td>
 					<td>Github Copilot</td>
-					<td>Deepseek, Local, Mistral</td>
+					<td>Deepseek,<br />Local,<br />Mistral</td>
 					<td>Gitlab</td>
 					<td>Amazon</td>
 				</tr>
@@ -252,6 +263,24 @@
 			<p>
 				The Codestral API key can then be configured in the Eclipse preferences like in the following screenshot:
 				<img src="images/settings.png" alt="Settings Screenshot">
+			</p>
+		</section>
+		<section>
+			<h2>Ollama</h2>
+			<p>You can also use <a href="https://ollama.com/">Ollama</a> to run a local LLM.</p>
+			<p>
+				Here is an example how to run the <a href="https://ollama.com/library/qwen2.5-coder">Qwen2.5-Coder</a>:
+					<ul>
+						<li>Follow the <a href="https://ollama.com/download">installation instructions</a> to install Ollama</li>
+						<li>Run
+							<pre>ollama pull qwen2.5-coder:3b</pre> to download the LLM
+						</li>
+						<li>In Eclipse go to Window > Preferences > AI Coder</li>
+						<li>Setup the Ollama base url
+							<pre>http://localhost:11434</pre> and model
+							<pre>qwen2.5-coder:3b</pre> in the AI Coder Eclipse preferences page
+						</li>
+					</ul>
 			</p>
 		</section>
 		<section>

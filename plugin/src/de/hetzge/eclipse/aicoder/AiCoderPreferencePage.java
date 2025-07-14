@@ -13,8 +13,8 @@ import org.eclipse.ui.IWorkbenchPreferencePage;
 
 public class AiCoderPreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
 
+	private Group ollamaGroup;
 	private Group mistralGroup;
-	private Group openaiGroup;
 
 	public AiCoderPreferencePage() {
 		super(GRID);
@@ -27,10 +27,10 @@ public class AiCoderPreferencePage extends FieldEditorPreferencePage implements 
 	}
 
 	private void updateVisibility(String selectedProvider) {
+		this.ollamaGroup.setVisible(AiProvider.OLLAMA.name().equals(selectedProvider));
+		((GridData) this.ollamaGroup.getLayoutData()).exclude = !AiProvider.OLLAMA.name().equals(selectedProvider);
 		this.mistralGroup.setVisible(AiProvider.MISTRAL.name().equals(selectedProvider));
 		((GridData) this.mistralGroup.getLayoutData()).exclude = !AiProvider.MISTRAL.name().equals(selectedProvider);
-		this.openaiGroup.setVisible(AiProvider.OPENAI.name().equals(selectedProvider));
-		((GridData) this.openaiGroup.getLayoutData()).exclude = !AiProvider.OPENAI.name().equals(selectedProvider);
 		getFieldEditorParent().layout(true, true);
 	}
 
@@ -95,8 +95,8 @@ public class AiCoderPreferencePage extends FieldEditorPreferencePage implements 
 				"AI Provider:",
 				1,
 				new String[][] {
-						{ "Mistral", AiProvider.MISTRAL.name() },
-//						{ "OpenAI", AiProvider.OPENAI.name() }
+						{ "Ollama", AiProvider.OLLAMA.name() },
+						{ "Mistral", AiProvider.MISTRAL.name() }
 				},
 				getFieldEditorParent()) {
 			@Override
@@ -109,7 +109,22 @@ public class AiCoderPreferencePage extends FieldEditorPreferencePage implements 
 		};
 		addField(providerEditor);
 
-		// Create settings groups right after their respective radio buttons
+		// Ollama
+		this.ollamaGroup = new Group(getFieldEditorParent(), SWT.NONE);
+		this.ollamaGroup.setText("Ollama Settings");
+		this.ollamaGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
+
+		addField(new StringFieldEditor(
+				AiCoderPreferences.OLLAMA_BASE_URL_PREFERENCE_KEY,
+				"Ollama Base URL:",
+				this.ollamaGroup));
+
+		addField(new StringFieldEditor(
+				AiCoderPreferences.OLLAMA_MODEL_PREFERENCE_KEY,
+				"Ollama Model:",
+				this.ollamaGroup));
+
+		// Mistral
 		this.mistralGroup = new Group(getFieldEditorParent(), SWT.NONE);
 		this.mistralGroup.setText("Mistral Settings");
 		this.mistralGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
@@ -125,28 +140,6 @@ public class AiCoderPreferencePage extends FieldEditorPreferencePage implements 
 				this.mistralGroup);
 		codestralApiKeyFieldEditor.getTextControl(this.mistralGroup).setEchoChar('*');
 		addField(codestralApiKeyFieldEditor);
-
-		// OpenAI settings group
-		this.openaiGroup = new Group(getFieldEditorParent(), SWT.NONE);
-		this.openaiGroup.setText("OpenAI Settings");
-		this.openaiGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
-
-		addField(new StringFieldEditor(
-				AiCoderPreferences.OPENAI_BASE_URL_PREFERENCE_KEY,
-				"OpenAI Base URL:",
-				this.openaiGroup));
-
-		final StringFieldEditor openaiApiKeyFieldEditor = new StringFieldEditor(
-				AiCoderPreferences.OPENAI_API_KEY_PREFERENCE_KEY,
-				"OpenAI API Key:",
-				this.openaiGroup);
-		openaiApiKeyFieldEditor.getTextControl(this.openaiGroup).setEchoChar('*');
-		addField(openaiApiKeyFieldEditor);
-
-		addField(new StringFieldEditor(
-				AiCoderPreferences.OPENAI_MODEL_PREFERENCE_KEY,
-				"OpenAI Model:",
-				this.openaiGroup));
 
 		// Initialize visibility based on current selection
 		updateVisibility(getPreferenceStore().getString(AiCoderPreferences.AI_PROVIDER_PREFERENCE_KEY));

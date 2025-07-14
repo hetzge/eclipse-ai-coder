@@ -11,10 +11,9 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String AI_PROVIDER_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.ai_provider";
 	public static final String CODESTRAL_BASE_URL_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.codestral_base_url";
 	public static final String CODESTRAL_API_KEY_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.codestral_api_key";
+	public static final String OLLAMA_BASE_URL_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.ollama_base_url";
+	public static final String OLLAMA_MODEL_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.ollama_model";
 	public static final String ENABLE_MULTILINE_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.enable_multiline";
-	public static final String OPENAI_BASE_URL_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.openai_base_url";
-	public static final String OPENAI_API_KEY_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.openai_api_key";
-	public static final String OPENAI_MODEL_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.openai_model";
 	public static final String ENABLE_AUTOCOMPLETE_KEY = "de.hetzge.eclipse.aicoder.enable_autocomplete";
 	public static final String MAX_PREFIX_SIZE_KEY = "de.hetzge.eclipse.aicoder.max_prefix_size";
 	public static final String MAX_SUFFIX_SIZE_KEY = "de.hetzge.eclipse.aicoder.max_suffix_size";
@@ -26,12 +25,11 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public void initializeDefaultPreferences() {
 		final IPreferenceStore store = AiCoderActivator.getDefault().getPreferenceStore();
 		store.setDefault(AI_PROVIDER_PREFERENCE_KEY, AiProvider.MISTRAL.name());
-		store.setDefault(CODESTRAL_BASE_URL_PREFERENCE_KEY, "https://codestral.mistral.ai/v1/fim/completions");
+		store.setDefault(CODESTRAL_BASE_URL_PREFERENCE_KEY, "https://codestral.mistral.ai");
 		store.setDefault(CODESTRAL_API_KEY_PREFERENCE_KEY, "");
+		store.setDefault(OLLAMA_BASE_URL_PREFERENCE_KEY, "http://localhost:11434");
+		store.setDefault(OLLAMA_MODEL_PREFERENCE_KEY, "qwen2.5-coder:3b");
 		store.setDefault(ENABLE_MULTILINE_PREFERENCE_KEY, true);
-		store.setDefault(OPENAI_BASE_URL_PREFERENCE_KEY, "https://api.openai.com/v1/chat/completions");
-		store.setDefault(OPENAI_API_KEY_PREFERENCE_KEY, "");
-		store.setDefault(OPENAI_MODEL_PREFERENCE_KEY, "gpt-3.5-turbo");
 		store.setDefault(ENABLE_AUTOCOMPLETE_KEY, true);
 		store.setDefault(MAX_PREFIX_SIZE_KEY, 1000);
 		store.setDefault(MAX_SUFFIX_SIZE_KEY, 1000);
@@ -53,24 +51,20 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 		return AiCoderActivator.getDefault().getPreferenceStore().getString(CODESTRAL_API_KEY_PREFERENCE_KEY);
 	}
 
+	public static String getOllamaBaseUrl() {
+		return AiCoderActivator.getDefault().getPreferenceStore().getString(OLLAMA_BASE_URL_PREFERENCE_KEY);
+	}
+
+	public static String getOllamaModel() {
+		return AiCoderActivator.getDefault().getPreferenceStore().getString(OLLAMA_MODEL_PREFERENCE_KEY);
+	}
+
 	public static boolean isMultilineEnabled() {
 		return AiCoderActivator.getDefault().getPreferenceStore().getBoolean(ENABLE_MULTILINE_PREFERENCE_KEY);
 	}
 
 	public static void setMultilineEnabled(boolean enabled) {
 		AiCoderActivator.getDefault().getPreferenceStore().setValue(ENABLE_MULTILINE_PREFERENCE_KEY, enabled);
-	}
-
-	public static String getOpenAiBaseUrl() {
-		return AiCoderActivator.getDefault().getPreferenceStore().getString(OPENAI_BASE_URL_PREFERENCE_KEY);
-	}
-
-	public static String getOpenAiApiKey() {
-		return AiCoderActivator.getDefault().getPreferenceStore().getString(OPENAI_API_KEY_PREFERENCE_KEY);
-	}
-
-	public static String getOpenAiModel() {
-		return AiCoderActivator.getDefault().getPreferenceStore().getString(OPENAI_MODEL_PREFERENCE_KEY);
 	}
 
 	public static boolean isAutocompleteEnabled() {

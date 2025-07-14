@@ -10,18 +10,12 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
-/**
- * The activator class controls the plug-in life cycle
- */
 public class AiCoderActivator extends AbstractUIPlugin {
 
-	public static final String PLUGIN_ID = "codestral-eclipse"; //$NON-NLS-1$
+	public static final String PLUGIN_ID = "de.hetzge.eclipse.aicoder";
 
 	private static AiCoderActivator plugin;
 
-	/**
-	 * The constructor
-	 */
 	public AiCoderActivator() {
 	}
 
