@@ -9,7 +9,7 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 
 	// Preference keys
 	public static final String AI_PROVIDER_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.ai_provider";
-	public static final String CODESTRAL_BASE_URL_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.codestral_base_url";
+
 	public static final String CODESTRAL_API_KEY_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.codestral_api_key";
 	public static final String OLLAMA_BASE_URL_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.ollama_base_url";
 	public static final String OLLAMA_MODEL_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.ollama_model";
@@ -26,7 +26,7 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public void initializeDefaultPreferences() {
 		final IPreferenceStore store = AiCoderActivator.getDefault().getPreferenceStore();
 		store.setDefault(AI_PROVIDER_PREFERENCE_KEY, AiProvider.MISTRAL.name());
-		store.setDefault(CODESTRAL_BASE_URL_PREFERENCE_KEY, "https://codestral.mistral.ai");
+
 		store.setDefault(CODESTRAL_API_KEY_PREFERENCE_KEY, "");
 		store.setDefault(OLLAMA_BASE_URL_PREFERENCE_KEY, "http://localhost:11434");
 		store.setDefault(OLLAMA_MODEL_PREFERENCE_KEY, "qwen2.5-coder:3b");
@@ -45,9 +45,7 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 		return AiProvider.valueOf(providerId.toUpperCase());
 	}
 
-	public static String getCodestralBaseUrl() {
-		return AiCoderActivator.getDefault().getPreferenceStore().getString(CODESTRAL_BASE_URL_PREFERENCE_KEY);
-	}
+
 
 	public static String getCodestralApiKey() {
 		return AiCoderActivator.getDefault().getPreferenceStore().getString(CODESTRAL_API_KEY_PREFERENCE_KEY);

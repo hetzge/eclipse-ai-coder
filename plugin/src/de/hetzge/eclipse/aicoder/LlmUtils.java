@@ -68,7 +68,7 @@ public final class LlmUtils {
 	}
 
 	private static LlmResponse executeMistral(String prompt, String suffix) throws IOException {
-		final String urlString = AiCoderPreferences.getCodestralBaseUrl();
+		final String urlString = "https://codestral.mistral.ai";
 		final String codestralApiKey = AiCoderPreferences.getCodestralApiKey();
 		final boolean multilineEnabled = AiCoderPreferences.isMultilineEnabled();
 		final Json json = Json.object()

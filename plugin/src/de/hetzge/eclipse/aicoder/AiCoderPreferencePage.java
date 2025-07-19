@@ -134,10 +134,7 @@ public class AiCoderPreferencePage extends FieldEditorPreferencePage implements 
 		this.mistralGroup.setText("Mistral Settings");
 		this.mistralGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
 
-		addField(new StringFieldEditor(
-				AiCoderPreferences.CODESTRAL_BASE_URL_PREFERENCE_KEY,
-				"Codestral Base URL:",
-				this.mistralGroup));
+
 
 		final StringFieldEditor codestralApiKeyFieldEditor = new StringFieldEditor(
 				AiCoderPreferences.CODESTRAL_API_KEY_PREFERENCE_KEY,
