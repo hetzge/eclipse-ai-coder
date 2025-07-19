@@ -254,7 +254,7 @@
 			<ul>
 				<li>Option A: Install from <a href="https://marketplace.eclipse.org/content/ai-coder">Eclipse Marketplace</a></li>
 				<li>Option B: Install from updatesite: <input value="https://eclipse.hetzge.de/aicoder/repository" readonly onclick="this.select();" style="width: 320px" /></li>
-				<li>Option C: <a href="https://eclipse.hetzge.de/aicoder/repository/plugins/de.hetzge.eclipse.aicoder_1.0.0.202507121602.jar">Download</a> the JAR</li>
+				<li>Option C: <a href="https://eclipse.hetzge.de/aicoder/repository/plugins/de.hetzge.eclipse.aicoder_1.0.0.202507142020.jar">Download</a> the JAR</li>
 			</ul>
 			<p>
 				You require a (currently free) Codestral API key. You can get one <a href="https://console.mistral.ai/codestral">here</a>.
@@ -270,18 +270,84 @@
 			<p>You can also use <a href="https://ollama.com/">Ollama</a> to run a local LLM.</p>
 			<p>
 				Here is an example how to run the <a href="https://ollama.com/library/qwen2.5-coder">Qwen2.5-Coder</a>:
-					<ul>
-						<li>Follow the <a href="https://ollama.com/download">installation instructions</a> to install Ollama</li>
-						<li>Run
-							<pre>ollama pull qwen2.5-coder:3b</pre> to download the LLM
-						</li>
-						<li>In Eclipse go to Window > Preferences > AI Coder</li>
-						<li>Setup the Ollama base url
-							<pre>http://localhost:11434</pre> and model
-							<pre>qwen2.5-coder:3b</pre> in the AI Coder Eclipse preferences page
-						</li>
-					</ul>
+			<ul>
+				<li>Follow the <a href="https://ollama.com/download">installation instructions</a> to install Ollama</li>
+				<li>Run
+					<pre>ollama pull qwen2.5-coder:3b</pre> to download the LLM
+				</li>
+				<li>In Eclipse go to Window > Preferences > AI Coder</li>
+				<li>Setup the Ollama base url
+					<pre>http://localhost:11434</pre> and model
+					<pre>qwen2.5-coder:3b</pre> in the AI Coder Eclipse preferences page
+				</li>
+			</ul>
 			</p>
+			<p>Models that are used in AI Coder must support additionaly to the prompt a suffix input. Here is an example:
+				<img src="images/ollama-template.png" alt="Ollama Template Screenshot">
+			</p>
+		</section>
+		<section>
+			<h2>Settings</h2>
+			<table>
+				<tr>
+					<th>Setting</th>
+					<th>Description</th>
+				</tr>
+				<tr>
+					<td>Enable Multiline Completion</td>
+					<td>If enabled inline completions that spans multiple lines will be recommended</td>
+				</tr>
+				<tr>
+					<td>Enable Autocomplete</td>
+					<td>If enabled inline completion will be triggered automatically (by typing or other changes). If disabled inline completion can only be triggered by configured shortcut.</td>
+				</tr>
+				<tr>
+					<td>Only on Change Autocomplete</td>
+					<td>If enabled autocomplete will only be triggered after a change in the file. As example after typing a letter. Other actions like moving the cursor will not trigger inline completion.</td>
+				</tr>
+				<tr>
+					<td>Ignore JRE Classes</td>
+					<td>Exclude JRE classes from context. These classes are typically already known by the LLMs.</td>
+				</tr>
+				<tr>
+					<td>Maximum Prefix Size (lines)</td>
+					<td>How many lines before the current cursor position should be included into the prompt</td>
+				</tr>
+				<tr>
+					<td>Maximum Suffix Size (lines)</td>
+					<td>How many lines after the current cursor position should be included into the prompt</td>
+				</tr>
+				<tr>
+					<td>Maximum Tokens</td>
+					<td>Limit the amount of tokens the used LLM should generate.</td>
+				</tr>
+				<tr>
+					<td>Debounce (in ms)</td>
+					<td>Autocompletion will wait this delay, and only if in this time no other trigger action is executed, execute the calculation of the inline completion. Only affects autocompletion.</td>
+				</tr>
+			</table>
+		</section>
+		<section>
+			<h2>Java Context</h2>
+			<p>This section describes the context that is considered while editing a java file</p>
+			<table>
+			</table>
+		</section>
+		<section>
+			<h2>Release Notes</h2>
+			<h3>2025-07-xx</h3>
+			<ul>
+				<li>Improved autocompletion trigger</li>
+				<li>Add only on content change autocompletion</li>
+			</ul>
+			<h3>2025-07-15</h3>
+			<ul>
+				<li>Add support for <a href="https://ollama.com/">Ollama</a></li>
+			</ul>
+			<h3>2025-07-12</h3>
+			<ul>
+				<li>Initial release</li>
+			</ul>
 		</section>
 		<section>
 			<h2>Feedback</h2>

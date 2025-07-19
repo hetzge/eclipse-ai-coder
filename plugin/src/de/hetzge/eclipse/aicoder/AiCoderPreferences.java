@@ -15,6 +15,7 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String OLLAMA_MODEL_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.ollama_model";
 	public static final String ENABLE_MULTILINE_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.enable_multiline";
 	public static final String ENABLE_AUTOCOMPLETE_KEY = "de.hetzge.eclipse.aicoder.enable_autocomplete";
+	public static final String ONLY_ON_CHANGE_AUTOCOMPLETE_PREFERENCE_KEY = "de.hetzge.eclipse.aicoder.only_on_change_autocomplete";
 	public static final String MAX_PREFIX_SIZE_KEY = "de.hetzge.eclipse.aicoder.max_prefix_size";
 	public static final String MAX_SUFFIX_SIZE_KEY = "de.hetzge.eclipse.aicoder.max_suffix_size";
 	public static final String MAX_TOKENS_KEY = "de.hetzge.eclipse.aicoder.max_tokens";
@@ -31,6 +32,7 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(OLLAMA_MODEL_PREFERENCE_KEY, "qwen2.5-coder:3b");
 		store.setDefault(ENABLE_MULTILINE_PREFERENCE_KEY, true);
 		store.setDefault(ENABLE_AUTOCOMPLETE_KEY, true);
+		store.setDefault(ONLY_ON_CHANGE_AUTOCOMPLETE_PREFERENCE_KEY, true);
 		store.setDefault(MAX_PREFIX_SIZE_KEY, 1000);
 		store.setDefault(MAX_SUFFIX_SIZE_KEY, 1000);
 		store.setDefault(MAX_TOKENS_KEY, 1024);
@@ -69,6 +71,10 @@ public class AiCoderPreferences extends AbstractPreferenceInitializer {
 
 	public static boolean isAutocompleteEnabled() {
 		return AiCoderActivator.getDefault().getPreferenceStore().getBoolean(ENABLE_AUTOCOMPLETE_KEY);
+	}
+
+	public static boolean isOnlyOnChangeAutocompleteEnabled() {
+		return AiCoderActivator.getDefault().getPreferenceStore().getBoolean(ONLY_ON_CHANGE_AUTOCOMPLETE_PREFERENCE_KEY);
 	}
 
 	public static int getMaxPrefixSize() {

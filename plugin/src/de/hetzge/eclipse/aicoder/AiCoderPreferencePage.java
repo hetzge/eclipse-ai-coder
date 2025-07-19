@@ -53,6 +53,11 @@ public class AiCoderPreferencePage extends FieldEditorPreferencePage implements 
 				"Enable autocomplete",
 				generalGroup));
 
+		addField(new BooleanFieldEditor(
+				AiCoderPreferences.ONLY_ON_CHANGE_AUTOCOMPLETE_PREFERENCE_KEY,
+				"Only on change autocomplete",
+				generalGroup));
+
 		// Ignore jre/jdk classes
 		final BooleanFieldEditor ignoreJreClassesEditor = new BooleanFieldEditor(
 				AiCoderPreferences.IGNORE_JRE_CLASSES_KEY,

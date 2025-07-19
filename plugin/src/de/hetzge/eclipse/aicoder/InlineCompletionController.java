@@ -33,8 +33,6 @@ import org.eclipse.swt.custom.CaretListener;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.custom.StyledTextLineSpacingProvider;
-import org.eclipse.swt.events.KeyEvent;
-import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Font;
@@ -76,7 +74,6 @@ public final class InlineCompletionController {
 				((ITextViewerExtension2) textViewer).addPainter(controller.painter);
 				textViewer.getTextWidget().addPaintListener(controller.paintListener);
 				textViewer.getTextWidget().setLineSpacingProvider(controller.spacingProvider);
-				textViewer.getTextWidget().addKeyListener(controller.keyListener);
 				textViewer.getSelectionProvider().addSelectionChangedListener(controller.selectionListener);
 				textViewer.getTextWidget().addCaretListener(controller.caretListener);
 				textEditor.getDocumentProvider().getDocument(textEditor.getEditorInput()).addDocumentListener(controller.documentListener);
@@ -92,14 +89,16 @@ public final class InlineCompletionController {
 	private final DocumentListenerImplementation documentListener;
 	private final PaintListenerImplementation paintListener;
 	private final PainterImplementation painter;
-	private final KeyListenerImplementation keyListener;
 	private final ISelectionChangedListener selectionListener;
 	private final CaretListener caretListener;
 	private final Font font;
 	private Completion completion;
 	private IContextActivation context;
 	private Job job;
-	private Runnable debounceRunnable;
+	private final Runnable debounceRunnable;
+	private long changeCounter;
+	private long lastChangeCounter;
+	private final Debouncer debouncer;
 
 	private InlineCompletionController(ITextViewer textViewer, ITextEditor textEditor, Font font) {
 		this.textViewer = textViewer;
@@ -109,7 +108,6 @@ public final class InlineCompletionController {
 		this.documentListener = new DocumentListenerImplementation();
 		this.paintListener = new PaintListenerImplementation();
 		this.painter = new PainterImplementation();
-		this.keyListener = new KeyListenerImplementation();
 		this.selectionListener = new SelectionListenerImplementation();
 		this.caretListener = new CaretListenerImplementation();
 		this.font = font;
@@ -117,72 +115,53 @@ public final class InlineCompletionController {
 		this.context = null;
 		this.job = null;
 		this.debounceRunnable = null;
+		this.changeCounter = 0;
+		this.lastChangeCounter = 0;
+		this.debouncer = new Debouncer(Display.getCurrent(), AiCoderPreferences::getDebounceDuration);
 	}
 
 	private void triggerAutocomplete() {
-		if (AiCoderPreferences.isAutocompleteEnabled()) {
-			InlineCompletionController.this.debounceRunnable = () -> {
-				if (isNoSelectionActive() && isLineSuffixBlank()) {
-					trigger();
-				}
-			};
-			Display.getCurrent().timerExec((int) AiCoderPreferences.getDebounceDuration().toMillis(), InlineCompletionController.this.debounceRunnable);
+		final boolean isDocumentChanged = this.lastChangeCounter != this.changeCounter;
+		this.lastChangeCounter = this.changeCounter;
+		if (!AiCoderPreferences.isAutocompleteEnabled()) {
+			return;
 		}
+		if (AiCoderPreferences.isOnlyOnChangeAutocompleteEnabled() && !isDocumentChanged) {
+			return;
+		}
+		this.debouncer.debounce(() -> {
+			if (isNoSelectionActive() && isAutocompleteAllowed()) {
+				trigger();
+			}
+		});
 	}
 
 	public void trigger() {
 		AiCoderActivator.log().info("Trigger");
-
-		// Filter JDK
-		// Prefer local
-		// Unresolved types?!
-		// Comment complete (when newline after comment, calculate completion, optional
-		// remove comment, always use multiline)
-		// Comment complete "?!" trigger
-		// Cache completion
-
 		final long startTime = System.currentTimeMillis();
-		final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
-		final IDocument document = this.textViewer.getDocument();
-
 		abort("Trigger");
 		this.job = Job.create("AI inline completion", monitor -> {
-			final RootContextEntry rootContextEntry;
+			String contextString = "";
 			try {
-				rootContextEntry = RootContextEntry.create(document, this.textEditor.getEditorInput(), modelOffset);
-			} catch (final CoreException | UnsupportedFlavorException | IOException | BadLocationException exception) {
-				AiCoderActivator.log().error("AI Coder completion failed", exception);
-				final String stacktrace = Utils.getStacktraceString(exception);
-				addHistoryEntry("", stacktrace, "Error: " + Optional.ofNullable(exception.getMessage()).orElse("-"), 0, 0);
-				return;
-			}
-
-			int widgetLine;
-			try {
-				widgetLine = getWidgetLine(modelOffset);
-			} catch (final BadLocationException exception) {
-				AiCoderActivator.log().error("AI Coder completion failed", exception);
-				final String stacktrace = Utils.getStacktraceString(exception);
-				addHistoryEntry("", stacktrace, "Error: " + Optional.ofNullable(exception.getMessage()).orElse("-"), 0, 0);
-				return;
-			}
-			final int widgetOffset = getWidgetOffset(modelOffset);
-
-			final int lineHeight = Display.getDefault().syncCall(() -> InlineCompletionController.this.textViewer.getTextWidget().getLineHeight());
-			final int defaultLineSpacing = Display.getDefault().syncCall(() -> InlineCompletionController.this.textViewer.getTextWidget().getLineSpacing());
-
-			if (monitor.isCanceled()) {
-				return;
-			}
-			final String contextString = ContextEntry.apply(rootContextEntry, new ContextContext());
-
-			// IMPORTANT: DO this after ContextEntry.apply(...)
-			updateContextView(rootContextEntry);
-
-			final String[] contextParts = contextString.split(SuffixContextEntry.FILL_HERE_PLACEHOLDER);
-			final String input = contextString; // Use full context as input
-
-			try {
+				final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
+				final IDocument document = this.textViewer.getDocument();
+				final RootContextEntry rootContextEntry = RootContextEntry.create(document, this.textEditor.getEditorInput(), modelOffset);
+				if (monitor.isCanceled()) {
+					addHistoryEntry("", "", "Aborted", 0, 0);
+					return;
+				}
+				final int widgetLine = getWidgetLine(modelOffset);
+				final int widgetOffset = getWidgetOffset(modelOffset);
+				final int lineHeight = Display.getDefault().syncCall(() -> InlineCompletionController.this.textViewer.getTextWidget().getLineHeight());
+				final int defaultLineSpacing = Display.getDefault().syncCall(() -> InlineCompletionController.this.textViewer.getTextWidget().getLineSpacing());
+				contextString = ContextEntry.apply(rootContextEntry, new ContextContext());
+				// IMPORTANT: DO this after ContextEntry.apply(...)
+				updateContextView(rootContextEntry);
+				if (monitor.isCanceled()) {
+					addHistoryEntry("", "", "Aborted", 0, 0);
+					return;
+				}
+				final String[] contextParts = contextString.split(SuffixContextEntry.FILL_HERE_PLACEHOLDER);
 				final String prefix = contextParts[0];
 				final String suffix = contextParts.length > 1 ? contextParts[1] : "";
 				final long llmStartTime = System.currentTimeMillis();
@@ -194,6 +173,10 @@ public final class InlineCompletionController {
 				final boolean isBlank = content.isBlank();
 				final boolean isMoved = currentModelOffset != modelOffset;
 				final boolean isSame = isMultilineContent && suffix.replaceAll("\\s", "").startsWith(content.replaceAll("\\s", ""));
+				if (monitor.isCanceled()) {
+					addHistoryEntry("", "", "Aborted", 0, 0);
+					return;
+				}
 				if (!isBlank && !isMoved && !isSame) {
 					setup(Completion.create(document, modelOffset, widgetOffset, widgetLine, content, lineHeight, defaultLineSpacing));
 				}
@@ -207,12 +190,12 @@ public final class InlineCompletionController {
 				} else {
 					status = "Generated";
 				}
-				addHistoryEntry(input, content, status, duration, llmDuration);
-			} catch (final IOException | BadLocationException exception) {
+				addHistoryEntry(contextString, content, status, duration, llmDuration);
+			} catch (final IOException | BadLocationException | UnsupportedFlavorException exception) {
 				AiCoderActivator.log().error("AI Coder completion failed", exception);
 				final long duration = System.currentTimeMillis() - startTime;
 				final String stacktrace = Utils.getStacktraceString(exception);
-				addHistoryEntry(input, stacktrace, "Error: " + Optional.ofNullable(exception.getMessage()).orElse("-"), duration, 0);
+				addHistoryEntry(contextString, stacktrace, "Error: " + Optional.ofNullable(exception.getMessage()).orElse("-"), duration, 0);
 			}
 		});
 		this.job.schedule();
@@ -222,11 +205,26 @@ public final class InlineCompletionController {
 		return InlineCompletionController.this.textViewer.getSelectedRange().y == 0;
 	}
 
-	private boolean isLineSuffixBlank() {
+	private boolean isAutocompleteAllowed() {
 		try {
 			final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
-			final IRegion lineRegion = InlineCompletionController.this.textViewer.getDocument().getLineInformationOfOffset(modelOffset);
-			final String lineString = InlineCompletionController.this.textViewer.getDocument().get(lineRegion.getOffset(), lineRegion.getLength());
+			final IDocument document = InlineCompletionController.this.textViewer.getDocument();
+			if (modelOffset > 0 && modelOffset < document.getLength()) {
+				if (document.getChar(modelOffset - 1) == '"' && document.getChar(modelOffset) == '"') {
+					return true;
+				}
+				if (document.getChar(modelOffset - 1) == '(' && document.getChar(modelOffset) == ')') {
+					return true;
+				}
+				if (document.getChar(modelOffset - 1) == '[' && document.getChar(modelOffset) == ']') {
+					return true;
+				}
+				if (document.getChar(modelOffset - 1) == '{' && document.getChar(modelOffset) == '}') {
+					return true;
+				}
+			}
+			final IRegion lineRegion = document.getLineInformationOfOffset(modelOffset);
+			final String lineString = document.get(lineRegion.getOffset(), lineRegion.getLength());
 			return lineString.substring(modelOffset - lineRegion.getOffset()).replace(";", "").replace(")", "").replace("{", "").replace("{", "").isBlank();
 		} catch (final BadLocationException exception) {
 			throw new RuntimeException("Failed to check if line suffix is blank", exception);
@@ -348,6 +346,13 @@ public final class InlineCompletionController {
 		}
 	}
 
+	private class CaretListenerImplementation implements CaretListener {
+		@Override
+		public void caretMoved(CaretEvent event) {
+			triggerAutocomplete();
+		}
+	}
+
 	private class DocumentListenerImplementation implements IDocumentListener {
 		@Override
 		public void documentAboutToBeChanged(DocumentEvent event) {
@@ -355,45 +360,23 @@ public final class InlineCompletionController {
 
 		@Override
 		public void documentChanged(DocumentEvent event) {
+			InlineCompletionController.this.changeCounter++;
 			abort("Document changed");
 		}
 	}
 
-	private class KeyListenerImplementation implements KeyListener {
-
-		private final Set<Integer> activeKeyCodes;
-
-		public KeyListenerImplementation() {
-			this.activeKeyCodes = new HashSet<>();
-		}
-
+	private class SelectionListenerImplementation implements ISelectionChangedListener {
 		@Override
-		public void keyPressed(KeyEvent event) {
-			this.activeKeyCodes.add(event.keyCode);
-		}
-
-		@Override
-		public void keyReleased(KeyEvent event) {
-			final boolean isCommandDown = this.activeKeyCodes.stream().anyMatch(this::isCommandKey);
-			this.activeKeyCodes.remove(event.keyCode);
-			abort("Key released");
-			// Ignore command keys
-			if (isCommandDown) {
+		public void selectionChanged(SelectionChangedEvent event) {
+			final ISelection selection = event.getSelection();
+			if (!(selection instanceof ITextSelection)) {
 				return;
 			}
-			// Handle "tab" only if no completion context is active
-			if (InlineCompletionController.this.context != null && event.keyCode == 9) {
+			final ITextSelection textSelection = (ITextSelection) selection;
+			if (textSelection.getLength() <= 0) {
 				return;
 			}
-			triggerAutocomplete();
-		}
-
-		private boolean isCommandKey(int keyCode) {
-			return keyCode == SWT.CTRL
-					|| keyCode == SWT.ALT
-					|| keyCode == SWT.SHIFT
-					|| keyCode == SWT.COMMAND
-					|| keyCode == SWT.ESC;
+			abort("Selection changed");
 		}
 	}
 
@@ -490,28 +473,6 @@ public final class InlineCompletionController {
 
 		@Override
 		public void setPositionManager(IPaintPositionManager manager) {
-		}
-	}
-
-	private class SelectionListenerImplementation implements ISelectionChangedListener {
-		@Override
-		public void selectionChanged(SelectionChangedEvent event) {
-			final ISelection selection = event.getSelection();
-			if (!(selection instanceof ITextSelection)) {
-				return;
-			}
-			final ITextSelection textSelection = (ITextSelection) selection;
-			if (textSelection.getLength() <= 0) {
-				return;
-			}
-			abort("Selection changed");
-		}
-	}
-
-	private class CaretListenerImplementation implements CaretListener {
-		@Override
-		public void caretMoved(CaretEvent event) {
-			// Do nothing here
 		}
 	}
 }
