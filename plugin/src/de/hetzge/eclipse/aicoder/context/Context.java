@@ -1,6 +1,7 @@
 package de.hetzge.eclipse.aicoder.context;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -10,7 +11,6 @@ import de.hetzge.eclipse.aicoder.LambdaExceptionUtils;
 
 /*
  * TODO lazy create methods
- * TODO Prio levels (High, Medium, Low)
  * TODO show tokens of each entry
  * TODO last edited files
  * TODO last viewed files
@@ -29,6 +29,38 @@ import de.hetzge.eclipse.aicoder.LambdaExceptionUtils;
  */
 
 public final class Context {
+
+	public static final Map<String, String> CONTEXT_TYPE_NAME_BY_CONTEXT_PREFIX = Map.ofEntries(
+			Map.entry(ImportsContextEntry.PREFIX, "Imports"),
+			Map.entry(StickyContextEntry.PREFIX, "Sticky"),
+			Map.entry(TypeContextEntry.PREFIX, "Type"),
+			Map.entry(PrefixContextEntry.PREFIX, "Prefix"),
+			Map.entry(CustomContextEntry.PREFIX, "Custom"),
+			Map.entry(ClipboardContextEntry.PREFIX, "Clipboard"),
+			Map.entry(EmptyContextEntry.PREFIX, "Empty"),
+			Map.entry(BlacklistedContextEntry.PREFIX, "Blacklisted"),
+			Map.entry(SuffixContextEntry.PREFIX, "Suffix"),
+			Map.entry(ScopeContextEntry.PREFIX, "Scope"),
+			Map.entry(UserContextEntry.PREFIX, "User"),
+			Map.entry(RootContextEntry.PREFIX, "Root"),
+			Map.entry(TypeMemberContextEntry.PREFIX, "Type Member"),
+			Map.entry(PackageContextEntry.PREFIX, "Package"));
+
+	public static final List<String> DEFAULT_PREFIX_ORDER = List.of(
+			RootContextEntry.PREFIX,
+			ScopeContextEntry.PREFIX,
+			ImportsContextEntry.PREFIX,
+			PackageContextEntry.PREFIX,
+			TypeContextEntry.PREFIX,
+			TypeMemberContextEntry.PREFIX,
+			PrefixContextEntry.PREFIX,
+			SuffixContextEntry.PREFIX,
+			ClipboardContextEntry.PREFIX,
+			StickyContextEntry.PREFIX,
+			CustomContextEntry.PREFIX,
+			UserContextEntry.PREFIX,
+			BlacklistedContextEntry.PREFIX,
+			EmptyContextEntry.PREFIX);
 
 	public static Optional<? extends ContextEntry> create(ContextEntryKey key) throws CoreException {
 		final List<? extends Function<ContextEntryKey, Optional<? extends ContextEntry>>> factories = List.of(

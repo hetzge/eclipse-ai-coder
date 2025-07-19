@@ -4,6 +4,7 @@ import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,6 +14,7 @@ import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.ui.IEditorInput;
 
+import de.hetzge.eclipse.aicoder.ContextPreferences;
 import de.hetzge.eclipse.aicoder.EclipseUtils;
 
 public class RootContextEntry extends ContextEntry {
@@ -54,6 +56,14 @@ public class RootContextEntry extends ContextEntry {
 		entries.add(PrefixContextEntry.create(filename, document, offset));
 		entries.add(SuffixContextEntry.create(document, offset));
 		entries.add(BlacklistedContextEntry.create());
-		return new RootContextEntry(entries, Duration.ofMillis(System.currentTimeMillis() - before));
+		final List<String> orderedPrefixes = ContextPreferences.getContextTypePositions().stream()
+				.filter(item -> item.enabled())
+				.map(item -> item.prefix())
+				.toList();
+		final List<ContextEntry> filteredAndSortedEntries = entries.stream()
+				.filter(entry -> orderedPrefixes.contains(entry.getKey().prefix()))
+				.sorted(Comparator.comparingInt(entry -> orderedPrefixes.indexOf(entry.getKey().prefix())))
+				.toList();
+		return new RootContextEntry(filteredAndSortedEntries, Duration.ofMillis(System.currentTimeMillis() - before));
 	}
 }

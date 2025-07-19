@@ -43,7 +43,7 @@ public class AiCoderPreferencePage extends FieldEditorPreferencePage implements 
 
 		// Multiline completion setting
 		addField(new BooleanFieldEditor(
-				AiCoderPreferences.ENABLE_MULTILINE_PREFERENCE_KEY,
+				AiCoderPreferences.ENABLE_MULTILINE_KEY,
 				"Enable multiline completion",
 				generalGroup));
 
@@ -54,7 +54,7 @@ public class AiCoderPreferencePage extends FieldEditorPreferencePage implements 
 				generalGroup));
 
 		addField(new BooleanFieldEditor(
-				AiCoderPreferences.ONLY_ON_CHANGE_AUTOCOMPLETE_PREFERENCE_KEY,
+				AiCoderPreferences.ONLY_ON_CHANGE_AUTOCOMPLETE_KEY,
 				"Only on change autocomplete",
 				generalGroup));
 
@@ -96,7 +96,7 @@ public class AiCoderPreferencePage extends FieldEditorPreferencePage implements 
 
 		// Create the main selection for AI Provider
 		final RadioGroupFieldEditor providerEditor = new RadioGroupFieldEditor(
-				AiCoderPreferences.AI_PROVIDER_PREFERENCE_KEY,
+				AiCoderPreferences.AI_PROVIDER_KEY,
 				"AI Provider:",
 				1,
 				new String[][] {
@@ -120,12 +120,12 @@ public class AiCoderPreferencePage extends FieldEditorPreferencePage implements 
 		this.ollamaGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
 
 		addField(new StringFieldEditor(
-				AiCoderPreferences.OLLAMA_BASE_URL_PREFERENCE_KEY,
+				AiCoderPreferences.OLLAMA_BASE_URL_KEY,
 				"Ollama Base URL:",
 				this.ollamaGroup));
 
 		addField(new StringFieldEditor(
-				AiCoderPreferences.OLLAMA_MODEL_PREFERENCE_KEY,
+				AiCoderPreferences.OLLAMA_MODEL_KEY,
 				"Ollama Model:",
 				this.ollamaGroup));
 
@@ -134,16 +134,14 @@ public class AiCoderPreferencePage extends FieldEditorPreferencePage implements 
 		this.mistralGroup.setText("Mistral Settings");
 		this.mistralGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
 
-
-
 		final StringFieldEditor codestralApiKeyFieldEditor = new StringFieldEditor(
-				AiCoderPreferences.CODESTRAL_API_KEY_PREFERENCE_KEY,
+				AiCoderPreferences.CODESTRAL_API_KEY,
 				"Codestral API Key:",
 				this.mistralGroup);
 		codestralApiKeyFieldEditor.getTextControl(this.mistralGroup).setEchoChar('*');
 		addField(codestralApiKeyFieldEditor);
 
 		// Initialize visibility based on current selection
-		updateVisibility(getPreferenceStore().getString(AiCoderPreferences.AI_PROVIDER_PREFERENCE_KEY));
+		updateVisibility(getPreferenceStore().getString(AiCoderPreferences.AI_PROVIDER_KEY));
 	}
 }
