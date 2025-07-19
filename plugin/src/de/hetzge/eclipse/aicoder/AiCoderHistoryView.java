@@ -230,6 +230,26 @@ public class AiCoderHistoryView extends ViewPart {
 			}
 		});
 
+		// Input token count column
+		column = createTableViewerColumn("Input Tokens", 70);
+		column.setLabelProvider(new ColumnLabelProvider() {
+			@Override
+			public String getText(Object element) {
+				final AiCoderHistoryEntry entry = (AiCoderHistoryEntry) element;
+				return String.valueOf(entry.getInputTokenCount());
+			}
+		});
+
+		// Output token count column
+		column = createTableViewerColumn("Output Tokens", 70);
+		column.setLabelProvider(new ColumnLabelProvider() {
+			@Override
+			public String getText(Object element) {
+				final AiCoderHistoryEntry entry = (AiCoderHistoryEntry) element;
+				return String.valueOf(entry.getOutputTokenCount());
+			}
+		});
+
 		// Duration column
 		column = createTableViewerColumn("Duration", 60);
 		column.setLabelProvider(new ColumnLabelProvider() {

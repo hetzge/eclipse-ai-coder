@@ -147,7 +147,7 @@ public final class InlineCompletionController {
 				final IDocument document = this.textViewer.getDocument();
 				final RootContextEntry rootContextEntry = RootContextEntry.create(document, this.textEditor.getEditorInput(), modelOffset);
 				if (monitor.isCanceled()) {
-					addHistoryEntry("", "", "Aborted", 0, 0);
+					addHistoryEntry("", "", "Aborted", 0, 0, 0, 0);
 					return;
 				}
 				final int widgetLine = getWidgetLine(modelOffset);
@@ -158,14 +158,15 @@ public final class InlineCompletionController {
 				// IMPORTANT: DO this after ContextEntry.apply(...)
 				updateContextView(rootContextEntry);
 				if (monitor.isCanceled()) {
-					addHistoryEntry("", "", "Aborted", 0, 0);
+					addHistoryEntry("", "", "Aborted", 0, 0, 0, 0);
 					return;
 				}
 				final String[] contextParts = contextString.split(SuffixContextEntry.FILL_HERE_PLACEHOLDER);
 				final String prefix = contextParts[0];
 				final String suffix = contextParts.length > 1 ? contextParts[1] : "";
 				final long llmStartTime = System.currentTimeMillis();
-				final String content = LlmUtils.execute(prefix, suffix);
+				final LlmResponse llmResponse = LlmUtils.execute(prefix, suffix);
+				final String content = llmResponse.getContent();
 				final long duration = System.currentTimeMillis() - startTime;
 				final long llmDuration = System.currentTimeMillis() - llmStartTime;
 				final int currentModelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
@@ -174,7 +175,7 @@ public final class InlineCompletionController {
 				final boolean isMoved = currentModelOffset != modelOffset;
 				final boolean isSame = isMultilineContent && suffix.replaceAll("\\s", "").startsWith(content.replaceAll("\\s", ""));
 				if (monitor.isCanceled()) {
-					addHistoryEntry("", "", "Aborted", 0, 0);
+					addHistoryEntry("", "", "Aborted", 0, 0, 0, 0);
 					return;
 				}
 				if (!isBlank && !isMoved && !isSame) {
@@ -190,12 +191,12 @@ public final class InlineCompletionController {
 				} else {
 					status = "Generated";
 				}
-				addHistoryEntry(contextString, content, status, duration, llmDuration);
+				addHistoryEntry(contextString, content, status, duration, llmDuration, llmResponse.getInputTokens(), llmResponse.getOutputTokens());
 			} catch (final IOException | BadLocationException | UnsupportedFlavorException exception) {
 				AiCoderActivator.log().error("AI Coder completion failed", exception);
 				final long duration = System.currentTimeMillis() - startTime;
 				final String stacktrace = Utils.getStacktraceString(exception);
-				addHistoryEntry(contextString, stacktrace, "Error: " + Optional.ofNullable(exception.getMessage()).orElse("-"), duration, 0);
+				addHistoryEntry(contextString, stacktrace, "Error: " + Optional.ofNullable(exception.getMessage()).orElse("-"), duration, 0, 0, 0);
 			}
 		});
 		this.job.schedule();
@@ -259,7 +260,7 @@ public final class InlineCompletionController {
 		}
 	}
 
-	private void addHistoryEntry(String input, String output, String status, long duration, long llmDuration) {
+	private void addHistoryEntry(String input, String output, String status, long duration, long llmDuration, int inputTokens, int outputTokens) {
 		Display.getDefault().asyncExec(() -> {
 			final IEditorInput editorInput = this.textEditor.getEditorInput();
 			final String filePath = editorInput.getName();
@@ -287,6 +288,8 @@ public final class InlineCompletionController {
 					output.length(),
 					outputWordCount,
 					(int) outputLineCount,
+					inputTokens,
+					outputTokens,
 					duration,
 					llmDuration);
 

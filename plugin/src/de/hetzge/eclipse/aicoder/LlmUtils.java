@@ -20,7 +20,7 @@ public final class LlmUtils {
 	private LlmUtils() {
 	}
 
-	public static String execute(String prompt, String suffix) throws IOException {
+	public static LlmResponse execute(String prompt, String suffix) throws IOException {
 		final AiProvider provider = AiCoderPreferences.getAiProvider();
 		switch (provider) {
 		case OLLAMA:
@@ -32,7 +32,7 @@ public final class LlmUtils {
 		}
 	}
 
-	private static String executeOllama(String prompt, String suffix) throws IOException {
+	private static LlmResponse executeOllama(String prompt, String suffix) throws IOException {
 		final String urlString = AiCoderPreferences.getOllamaBaseUrl();
 		final boolean multilineEnabled = AiCoderPreferences.isMultilineEnabled();
 		final Json json = Json.object()
@@ -56,14 +56,18 @@ public final class LlmUtils {
 		final int responseCode = connection.getResponseCode();
 		if (responseCode == HttpURLConnection.HTTP_OK) {
 			final String responseBody = readResponse(connection);
-			return Json.read(responseBody).at("response").asString();
+			final Json responseJson = Json.read(responseBody);
+			final String content = responseJson.at("response").asString();
+			final int inputTokens = responseJson.at("prompt_eval_count").asInteger();
+			final int outputTokens = responseJson.at("eval_count").asInteger();
+			return new LlmResponse(content, inputTokens, outputTokens);
 		} else {
 			AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", connection.getResponseMessage(), responseCode)));
-			return "";
+			return new LlmResponse("", 0, 0);
 		}
 	}
 
-	private static String executeMistral(String prompt, String suffix) throws IOException {
+	private static LlmResponse executeMistral(String prompt, String suffix) throws IOException {
 		final String urlString = AiCoderPreferences.getCodestralBaseUrl();
 		final String codestralApiKey = AiCoderPreferences.getCodestralApiKey();
 		final boolean multilineEnabled = AiCoderPreferences.isMultilineEnabled();
@@ -87,10 +91,14 @@ public final class LlmUtils {
 		final int responseCode = connection.getResponseCode();
 		if (responseCode == HttpURLConnection.HTTP_OK) {
 			final String responseBody = readResponse(connection);
-			return Json.read(responseBody).at("choices").at(0).at("message").at("content").asString();
+			final Json responseJson = Json.read(responseBody);
+			final String content = responseJson.at("choices").at(0).at("message").at("content").asString();
+			final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
+			final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
+			return new LlmResponse(content, inputTokens, outputTokens);
 		} else {
 			AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", connection.getResponseMessage(), responseCode)));
-			return "";
+			return new LlmResponse("", 0, 0);
 		}
 	}
 

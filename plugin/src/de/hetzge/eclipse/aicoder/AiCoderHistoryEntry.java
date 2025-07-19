@@ -17,6 +17,9 @@ public class AiCoderHistoryEntry {
 	private final int outputCharacterCount;
 	private final int outputWordCount;
 	private final int outputLineCount;
+	// Token counts
+	private final int inputTokenCount;
+	private final int outputTokenCount;
 	private final long durationMs;
 	private final long llmDurationMs;
 
@@ -33,6 +36,8 @@ public class AiCoderHistoryEntry {
 			int outputCharacterCount,
 			int outputWordCount,
 			int outputLineCount,
+			int inputTokenCount,
+			int outputTokenCount,
 			long durationMs,
 			long llmDurationMs) {
 		this.timestamp = timestamp;
@@ -47,6 +52,8 @@ public class AiCoderHistoryEntry {
 		this.outputCharacterCount = outputCharacterCount;
 		this.outputWordCount = outputWordCount;
 		this.outputLineCount = outputLineCount;
+		this.inputTokenCount = inputTokenCount;
+		this.outputTokenCount = outputTokenCount;
 		this.durationMs = durationMs;
 		this.llmDurationMs = llmDurationMs;
 	}
@@ -101,6 +108,14 @@ public class AiCoderHistoryEntry {
 
 	public int getOutputLineCount() {
 		return this.outputLineCount;
+	}
+
+	public int getInputTokenCount() {
+		return this.inputTokenCount;
+	}
+
+	public int getOutputTokenCount() {
+		return this.outputTokenCount;
 	}
 
 	public long getDurationMs() {
