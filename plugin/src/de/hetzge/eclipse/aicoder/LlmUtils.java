@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 
+import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import mjson.Json;
 
 public final class LlmUtils {

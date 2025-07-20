@@ -1,9 +1,12 @@
-package de.hetzge.eclipse.aicoder;
+package de.hetzge.eclipse.aicoder.preferences;
 
 import java.time.Duration;
 
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
 import org.eclipse.jface.preference.IPreferenceStore;
+
+import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.AiProvider;
 
 public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 

@@ -1,4 +1,4 @@
-package de.hetzge.eclipse.aicoder;
+package de.hetzge.eclipse.aicoder.preferences;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,10 +29,11 @@ import org.eclipse.swt.widgets.Table;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
-import de.hetzge.eclipse.aicoder.ContextPreferences.ContextTypePositionItem;
+import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.context.Context;
 import de.hetzge.eclipse.aicoder.context.PrefixContextEntry;
 import de.hetzge.eclipse.aicoder.context.SuffixContextEntry;
+import de.hetzge.eclipse.aicoder.preferences.ContextPreferences.ContextTypePositionItem;
 
 public class ContextPreferencePage extends PreferencePage implements IWorkbenchPreferencePage {
 

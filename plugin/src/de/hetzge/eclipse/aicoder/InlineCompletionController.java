@@ -49,6 +49,7 @@ import de.hetzge.eclipse.aicoder.context.ContextContext;
 import de.hetzge.eclipse.aicoder.context.ContextEntry;
 import de.hetzge.eclipse.aicoder.context.RootContextEntry;
 import de.hetzge.eclipse.aicoder.context.SuffixContextEntry;
+import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 
 public final class InlineCompletionController {
 

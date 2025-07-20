@@ -1,4 +1,4 @@
-package de.hetzge.eclipse.aicoder;
+package de.hetzge.eclipse.aicoder.preferences;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.osgi.service.prefs.Preferences;
 
+import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.context.ContextEntryKey;
 import de.hetzge.eclipse.aicoder.context.CustomContextEntry;
 import de.hetzge.eclipse.aicoder.context.PrefixContextEntry;

@@ -50,6 +50,7 @@ import de.hetzge.eclipse.aicoder.context.CustomContextEntry;
 import de.hetzge.eclipse.aicoder.context.EmptyContextEntry;
 import de.hetzge.eclipse.aicoder.context.UserContextEntry;
 import de.hetzge.eclipse.aicoder.handler.ToggleMultilineHandler;
+import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
 import jakarta.inject.Inject;
 
 public class ContextView extends ViewPart {

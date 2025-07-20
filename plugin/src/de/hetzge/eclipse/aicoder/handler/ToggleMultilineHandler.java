@@ -10,7 +10,7 @@ import org.eclipse.ui.commands.ICommandService;
 import org.eclipse.ui.handlers.HandlerUtil;
 import org.eclipse.ui.handlers.RegistryToggleState;
 
-import de.hetzge.eclipse.aicoder.AiCoderPreferences;
+import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 
 public class ToggleMultilineHandler extends AbstractHandler {
 

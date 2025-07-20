@@ -3,7 +3,7 @@ package de.hetzge.eclipse.aicoder.context;
 import java.time.Duration;
 import java.util.List;
 
-import de.hetzge.eclipse.aicoder.ContextPreferences;
+import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
 
 public class UserContextEntry extends ContextEntry {
 	public static final String PREFIX = "USER";

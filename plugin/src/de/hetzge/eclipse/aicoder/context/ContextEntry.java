@@ -8,7 +8,7 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
 
-import de.hetzge.eclipse.aicoder.ContextPreferences;
+import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
 
 public abstract class ContextEntry {
 

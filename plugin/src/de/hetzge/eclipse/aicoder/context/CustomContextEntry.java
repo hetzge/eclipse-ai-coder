@@ -6,7 +6,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-import de.hetzge.eclipse.aicoder.ContextPreferences;
+import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
 import mjson.Json;
 
 public class CustomContextEntry extends ContextEntry {

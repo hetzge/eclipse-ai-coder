@@ -9,7 +9,7 @@ import org.eclipse.swt.graphics.Image;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
-import de.hetzge.eclipse.aicoder.AiCoderPreferences;
+import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 
 public class PrefixContextEntry extends ContextEntry {
 	public static final String PREFIX = "PREFIX";

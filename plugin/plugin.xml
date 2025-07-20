@@ -131,21 +131,33 @@
  <extension
         point="org.eclipse.ui.preferencePages">
      <page
-           class="de.hetzge.eclipse.aicoder.AiCoderPreferencePage"
+           class="de.hetzge.eclipse.aicoder.preferences.AiCoderPreferencePage"
            id="de.hetzge.eclipse.aicoder.preferences"
            name="AI Coder">
      </page>
      <page
            category="de.hetzge.eclipse.aicoder.preferences"
-           class="de.hetzge.eclipse.aicoder.ContextPreferencePage"
+           class="de.hetzge.eclipse.aicoder.preferences.GeneralPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.general"
+           name="General">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences"
+           class="de.hetzge.eclipse.aicoder.preferences.ContextPreferencePage"
            id="de.hetzge.eclipse.aicoder.preferences.context"
            name="Context">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences"
+           class="de.hetzge.eclipse.aicoder.preferences.ProviderPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.provider"
+           name="Provider">
      </page>
   </extension> 
  <extension
        point="org.eclipse.core.runtime.preferences">
     <initializer
-          class="de.hetzge.eclipse.aicoder.AiCoderPreferences">
+          class="de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences">
     </initializer>
  </extension>
 </plugin>
