@@ -137,7 +137,7 @@
      </page>
      <page
            category="de.hetzge.eclipse.aicoder.preferences"
-           class="de.hetzge.eclipse.aicoder.ContextTypePreferencePage"
+           class="de.hetzge.eclipse.aicoder.ContextPreferencePage"
            id="de.hetzge.eclipse.aicoder.preferences.context"
            name="Context">
      </page>

@@ -30,37 +30,34 @@ import de.hetzge.eclipse.aicoder.LambdaExceptionUtils;
 
 public final class Context {
 
+	// TODO use enum for prefixes, label, order
+
 	public static final Map<String, String> CONTEXT_TYPE_NAME_BY_CONTEXT_PREFIX = Map.ofEntries(
-			Map.entry(ImportsContextEntry.PREFIX, "Imports"),
+			Map.entry(ImportsContextEntry.PREFIX, "Imports (Java)"),
 			Map.entry(StickyContextEntry.PREFIX, "Sticky"),
-			Map.entry(TypeContextEntry.PREFIX, "Type"),
+			Map.entry(TypeContextEntry.PREFIX, "Type (Java)"),
 			Map.entry(PrefixContextEntry.PREFIX, "Prefix"),
 			Map.entry(CustomContextEntry.PREFIX, "Custom"),
 			Map.entry(ClipboardContextEntry.PREFIX, "Clipboard"),
 			Map.entry(EmptyContextEntry.PREFIX, "Empty"),
 			Map.entry(BlacklistedContextEntry.PREFIX, "Blacklisted"),
 			Map.entry(SuffixContextEntry.PREFIX, "Suffix"),
-			Map.entry(ScopeContextEntry.PREFIX, "Scope"),
+			Map.entry(ScopeContextEntry.PREFIX, "Scope (Java)"),
 			Map.entry(UserContextEntry.PREFIX, "User"),
 			Map.entry(RootContextEntry.PREFIX, "Root"),
-			Map.entry(TypeMemberContextEntry.PREFIX, "Type Member"),
-			Map.entry(PackageContextEntry.PREFIX, "Package"));
+			Map.entry(TypeMemberContextEntry.PREFIX, "Type Member (Java)"),
+			Map.entry(PackageContextEntry.PREFIX, "Package (Java)"));
 
 	public static final List<String> DEFAULT_PREFIX_ORDER = List.of(
-			RootContextEntry.PREFIX,
 			ScopeContextEntry.PREFIX,
 			ImportsContextEntry.PREFIX,
 			PackageContextEntry.PREFIX,
-			TypeContextEntry.PREFIX,
-			TypeMemberContextEntry.PREFIX,
+			StickyContextEntry.PREFIX,
+			UserContextEntry.PREFIX,
+			ClipboardContextEntry.PREFIX,
 			PrefixContextEntry.PREFIX,
 			SuffixContextEntry.PREFIX,
-			ClipboardContextEntry.PREFIX,
-			StickyContextEntry.PREFIX,
-			CustomContextEntry.PREFIX,
-			UserContextEntry.PREFIX,
-			BlacklistedContextEntry.PREFIX,
-			EmptyContextEntry.PREFIX);
+			BlacklistedContextEntry.PREFIX);
 
 	public static Optional<? extends ContextEntry> create(ContextEntryKey key) throws CoreException {
 		final List<? extends Function<ContextEntryKey, Optional<? extends ContextEntry>>> factories = List.of(

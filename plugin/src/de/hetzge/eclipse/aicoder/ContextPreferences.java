@@ -14,6 +14,8 @@ import org.osgi.service.prefs.Preferences;
 
 import de.hetzge.eclipse.aicoder.context.ContextEntryKey;
 import de.hetzge.eclipse.aicoder.context.CustomContextEntry;
+import de.hetzge.eclipse.aicoder.context.PrefixContextEntry;
+import de.hetzge.eclipse.aicoder.context.SuffixContextEntry;
 import mjson.Json;
 
 public final class ContextPreferences {
@@ -171,6 +173,10 @@ public final class ContextPreferences {
 
 		public ContextTypePositionItem withPosition(int position) {
 			return new ContextTypePositionItem(this.prefix, this.enabled, position);
+		}
+
+		public boolean isPrefixOrSuffix() {
+			return this.prefix.equals(PrefixContextEntry.PREFIX) || this.prefix.equals(SuffixContextEntry.PREFIX);
 		}
 
 		public Json toJson() {

@@ -8,18 +8,22 @@ import java.util.Map;
 
 import org.eclipse.jface.preference.PreferencePage;
 import org.eclipse.jface.viewers.ArrayContentProvider;
+import org.eclipse.jface.viewers.CheckStateChangedEvent;
 import org.eclipse.jface.viewers.CheckboxTableViewer;
 import org.eclipse.jface.viewers.ColumnLabelProvider;
+import org.eclipse.jface.viewers.ICheckStateListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TableViewerColumn;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.ui.IWorkbench;
@@ -27,15 +31,17 @@ import org.eclipse.ui.IWorkbenchPreferencePage;
 
 import de.hetzge.eclipse.aicoder.ContextPreferences.ContextTypePositionItem;
 import de.hetzge.eclipse.aicoder.context.Context;
+import de.hetzge.eclipse.aicoder.context.PrefixContextEntry;
+import de.hetzge.eclipse.aicoder.context.SuffixContextEntry;
 
-public class ContextTypePreferencePage extends PreferencePage implements IWorkbenchPreferencePage {
+public class ContextPreferencePage extends PreferencePage implements IWorkbenchPreferencePage {
 
 	private CheckboxTableViewer tableViewer;
 	private List<ContextTypePositionItem> contextTypeItems;
 	private Button upButton;
 	private Button downButton;
 
-	public ContextTypePreferencePage() {
+	public ContextPreferencePage() {
 		setPreferenceStore(AiCoderActivator.getDefault().getPreferenceStore());
 		setDescription("Configure context");
 	}
@@ -46,7 +52,8 @@ public class ContextTypePreferencePage extends PreferencePage implements IWorkbe
 		final Map<String, ContextTypePositionItem> calculatedItemByPrefix = new HashMap<>(preferenceItemByPrefix);
 		for (final String prefix : Context.DEFAULT_PREFIX_ORDER) {
 			if (!calculatedItemByPrefix.containsKey(prefix)) {
-				calculatedItemByPrefix.put(prefix, new ContextTypePositionItem(prefix, true, calculatedItemByPrefix.size() + 1));
+				final boolean enabled = preferenceItemByPrefix.isEmpty(); // if user has already stored preferences, then do not enable by default
+				calculatedItemByPrefix.put(prefix, new ContextTypePositionItem(prefix, enabled, calculatedItemByPrefix.size() + 1));
 			}
 		}
 		this.contextTypeItems = new ArrayList<>(calculatedItemByPrefix.values());
@@ -60,13 +67,21 @@ public class ContextTypePreferencePage extends PreferencePage implements IWorkbe
 
 		// Description label
 		final Label descLabel = new Label(composite, SWT.WRAP);
-		descLabel.setText("Enable/disable context types and set their order");
+		descLabel.setText("Enable/disable context types and set their order in the prompt");
 		final GridData descData = new GridData(SWT.FILL, SWT.TOP, true, false, 2, 1);
 		descData.widthHint = 400;
 		descLabel.setLayoutData(descData);
 
 		// Table viewer
 		this.tableViewer = CheckboxTableViewer.newCheckList(composite, SWT.BORDER | SWT.FULL_SELECTION);
+		this.tableViewer.addCheckStateListener(new ICheckStateListener() {
+			  @Override
+			public void checkStateChanged(CheckStateChangedEvent event) {
+			     if (((ContextTypePositionItem) event.getElement()).isPrefixOrSuffix()) {
+			        Display.getDefault().asyncExec(() -> ContextPreferencePage.this.tableViewer.setChecked(event.getElement(), true));
+			     }
+			  }
+			});
 		final Table table = this.tableViewer.getTable();
 		table.setHeaderVisible(true);
 		table.setLinesVisible(true);
@@ -79,17 +94,33 @@ public class ContextTypePreferencePage extends PreferencePage implements IWorkbe
 		final TableViewerColumn nameColumn = new TableViewerColumn(this.tableViewer, SWT.NONE);
 		nameColumn.getColumn().setText("Context Type");
 		nameColumn.getColumn().setWidth(200);
-		nameColumn.setLabelProvider(ColumnLabelProvider.createTextProvider(element -> {
-			final String prefix = ((ContextTypePositionItem) element).prefix();
-			return Context.CONTEXT_TYPE_NAME_BY_CONTEXT_PREFIX.getOrDefault(prefix, prefix);
-		}));
+		nameColumn.setLabelProvider(new ColumnLabelProvider() {
+			@Override
+			public String getText(Object element) {
+				final String prefix = ((ContextTypePositionItem) element).prefix();
+				return Context.CONTEXT_TYPE_NAME_BY_CONTEXT_PREFIX.getOrDefault(prefix, prefix);
+			}
+
+			@Override
+			public Color getBackground(Object element) {
+				return ((ContextTypePositionItem) element).isPrefixOrSuffix() ? new Color(null, 240, 240, 240) : null;
+			}
+		});
 
 		final TableViewerColumn positionColumn = new TableViewerColumn(this.tableViewer, SWT.NONE);
 		positionColumn.getColumn().setText("Position");
 		positionColumn.getColumn().setWidth(80);
-		positionColumn.setLabelProvider(ColumnLabelProvider.createTextProvider(element -> {
-			return String.valueOf(((ContextTypePositionItem) element).position());
-		}));
+		positionColumn.setLabelProvider(new ColumnLabelProvider() {
+			@Override
+			public String getText(Object element) {
+				return String.valueOf(((ContextTypePositionItem) element).position());
+			}
+
+			@Override
+			public Color getBackground(Object element) {
+				return ((ContextTypePositionItem) element).isPrefixOrSuffix() ? new Color(null, 240, 240, 240) : null;
+			}
+		});
 
 		// Set content provider and input
 		this.tableViewer.setContentProvider(ArrayContentProvider.getInstance());
@@ -134,12 +165,22 @@ public class ContextTypePreferencePage extends PreferencePage implements IWorkbe
 		}
 		final ContextTypePositionItem selectedItem = (ContextTypePositionItem) selection.getFirstElement();
 		final int currentIndex = this.contextTypeItems.indexOf(selectedItem);
-		final int newIndex = currentIndex + direction;
+		int newIndex = currentIndex + direction;
+
+		// Keep prefix/suffix type together
+		if (newIndex >= 0 && newIndex < this.contextTypeItems.size()) {
+			final String newIndexPrefix = this.contextTypeItems.get(newIndex).prefix();
+			if (newIndexPrefix.equals(PrefixContextEntry.PREFIX) || newIndexPrefix.equals(SuffixContextEntry.PREFIX)) {
+				newIndex += direction; // move one more step
+			}
+		}
+
 		if (newIndex >= 0 && newIndex < this.contextTypeItems.size()) {
 			final ContextTypePositionItem otherItem = this.contextTypeItems.get(newIndex);
 			// Swap items
 			this.contextTypeItems.set(currentIndex, otherItem);
 			this.contextTypeItems.set(newIndex, selectedItem);
+
 			this.contextTypeItems = new ArrayList<>(this.contextTypeItems.stream().map(item -> item
 					.withPosition(this.contextTypeItems.indexOf(item) + 1)
 					.withEnabled(this.tableViewer.getChecked(item))).toList());
@@ -157,8 +198,8 @@ public class ContextTypePreferencePage extends PreferencePage implements IWorkbe
 		if (hasSelection) {
 			final ContextTypePositionItem selectedItem = (ContextTypePositionItem) selection.getFirstElement();
 			final int index = this.contextTypeItems.indexOf(selectedItem);
-			this.upButton.setEnabled(index > 0);
-			this.downButton.setEnabled(index < this.contextTypeItems.size() - 1);
+			this.upButton.setEnabled(index > 0 && !selectedItem.isPrefixOrSuffix());
+			this.downButton.setEnabled(index < this.contextTypeItems.size() - 1 && !selectedItem.isPrefixOrSuffix());
 		} else {
 			this.upButton.setEnabled(false);
 			this.downButton.setEnabled(false);
@@ -175,7 +216,7 @@ public class ContextTypePreferencePage extends PreferencePage implements IWorkbe
 
 	@Override
 	protected void performDefaults() {
-		this.contextTypeItems = new ArrayList<>(this.contextTypeItems.stream().map(item -> new ContextTypePositionItem(item.prefix(), true, Context.DEFAULT_PREFIX_ORDER.indexOf(item.prefix()) + 1)).toList());
+		this.contextTypeItems = new ArrayList<>(Context.DEFAULT_PREFIX_ORDER.stream().map(prefix -> new ContextTypePositionItem(prefix, true, Context.DEFAULT_PREFIX_ORDER.indexOf(prefix) + 1)).toList());
 		this.contextTypeItems.sort((a, b) -> Integer.compare(a.position(), b.position()));
 		this.tableViewer.setInput(this.contextTypeItems);
 		this.tableViewer.setCheckedElements(this.contextTypeItems.toArray());
