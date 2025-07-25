@@ -20,10 +20,10 @@ import org.eclipse.swt.graphics.Image;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
-import de.hetzge.eclipse.aicoder.JdkUtils;
-import de.hetzge.eclipse.aicoder.LambdaExceptionUtils;
-import de.hetzge.eclipse.aicoder.Utils;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
+import de.hetzge.eclipse.aicoder.util.JdkUtils;
+import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
+import de.hetzge.eclipse.aicoder.util.Utils;
 
 public class ScopeContextEntry extends ContextEntry {
 

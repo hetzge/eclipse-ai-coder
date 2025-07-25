@@ -1,4 +1,4 @@
-package de.hetzge.eclipse.aicoder;
+package de.hetzge.eclipse.aicoder.util;
 
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;

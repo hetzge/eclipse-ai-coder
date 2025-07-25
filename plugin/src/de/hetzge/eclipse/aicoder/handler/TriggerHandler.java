@@ -5,8 +5,8 @@ import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
-import de.hetzge.eclipse.aicoder.EclipseUtils;
-import de.hetzge.eclipse.aicoder.InlineCompletionController;
+import de.hetzge.eclipse.aicoder.inline.InlineCompletionController;
+import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 
 public class TriggerHandler extends AbstractHandler {
 

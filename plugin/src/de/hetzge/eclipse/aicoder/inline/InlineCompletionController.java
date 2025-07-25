@@ -1,4 +1,4 @@
-package de.hetzge.eclipse.aicoder;
+package de.hetzge.eclipse.aicoder.inline;
 
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
@@ -45,11 +45,21 @@ import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.contexts.IContextActivation;
 import org.eclipse.ui.texteditor.ITextEditor;
 
+import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.AiCoderHistoryEntry;
+import de.hetzge.eclipse.aicoder.AiCoderHistoryView;
+import de.hetzge.eclipse.aicoder.ContextView;
+import de.hetzge.eclipse.aicoder.Debouncer;
 import de.hetzge.eclipse.aicoder.context.ContextContext;
 import de.hetzge.eclipse.aicoder.context.ContextEntry;
+import de.hetzge.eclipse.aicoder.context.LastEditContextEntry;
 import de.hetzge.eclipse.aicoder.context.RootContextEntry;
 import de.hetzge.eclipse.aicoder.context.SuffixContextEntry;
+import de.hetzge.eclipse.aicoder.llm.LlmResponse;
+import de.hetzge.eclipse.aicoder.llm.LlmUtils;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
+import de.hetzge.eclipse.aicoder.util.EclipseUtils;
+import de.hetzge.eclipse.aicoder.util.Utils;
 
 public final class InlineCompletionController {
 
@@ -93,7 +103,7 @@ public final class InlineCompletionController {
 	private final ISelectionChangedListener selectionListener;
 	private final CaretListener caretListener;
 	private final Font font;
-	private Completion completion;
+	private InlineCompletion completion;
 	private IContextActivation context;
 	private Job job;
 	private final Runnable debounceRunnable;
@@ -138,6 +148,14 @@ public final class InlineCompletionController {
 	}
 
 	public void trigger() {
+
+		try {
+			LastEditContextEntry.create();
+		} catch (final CoreException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 		AiCoderActivator.log().info("Trigger");
 		final long startTime = System.currentTimeMillis();
 		abort("Trigger");
@@ -180,7 +198,7 @@ public final class InlineCompletionController {
 					return;
 				}
 				if (!isBlank && !isMoved && !isSame) {
-					setup(Completion.create(document, modelOffset, widgetOffset, widgetLine, content, lineHeight, defaultLineSpacing));
+					setup(InlineCompletion.create(document, modelOffset, widgetOffset, widgetLine, content, lineHeight, defaultLineSpacing));
 				}
 				String status;
 				if (isMoved) {
@@ -300,7 +318,7 @@ public final class InlineCompletionController {
 		});
 	}
 
-	private void setup(Completion completion) {
+	private void setup(InlineCompletion completion) {
 		AiCoderActivator.log().info("Activate context");
 		this.completion = completion;
 		Display.getDefault().syncExec(() -> {
@@ -338,7 +356,7 @@ public final class InlineCompletionController {
 		}
 		final IDocument document = this.textViewer.getDocument();
 		try {
-			final Completion completion = this.completion;
+			final InlineCompletion completion = this.completion;
 			document.replace(completion.modelRegion().getOffset(), completion.modelRegion().getLength(), this.completion.content()); // triggers document change -> triggers abort
 			this.textViewer.setSelectedRange(completion.modelRegion().getOffset() + completion.content().length(), 0);
 
@@ -387,7 +405,7 @@ public final class InlineCompletionController {
 	private class StyledTextLineSpacingProviderImplementation implements StyledTextLineSpacingProvider {
 		@Override
 		public Integer getLineSpacing(int lineIndex) {
-			final Completion completion = InlineCompletionController.this.completion;
+			final InlineCompletion completion = InlineCompletionController.this.completion;
 			if (completion != null && completion.lineIndex() == lineIndex) {
 				return completion.lineSpacing();
 			}
@@ -404,7 +422,7 @@ public final class InlineCompletionController {
 
 		@Override
 		public void paintControl(PaintEvent event) {
-			final Completion completion = InlineCompletionController.this.completion;
+			final InlineCompletion completion = InlineCompletionController.this.completion;
 			final StyledText widget = InlineCompletionController.this.textViewer.getTextWidget();
 			if (completion == null) {
 				return;
@@ -438,7 +456,7 @@ public final class InlineCompletionController {
 			return styleRange == null || styleRange.metrics == null || styleRange.metrics.width != metricWidth;
 		}
 
-		private void updateMetrics(PaintEvent event, Completion completion, StyledText widget, int metricWidth) {
+		private void updateMetrics(PaintEvent event, InlineCompletion completion, StyledText widget, int metricWidth) {
 			final FontMetrics fontMetrics = event.gc.getFontMetrics();
 			final StyleRange newStyleRange = new StyleRange(completion.widgetOffset(), 1, null, null);
 			newStyleRange.metrics = new GlyphMetrics(fontMetrics.getAscent(), fontMetrics.getDescent(), metricWidth);

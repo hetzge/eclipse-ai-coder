@@ -9,8 +9,8 @@ import org.eclipse.swt.graphics.Image;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
-import de.hetzge.eclipse.aicoder.LambdaExceptionUtils;
 import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
+import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
 
 public class BlacklistedContextEntry extends ContextEntry {
 	public static final String PREFIX = "BLACKLISTED";

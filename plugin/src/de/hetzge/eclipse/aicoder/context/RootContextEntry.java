@@ -14,8 +14,8 @@ import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.ui.IEditorInput;
 
-import de.hetzge.eclipse.aicoder.EclipseUtils;
 import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
+import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 
 public class RootContextEntry extends ContextEntry {
 	public static final String PREFIX = "ROOT";
@@ -52,6 +52,7 @@ public class RootContextEntry extends ContextEntry {
 			entries.add(ImportsContextEntry.create(unit));
 			entries.add(PackageContextEntry.create(unit));
 		}
+		entries.add(LastEditContextEntry.create());
 		entries.add(ClipboardContextEntry.create());
 		entries.add(PrefixContextEntry.create(filename, document, offset));
 		entries.add(SuffixContextEntry.create(document, offset));

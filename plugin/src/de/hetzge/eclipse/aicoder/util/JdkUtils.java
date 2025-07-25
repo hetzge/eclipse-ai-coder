@@ -1,4 +1,4 @@
-package de.hetzge.eclipse.aicoder;
+package de.hetzge.eclipse.aicoder.util;
 
 public final class JdkUtils {
 	private static final String[] JRE_PACKAGE_PREFIXES = {

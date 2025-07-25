@@ -7,7 +7,7 @@ import java.util.function.Function;
 
 import org.eclipse.core.runtime.CoreException;
 
-import de.hetzge.eclipse.aicoder.LambdaExceptionUtils;
+import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
 
 /*
  * TODO lazy create methods
@@ -26,6 +26,9 @@ import de.hetzge.eclipse.aicoder.LambdaExceptionUtils;
  * TODO open tabs context (same type)
  * TODO configure last x entries (tabs, edited files, usw.)
  * TODO files in current folder context
+ * TODO trigger inline completion when rename is entered
+ * TODO trigger comment complete (ctrl + shift + space when comment is selected)
+ * TODO trigger ai refactor (ctrl + shift + space when code is selected)
  */
 
 public final class Context {
@@ -39,6 +42,7 @@ public final class Context {
 			Map.entry(PrefixContextEntry.PREFIX, "Prefix"),
 			Map.entry(CustomContextEntry.PREFIX, "Custom"),
 			Map.entry(ClipboardContextEntry.PREFIX, "Clipboard"),
+			Map.entry(LastEditContextEntry.PREFIX, "Last Edit"),
 			Map.entry(EmptyContextEntry.PREFIX, "Empty"),
 			Map.entry(BlacklistedContextEntry.PREFIX, "Blacklisted"),
 			Map.entry(SuffixContextEntry.PREFIX, "Suffix"),
@@ -54,6 +58,7 @@ public final class Context {
 			PackageContextEntry.PREFIX,
 			StickyContextEntry.PREFIX,
 			UserContextEntry.PREFIX,
+			LastEditContextEntry.PREFIX,
 			ClipboardContextEntry.PREFIX,
 			PrefixContextEntry.PREFIX,
 			SuffixContextEntry.PREFIX,

@@ -12,8 +12,8 @@ import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.ui.JavaElementLabels;
 
-import de.hetzge.eclipse.aicoder.EclipseUtils;
-import de.hetzge.eclipse.aicoder.LambdaExceptionUtils;
+import de.hetzge.eclipse.aicoder.util.EclipseUtils;
+import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
 
 public class TypeMemberContextEntry extends ContextEntry {
 	public static final String PREFIX = "TYPE_MEMBER";

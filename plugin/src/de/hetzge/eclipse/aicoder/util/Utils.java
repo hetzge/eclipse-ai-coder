@@ -1,4 +1,4 @@
-package de.hetzge.eclipse.aicoder;
+package de.hetzge.eclipse.aicoder.util;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;

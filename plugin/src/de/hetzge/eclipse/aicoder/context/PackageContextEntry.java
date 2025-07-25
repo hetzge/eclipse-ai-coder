@@ -15,9 +15,9 @@ import org.eclipse.swt.graphics.Image;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
-import de.hetzge.eclipse.aicoder.JavaProjectUtils;
-import de.hetzge.eclipse.aicoder.LambdaExceptionUtils;
-import de.hetzge.eclipse.aicoder.Utils;
+import de.hetzge.eclipse.aicoder.util.JavaProjectUtils;
+import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
+import de.hetzge.eclipse.aicoder.util.Utils;
 
 public class PackageContextEntry extends ContextEntry {
 

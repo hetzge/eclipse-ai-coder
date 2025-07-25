@@ -1,11 +1,11 @@
-package de.hetzge.eclipse.aicoder;
+package de.hetzge.eclipse.aicoder.inline;
 
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.Region;
 
-public record Completion(
+public record InlineCompletion(
 		int lineIndex,
 		IRegion modelRegion,
 		int widgetOffset,
@@ -18,7 +18,7 @@ public record Completion(
 		int lineSpacing,
 		int lineHeight) {
 
-	public static Completion create(IDocument document, int modelOffset, int widgetOffset, int widgetLine, String content, int lineHeight, int defaultLineSpacing) throws BadLocationException {
+	public static InlineCompletion create(IDocument document, int modelOffset, int widgetOffset, int widgetLine, String content, int lineHeight, int defaultLineSpacing) throws BadLocationException {
 		final int line = document.getLineOfOffset(modelOffset);
 		final int nextLine = line + 1;
 		final int lineSuffixLength;
@@ -37,6 +37,6 @@ public record Completion(
 		}
 		final int lineSpacing = (int) (defaultLineSpacing + (content.lines().count() - 1) * lineHeight);
 		final Region modelRegion = new Region(modelOffset, contentContainsLineSuffix ? lineSuffix.length() : 0);
-		return new Completion(widgetLine, modelRegion, widgetOffset, firstLineContent, content, firstLineSuffixCharacter, lineSpacing, lineHeight);
+		return new InlineCompletion(widgetLine, modelRegion, widgetOffset, firstLineContent, content, firstLineSuffixCharacter, lineSpacing, lineHeight);
 	}
 }

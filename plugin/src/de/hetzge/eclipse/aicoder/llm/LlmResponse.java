@@ -1,4 +1,4 @@
-package de.hetzge.eclipse.aicoder;
+package de.hetzge.eclipse.aicoder.llm;
 
 public class LlmResponse {
 	private final String content;

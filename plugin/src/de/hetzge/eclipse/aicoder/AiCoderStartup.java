@@ -12,6 +12,8 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.texteditor.ITextEditor;
 
+import de.hetzge.eclipse.aicoder.inline.InlineCompletionController;
+
 /**
  * https://stackoverflow.com/a/26901175/7662651
  * https://github.com/TabbyML/tabby/blob/main/clients/eclipse/plugin/src/com/tabbyml/tabby4eclipse/editor/WorkbenchPartListener.java

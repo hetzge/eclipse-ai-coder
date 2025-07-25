@@ -16,8 +16,8 @@ import org.eclipse.swt.graphics.Image;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
-import de.hetzge.eclipse.aicoder.LambdaExceptionUtils;
-import de.hetzge.eclipse.aicoder.Utils;
+import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
+import de.hetzge.eclipse.aicoder.util.Utils;
 
 public class TypeContextEntry extends ContextEntry {
 	public static final String PREFIX = "TYPE";
@@ -60,7 +60,11 @@ public class TypeContextEntry extends ContextEntry {
 
 	@Override
 	public String getContent(ContextContext context) {
-		return String.format("%s{\n%s}\n", this.signature, super.getContent(context));
+		final boolean isRecord = this.signature.startsWith("record");
+		final char openBrace = isRecord ? '(' : '{';
+		final char closeBrace = isRecord ? ')' : '}';
+		final String suffix = isRecord ? "{}" : "";
+		return String.format("%s%s\n%s%s%s\n", this.signature, openBrace, super.getContent(context), closeBrace, suffix);
 	}
 
 	public static TypeContextEntry create(IType type) throws CoreException {

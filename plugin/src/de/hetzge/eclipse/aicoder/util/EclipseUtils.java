@@ -1,4 +1,4 @@
-package de.hetzge.eclipse.aicoder;
+package de.hetzge.eclipse.aicoder.util;
 
 import java.util.Optional;
 
@@ -9,6 +9,7 @@ import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.internal.ui.text.javadoc.JavadocContentAccess2;
+import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.ITextViewerExtension5;
@@ -155,5 +156,18 @@ public class EclipseUtils {
 
 	public static String getJavadoc(final IJavaElement element) throws CoreException {
 		return JavadocContentAccess2.getHTMLContent(element, true);
+	}
+
+	public static IDocument getDocumentForEditor(Object input) {
+		if (input instanceof IEditorInput) {
+			final IEditorPart editor = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().findEditor((IEditorInput) input);
+			if (editor instanceof ITextEditor) {
+				final ITextViewer viewer = getTextViewer((ITextEditor) editor);
+				if (viewer != null) {
+					return viewer.getDocument();
+				}
+			}
+		}
+		return null;
 	}
 }
