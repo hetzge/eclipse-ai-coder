@@ -3,7 +3,6 @@ package de.hetzge.eclipse.aicoder.context;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.eclipse.core.runtime.CoreException;
@@ -21,6 +20,7 @@ import org.eclipse.swt.graphics.Image;
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
+import de.hetzge.eclipse.aicoder.util.ContextUtils;
 import de.hetzge.eclipse.aicoder.util.JdkUtils;
 import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
 import de.hetzge.eclipse.aicoder.util.Utils;
@@ -40,7 +40,7 @@ public class ScopeContextEntry extends ContextEntry {
 
 	@Override
 	public String getContent(ContextContext context) {
-		return super.getContent(context) + "\n";
+		return ContextUtils.contentTemplate("Content in scope", super.getContent(context));
 	}
 
 	@Override
@@ -57,8 +57,7 @@ public class ScopeContextEntry extends ContextEntry {
 		final long before = System.currentTimeMillis();
 		final CompilationUnit parsedUnit = parseUnit(unit);
 
-		final List<TypeContextEntry> entries = getBindingsInScope(parsedUnit, offset).stream()
-				.parallel()
+		final List<TypeContextEntry> entries = getBindingsInScope(parsedUnit, offset).stream().parallel()
 				.flatMap(LambdaExceptionUtils.rethrowFunction(binding -> {
 					if (binding.getJavaElement() instanceof final IType type) {
 						final String fullyQualifiedName = type.getFullyQualifiedName();
@@ -85,7 +84,8 @@ public class ScopeContextEntry extends ContextEntry {
 						return Stream.empty();
 					}
 				}))
-				.collect(Collectors.toList());
+				.toList();
+
 		return new ScopeContextEntry(entries, Duration.ofMillis(System.currentTimeMillis() - before));
 	}
 

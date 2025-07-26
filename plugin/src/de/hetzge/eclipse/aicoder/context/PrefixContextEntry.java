@@ -10,6 +10,7 @@ import org.eclipse.swt.graphics.Image;
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
+import de.hetzge.eclipse.aicoder.util.ContextUtils;
 
 public class PrefixContextEntry extends ContextEntry {
 	public static final String PREFIX = "PREFIX";
@@ -40,7 +41,7 @@ public class PrefixContextEntry extends ContextEntry {
 
 	@Override
 	public String getContent(ContextContext context) {
-		return String.format("File: %s\n%s", this.filename, this.content);
+		return ContextUtils.contentTemplate(String.format("Current file: %s", this.filename), this.content);
 	}
 
 	public static PrefixContextEntry create(String filename, IDocument document, int modelOffset) throws BadLocationException {

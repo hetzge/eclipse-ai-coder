@@ -36,7 +36,11 @@ public final class Context {
 	// TODO use enum for prefixes, label, order
 
 	public static final Map<String, String> CONTEXT_TYPE_NAME_BY_CONTEXT_PREFIX = Map.ofEntries(
+			Map.entry(ProjectInformationsContextEntry.PREFIX, "Project Informations"),
+			Map.entry(DependenciesContextEntry.PREFIX, "Dependencies"),
+			Map.entry(OpenEditorsContextEntry.PREFIX, "Open Editors"),
 			Map.entry(ImportsContextEntry.PREFIX, "Imports (Java)"),
+			Map.entry(SuperContextEntry.PREFIX, "Super (Java)"),
 			Map.entry(StickyContextEntry.PREFIX, "Sticky"),
 			Map.entry(TypeContextEntry.PREFIX, "Type (Java)"),
 			Map.entry(PrefixContextEntry.PREFIX, "Prefix"),
@@ -53,6 +57,10 @@ public final class Context {
 			Map.entry(PackageContextEntry.PREFIX, "Package (Java)"));
 
 	public static final List<String> DEFAULT_PREFIX_ORDER = List.of(
+			ProjectInformationsContextEntry.PREFIX,
+			DependenciesContextEntry.PREFIX,
+			OpenEditorsContextEntry.PREFIX,
+			SuperContextEntry.PREFIX,
 			ScopeContextEntry.PREFIX,
 			ImportsContextEntry.PREFIX,
 			PackageContextEntry.PREFIX,
@@ -61,8 +69,7 @@ public final class Context {
 			LastEditContextEntry.PREFIX,
 			ClipboardContextEntry.PREFIX,
 			PrefixContextEntry.PREFIX,
-			SuffixContextEntry.PREFIX,
-			BlacklistedContextEntry.PREFIX);
+			SuffixContextEntry.PREFIX);
 
 	public static Optional<? extends ContextEntry> create(ContextEntryKey key) throws CoreException {
 		final List<? extends Function<ContextEntryKey, Optional<? extends ContextEntry>>> factories = List.of(

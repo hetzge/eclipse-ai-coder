@@ -1,14 +1,25 @@
 package de.hetzge.eclipse.aicoder.util;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaElement;
+import org.eclipse.jdt.core.IOrdinaryClassFile;
+import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.internal.ui.text.javadoc.JavadocContentAccess2;
+import org.eclipse.jdt.ui.JavaUI;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.text.ITextViewer;
@@ -19,10 +30,13 @@ import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
+import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.contexts.IContextService;
+import org.eclipse.ui.ide.FileStoreEditorInput;
 import org.eclipse.ui.part.FileEditorInput;
 import org.eclipse.ui.texteditor.ITextEditor;
 
@@ -39,28 +53,30 @@ public class EclipseUtils {
 		return Optional.empty();
 	}
 
-	public static IWorkbenchPage getActiveWorkbenchPage() {
-		final IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
-		if (window != null) {
-			final IWorkbenchPage page = window.getActivePage();
-			return page;
-		}
-		return null;
+	public static Optional<IWorkbenchPage> getActiveWorkbenchPage() {
+		return syncCall(() -> {
+			return Optional.ofNullable(PlatformUI.getWorkbench().getActiveWorkbenchWindow())
+					.map(IWorkbenchWindow::getActivePage);
+		});
 	}
 
-	public static ITextEditor getActiveTextEditor() {
-		final IWorkbenchPage page = getActiveWorkbenchPage();
-		if (page != null) {
-			final IEditorPart activeEditor = page.getActiveEditor();
-			if (activeEditor instanceof final ITextEditor textEditor) {
-				return textEditor;
-			}
-		}
-		return null;
+	public static Optional<ITextEditor> getActiveTextEditor() {
+		return getActiveWorkbenchPage()
+				.map(IWorkbenchPage::getActiveEditor)
+				.filter(ITextEditor.class::isInstance)
+				.map(ITextEditor.class::cast);
+	}
+
+	public static Optional<IEditorPart> getActiveEditor() {
+		return syncCall(() -> getActiveWorkbenchPage().map(IWorkbenchPage::getActiveEditor));
 	}
 
 	public static boolean isActiveEditor(ITextEditor textEditor) {
-		return textEditor == EclipseUtils.getActiveTextEditor();
+		return EclipseUtils.getActiveTextEditor().stream().anyMatch(it -> Objects.equals(it, textEditor));
+	}
+
+	public static boolean isActiveEditor(IEditorPart editor) {
+		return EclipseUtils.getActiveEditor().stream().anyMatch(it -> Objects.equals(it, editor));
 	}
 
 	public static ITextViewer getTextViewer(ITextEditor textEditor) {
@@ -113,7 +129,6 @@ public class EclipseUtils {
 			if (offset != -1) {
 				return offset;
 			}
-
 			final int offsetInWidget = getStyledTextWidget(textEditor).getCaretOffset();
 			final ITextViewer textViewer = getTextViewer(textEditor);
 			if (textViewer instanceof final ITextViewerExtension5 textViewerExt) {
@@ -122,29 +137,25 @@ public class EclipseUtils {
 			if (offset != -1) {
 				return offset;
 			}
-
 			throw new IllegalStateException("Failed to get current offset in document.");
 		});
 	}
 
-	public static String getSelectedText() {
-		final ITextEditor editor = getActiveTextEditor();
-		if (editor != null) {
-			return getSelectedText(editor);
-		}
-		return null;
-	}
-
-	public static String getSelectedText(ITextEditor textEditor) {
-		final ISelection selection = textEditor.getSelectionProvider().getSelection();
-		if (selection instanceof final ITextSelection textSelection) {
-			return textSelection.getText();
-		}
-		return null;
-	}
-
 	public static Optional<ICompilationUnit> getCompilationUnit(IEditorInput editorInput) {
-		if (editorInput instanceof final FileEditorInput fileEditorInput) {
+		IJavaElement javaElement = null;
+		if (editorInput instanceof IAdaptable) {
+			javaElement = editorInput.getAdapter(IJavaElement.class);
+		}
+		if (javaElement == null) {
+			javaElement = JavaUI.getEditorInputJavaElement(editorInput);
+		}
+		if (javaElement instanceof final ICompilationUnit compilationUnit) {
+			return Optional.of(compilationUnit);
+		} else if (javaElement instanceof final IType type) {
+			return Optional.of(type.getCompilationUnit());
+		} else if (javaElement instanceof final IOrdinaryClassFile classFile) {
+			return Optional.ofNullable(classFile.getType().getCompilationUnit());
+		} else if (editorInput instanceof final FileEditorInput fileEditorInput) {
 			final IFile file = fileEditorInput.getFile();
 			final IJavaElement element = JavaCore.create(file);
 			if (element instanceof final ICompilationUnit compilationUnit) {
@@ -159,15 +170,52 @@ public class EclipseUtils {
 	}
 
 	public static IDocument getDocumentForEditor(Object input) {
-		if (input instanceof IEditorInput) {
-			final IEditorPart editor = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().findEditor((IEditorInput) input);
-			if (editor instanceof ITextEditor) {
-				final ITextViewer viewer = getTextViewer((ITextEditor) editor);
-				if (viewer != null) {
-					return viewer.getDocument();
+		return syncCall(() -> {
+			if (input instanceof IEditorInput) {
+				final IEditorPart editor = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().findEditor((IEditorInput) input);
+				if (editor instanceof ITextEditor) {
+					final ITextViewer viewer = getTextViewer((ITextEditor) editor);
+					if (viewer != null) {
+						return viewer.getDocument();
+					}
 				}
 			}
-		}
-		return null;
+			return null;
+		});
 	}
+
+	public static IProject getProject(IEditorInput input) {
+		IProject project = input.getAdapter(IProject.class);
+		if (project == null) {
+			final IResource resource = input.getAdapter(IResource.class);
+			if (resource != null) {
+				project = resource.getProject();
+			}
+		}
+		return project;
+	}
+
+	public static Optional<String> stringFromInput(IEditorInput input, IWorkbenchPart part) throws IOException, CoreException {
+		if (input instanceof IFileEditorInput) {
+			final IFile file = ((IFileEditorInput) input).getFile();
+			try (InputStream in = file.getContents()) {
+				return Optional.of(new String(in.readAllBytes(), file.getCharset()));
+			}
+		}
+
+		if (part instanceof ITextEditor) {
+			final IDocument doc = ((ITextEditor) part).getDocumentProvider().getDocument(input);
+			return doc != null ? Optional.of(doc.get()) : Optional.empty();
+		}
+
+		if (input instanceof FileStoreEditorInput) {
+			final URI uri = ((FileStoreEditorInput) input).getURI();
+			try (InputStream in = uri.toURL().openStream()) {
+				return Optional.of(new String(in.readAllBytes(), StandardCharsets.UTF_8));
+			}
+		}
+
+		return Optional.empty();
+	}
+
 }

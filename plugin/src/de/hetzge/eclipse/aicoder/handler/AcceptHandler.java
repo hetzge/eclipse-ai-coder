@@ -15,7 +15,7 @@ public class AcceptHandler extends AbstractHandler {
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		AiCoderActivator.log().info("Execute accept handler");
-		final ITextEditor textEditor = EclipseUtils.getActiveTextEditor();
+		final ITextEditor textEditor = EclipseUtils.getActiveTextEditor().orElseThrow(() -> new ExecutionException("No active text editor"));
 		final InlineCompletionController controller = InlineCompletionController.setup(textEditor);
 		try {
 			controller.accept();

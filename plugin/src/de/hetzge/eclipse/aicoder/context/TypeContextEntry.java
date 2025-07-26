@@ -11,11 +11,13 @@ import org.eclipse.jdt.core.IField;
 import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.ui.JavaElementLabels;
 import org.eclipse.swt.graphics.Image;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
+import de.hetzge.eclipse.aicoder.util.ContextUtils;
 import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
 import de.hetzge.eclipse.aicoder.util.Utils;
 
@@ -60,17 +62,13 @@ public class TypeContextEntry extends ContextEntry {
 
 	@Override
 	public String getContent(ContextContext context) {
-		final boolean isRecord = this.signature.startsWith("record");
-		final char openBrace = isRecord ? '(' : '{';
-		final char closeBrace = isRecord ? ')' : '}';
-		final String suffix = isRecord ? "{}" : "";
-		return String.format("%s%s\n%s%s%s\n", this.signature, openBrace, super.getContent(context), closeBrace, suffix);
+		return ContextUtils.codeTemplate("Classpath entry", String.format("%s{\n%s}", this.signature, super.getContent(context)));
 	}
 
 	public static TypeContextEntry create(IType type) throws CoreException {
 		final long before = System.currentTimeMillis();
 		final List<TypeMemberContextEntry> members = new ArrayList<>();
-		final String typeSignature = Utils.getTypeKeywordLabel(type) + " " + JavaElementLabels.getElementLabel(type, JavaElementLabels.T_FULLY_QUALIFIED);
+		final String typeSignature = Utils.getTypeKeywordLabel(type) + " " + JavaElementLabels.getElementLabel(type, JavaElementLabels.T_FULLY_QUALIFIED) + getSuperSignature(type);
 		for (final IField field : type.getFields()) {
 			if (!Flags.isPrivate(field.getFlags())) {
 				members.add(TypeMemberContextEntry.create(field));
@@ -98,5 +96,18 @@ public class TypeContextEntry extends ContextEntry {
 				.map(IType.class::cast)
 				.filter(Utils::checkType)
 				.map(LambdaExceptionUtils.rethrowFunction(TypeContextEntry::create));
+	}
+
+	private static String getSuperSignature(IType type) throws JavaModelException {
+		final StringBuilder builder = new StringBuilder();
+		if (type.getSuperclassName() != null) {
+			builder.append(" extends ");
+			builder.append(type.getSuperclassName());
+		}
+		if (type.getSuperInterfaceNames().length > 0) {
+			builder.append(" implements ");
+			builder.append(String.join(", ", type.getSuperInterfaceNames()));
+		}
+		return builder.toString();
 	}
 }

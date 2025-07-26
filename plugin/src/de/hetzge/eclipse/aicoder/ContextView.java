@@ -43,6 +43,7 @@ import org.eclipse.ui.menus.CommandContributionItemParameter;
 import org.eclipse.ui.part.DrillDownAdapter;
 import org.eclipse.ui.part.ViewPart;
 
+import de.hetzge.eclipse.aicoder.context.BlacklistedContextEntry;
 import de.hetzge.eclipse.aicoder.context.ContextContext;
 import de.hetzge.eclipse.aicoder.context.ContextEntry;
 import de.hetzge.eclipse.aicoder.context.ContextEntryKey;
@@ -293,7 +294,11 @@ public class ContextView extends ViewPart {
 		@Override
 		public Object[] getElements(Object parent) {
 			if (parent.equals(getViewSite())) {
-				return new Object[] { ContextView.this.rootContextEntry };
+				try {
+					return new Object[] { ContextView.this.rootContextEntry, BlacklistedContextEntry.create() };
+				} catch (final CoreException exception) {
+					throw new RuntimeException("Failed to create blacklisted context entry", exception);
+				}
 			}
 			return getChildren(parent);
 		}

@@ -1,9 +1,9 @@
 package de.hetzge.eclipse.aicoder.context;
 
-import java.lang.reflect.Field;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -12,26 +12,20 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
-import org.eclipse.jface.text.Position;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorInput;
-import org.eclipse.ui.INavigationHistory;
-import org.eclipse.ui.INavigationLocation;
-import org.eclipse.ui.IWorkbench;
-import org.eclipse.ui.IWorkbenchPage;
-import org.eclipse.ui.IWorkbenchWindow;
-import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.internal.texteditor.EditPosition;
 import org.eclipse.ui.internal.texteditor.TextEditorPlugin;
-import org.eclipse.ui.texteditor.TextSelectionNavigationLocation;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
-import de.hetzge.eclipse.aicoder.AiCoderImageKey;
+import de.hetzge.eclipse.aicoder.util.ContextUtils;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
+import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
 
 public class LastEditContextEntry extends ContextEntry {
 
 	public static final String PREFIX = "LAST_EDIT";
+	private static final int CONTEXT_PADDING_LINE_COUNT = 10;
 
 	private final List<CodeLocation> lastCodeLocations;
 
@@ -52,33 +46,33 @@ public class LastEditContextEntry extends ContextEntry {
 
 	@Override
 	public String getContent(ContextContext context) {
-		return "Last edit locations:\n" + this.lastCodeLocations.stream()
-				.map(snippet -> String.format("Edit location: %s\n---\n%s\n---\n", snippet.name, snippet.content))
-				.collect(Collectors.joining("\n"));
-	}
-
-	@Override
-	public org.eclipse.swt.graphics.Image getImage() {
-		return AiCoderActivator.getImage(AiCoderImageKey.BEFORE_ICON);
+		return ContextUtils.contentTemplate("Last edit locations", this.lastCodeLocations.stream()
+				.map(snippet -> ContextUtils.codeTemplate(snippet.name, snippet.content))
+				.collect(Collectors.joining("\n")));
 	}
 
 	@SuppressWarnings("restriction")
 	public static LastEditContextEntry create() throws CoreException {
 		final long before = System.currentTimeMillis();
-//		final Optional<INavigationHistory> navigationHistoryOptional = getNavigationHistory();
-//		if (!navigationHistoryOptional.isPresent()) {
-//			return new LastEditContextEntry(List.of(), Duration.ofMillis(System.currentTimeMillis() - before));
-//		}
-//		final INavigationHistory navigationHistory = navigationHistoryOptional.get();
-//		final INavigationLocation[] locations = navigationHistory.getLocations();
-		// TODO ignore near current location
 		final List<CodeLocation> codeLocations = new ArrayList<>();
-		for (final EditPosition position : getLastEditPositions()) {
-			try {
+		try {
+			for (final EditPosition position : getLastEditPositions()) {
 				if (codeLocations.size() > 10) {
 					break;
 				}
 				final IEditorInput input = position.getEditorInput();
+				// skip current edit position
+				if (EclipseUtils.getActiveEditor().stream().anyMatch(editor -> Objects.equals(editor.getEditorInput(), input))) {
+					final boolean skip = EclipseUtils.getActiveTextEditor().map(LambdaExceptionUtils.rethrowFunction(editor -> {
+						final int currentOffset = EclipseUtils.getCurrentOffsetInDocument(editor);
+						final int currentLine = Optional.ofNullable(EclipseUtils.getDocumentForEditor(editor.getEditorInput())).map(LambdaExceptionUtils.rethrowFunction(document -> document.getLineOfOffset(currentOffset))).orElse(0);
+						final int line = Optional.ofNullable(EclipseUtils.getDocumentForEditor(input)).map(LambdaExceptionUtils.rethrowFunction(document -> document.getLineOfOffset(currentOffset))).orElse(0);
+						return Math.abs(line - currentLine) < CONTEXT_PADDING_LINE_COUNT + 2;
+					})).orElse(false);
+					if (skip) {
+						continue;
+					}
+				}
 				final String name = input.getName();
 				final int offset = position.getPosition().getOffset();
 				if (offset < 0) {
@@ -89,8 +83,8 @@ public class LastEditContextEntry extends ContextEntry {
 					continue;
 				}
 				final int line = document.getLineOfOffset(offset);
-				final int startLine = Math.max(0, line - 10);
-				final int endLine = Math.min(document.getNumberOfLines() - 1, line + 10);
+				final int startLine = Math.max(0, line - CONTEXT_PADDING_LINE_COUNT);
+				final int endLine = Math.min(document.getNumberOfLines() - 1, line + CONTEXT_PADDING_LINE_COUNT);
 				final int startOffset = document.getLineOffset(startLine);
 				final int endOffset = endLine + 1 < document.getNumberOfLines() ? document.getLineOffset(endLine + 1) - 1 : document.getLength() - 1;
 				final String content = document.get(startOffset, endOffset - startOffset);
@@ -98,37 +92,16 @@ public class LastEditContextEntry extends ContextEntry {
 				// Merge overlapping code locations
 				codeLocations.removeAll(codeLocations.stream().filter(existing -> existing.doesOverlap(codeLocation)).toList());
 				codeLocations.add(codeLocations.stream().filter(existing -> existing.doesOverlap(codeLocation)).toList().stream().reduce(codeLocation, CodeLocation::merge));
-			} catch (final BadLocationException exception) {
-				throw new CoreException(new Status(IStatus.ERROR, AiCoderActivator.PLUGIN_ID, "Failed to create last edit context entry", exception));
 			}
+			return new LastEditContextEntry(codeLocations, Duration.ofMillis(System.currentTimeMillis() - before));
+		} catch (final BadLocationException exception) {
+			throw new CoreException(new Status(IStatus.ERROR, AiCoderActivator.PLUGIN_ID, "Failed to create last edit context entry", exception));
 		}
-		return new LastEditContextEntry(codeLocations, Duration.ofMillis(System.currentTimeMillis() - before));
 	}
 
 	@SuppressWarnings("restriction") // Accessing internal is easier then cloning all the logic for now
 	private static List<EditPosition> getLastEditPositions() {
 		return TextEditorPlugin.getDefault().getEditPositionHistory().rawHistory().toList().reversed().stream().limit(3).toList();
-	}
-
-	private static Optional<INavigationHistory> getNavigationHistory() {
-		return Display.getDefault().syncCall(() -> {
-			return Optional.of(PlatformUI.getWorkbench())
-					.map(IWorkbench::getActiveWorkbenchWindow)
-					.map(IWorkbenchWindow::getActivePage)
-					.map(IWorkbenchPage::getNavigationHistory);
-		});
-	}
-
-	private static int getOffsetFromLocation(INavigationLocation location) throws CoreException {
-		try {
-			// Using reflection here as workaround for missing API to get the offset of a navigation location
-			final Field fPositionField = TextSelectionNavigationLocation.class.getDeclaredField("fPosition");
-			fPositionField.setAccessible(true);
-			final Position position = (Position) fPositionField.get(location);
-			return position.getOffset();
-		} catch (NoSuchFieldException | IllegalAccessException exception) {
-			throw new CoreException(new Status(IStatus.ERROR, AiCoderActivator.PLUGIN_ID, "Failed to get offset from navigation location", exception));
-		}
 	}
 
 	private static record CodeLocation(String name, int firstLine, int lastLine, String content) {

@@ -12,6 +12,7 @@ import org.eclipse.swt.widgets.Display;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
+import de.hetzge.eclipse.aicoder.util.ContextUtils;
 
 public class ClipboardContextEntry extends ContextEntry {
 
@@ -26,7 +27,7 @@ public class ClipboardContextEntry extends ContextEntry {
 
 	@Override
 	public String getContent(ContextContext context) {
-		return "Clipboard content:\n" + this.content + "\n\n";
+		return ContextUtils.contentTemplate("Clipboard content", this.content);
 	}
 
 	@Override

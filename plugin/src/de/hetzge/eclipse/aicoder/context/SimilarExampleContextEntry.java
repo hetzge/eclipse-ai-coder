@@ -1,5 +1,5 @@
 package de.hetzge.eclipse.aicoder.context;
 
-public class SuperClassContextEntry {
+public class SimilarExampleContextEntry {
 
 }

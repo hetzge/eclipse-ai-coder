@@ -43,9 +43,9 @@ public class FileTreeContextEntry extends ContextEntry {
 		return new ContextEntryKey(PREFIX, this.project.getName());
 	}
 
-	private void appendResourceTree(StringBuilder sb, IResource resource, int depth) throws CoreException {
+	private void appendResourceTree(StringBuilder stringBuilder, IResource resource, int depth) throws CoreException {
 		final String indent = "  ".repeat(depth);
-		sb.append(indent).append(resource.getName()).append("\n");
+		stringBuilder.append(indent).append(resource.getName()).append("\n");
 
 		if (resource instanceof final IContainer container) {
 			for (final IResource child : container.members()) {
@@ -55,7 +55,7 @@ public class FileTreeContextEntry extends ContextEntry {
 						child.getName().equals("bin")) {
 					continue;
 				}
-				appendResourceTree(sb, child, depth + 1);
+				appendResourceTree(stringBuilder, child, depth + 1);
 			}
 		}
 	}

@@ -10,6 +10,7 @@ import org.eclipse.swt.graphics.Image;
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
 import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
+import de.hetzge.eclipse.aicoder.util.ContextUtils;
 import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
 
 public class StickyContextEntry extends ContextEntry {
@@ -32,7 +33,7 @@ public class StickyContextEntry extends ContextEntry {
 
 	@Override
 	public String getContent(ContextContext context) {
-		return super.getContent(context) + "\n";
+		return ContextUtils.contentTemplate("Sticky", super.getContent(context));
 	}
 
 	@Override

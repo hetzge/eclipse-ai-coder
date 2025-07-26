@@ -52,7 +52,6 @@ import de.hetzge.eclipse.aicoder.ContextView;
 import de.hetzge.eclipse.aicoder.Debouncer;
 import de.hetzge.eclipse.aicoder.context.ContextContext;
 import de.hetzge.eclipse.aicoder.context.ContextEntry;
-import de.hetzge.eclipse.aicoder.context.LastEditContextEntry;
 import de.hetzge.eclipse.aicoder.context.RootContextEntry;
 import de.hetzge.eclipse.aicoder.context.SuffixContextEntry;
 import de.hetzge.eclipse.aicoder.llm.LlmResponse;
@@ -148,14 +147,6 @@ public final class InlineCompletionController {
 	}
 
 	public void trigger() {
-
-		try {
-			LastEditContextEntry.create();
-		} catch (final CoreException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
 		AiCoderActivator.log().info("Trigger");
 		final long startTime = System.currentTimeMillis();
 		abort("Trigger");

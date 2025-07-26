@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jface.text.BadLocationException;
@@ -40,14 +41,19 @@ public class RootContextEntry extends ContextEntry {
 	}
 
 	public static RootContextEntry create(IDocument document, IEditorInput editorInput, int offset) throws BadLocationException, UnsupportedFlavorException, IOException, CoreException {
+		final IProject project = EclipseUtils.getProject(editorInput);
 		final String filename = EclipseUtils.getFilename(editorInput).orElse("Active File");
 		final long before = System.currentTimeMillis();
 		final Optional<ICompilationUnit> compilationUnitOptional = EclipseUtils.getCompilationUnit(editorInput);
 		final List<ContextEntry> entries = new ArrayList<>();
+		entries.add(ProjectInformationsContextEntry.create(project));
+		entries.add(DependenciesContextEntry.create(project));
+		entries.add(OpenEditorsContextEntry.create());
 		entries.add(StickyContextEntry.create());
 		entries.add(UserContextEntry.create());
 		if (compilationUnitOptional.isPresent()) {
 			final ICompilationUnit unit = compilationUnitOptional.get();
+			entries.add(SuperContextEntry.create(unit, offset));
 			entries.add(ScopeContextEntry.create(unit, offset));
 			entries.add(ImportsContextEntry.create(unit));
 			entries.add(PackageContextEntry.create(unit));
@@ -56,7 +62,6 @@ public class RootContextEntry extends ContextEntry {
 		entries.add(ClipboardContextEntry.create());
 		entries.add(PrefixContextEntry.create(filename, document, offset));
 		entries.add(SuffixContextEntry.create(document, offset));
-		entries.add(BlacklistedContextEntry.create());
 		final List<String> orderedPrefixes = ContextPreferences.getContextTypePositions().stream()
 				.filter(item -> item.enabled())
 				.map(item -> item.prefix())

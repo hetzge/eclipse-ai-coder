@@ -15,6 +15,7 @@ import org.eclipse.swt.graphics.Image;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
+import de.hetzge.eclipse.aicoder.util.ContextUtils;
 import de.hetzge.eclipse.aicoder.util.JavaProjectUtils;
 import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
 import de.hetzge.eclipse.aicoder.util.Utils;
@@ -37,7 +38,7 @@ public class PackageContextEntry extends ContextEntry {
 
 	@Override
 	public String getContent(ContextContext context) {
-		return super.getContent(context) + "\n";
+		return ContextUtils.contentTemplate("Current package content", super.getContent(context));
 	}
 
 	@Override
