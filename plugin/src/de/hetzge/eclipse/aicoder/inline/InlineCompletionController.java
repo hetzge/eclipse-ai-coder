@@ -52,8 +52,8 @@ import de.hetzge.eclipse.aicoder.ContextView;
 import de.hetzge.eclipse.aicoder.Debouncer;
 import de.hetzge.eclipse.aicoder.context.ContextContext;
 import de.hetzge.eclipse.aicoder.context.ContextEntry;
+import de.hetzge.eclipse.aicoder.context.FillInMiddleContextEntry;
 import de.hetzge.eclipse.aicoder.context.RootContextEntry;
-import de.hetzge.eclipse.aicoder.context.SuffixContextEntry;
 import de.hetzge.eclipse.aicoder.llm.LlmResponse;
 import de.hetzge.eclipse.aicoder.llm.LlmUtils;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
@@ -171,7 +171,7 @@ public final class InlineCompletionController {
 					addHistoryEntry("", "", "Aborted", 0, 0, 0, 0);
 					return;
 				}
-				final String[] contextParts = contextString.split(SuffixContextEntry.FILL_HERE_PLACEHOLDER);
+				final String[] contextParts = contextString.split(FillInMiddleContextEntry.FILL_HERE_PLACEHOLDER);
 				final String prefix = contextParts[0];
 				final String suffix = contextParts.length > 1 ? contextParts[1] : "";
 				final long llmStartTime = System.currentTimeMillis();

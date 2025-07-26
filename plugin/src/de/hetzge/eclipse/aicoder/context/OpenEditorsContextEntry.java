@@ -11,6 +11,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.JavaModelException;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IWorkbenchPage;
@@ -20,6 +21,7 @@ import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.AiCoderImageKey;
 import de.hetzge.eclipse.aicoder.util.ContextUtils;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
@@ -41,6 +43,11 @@ public class OpenEditorsContextEntry extends ContextEntry {
 	@Override
 	public String getLabel() {
 		return "Open editors";
+	}
+
+	@Override
+	public Image getImage() {
+		return AiCoderActivator.getImage(AiCoderImageKey.EDITOR_ICON);
 	}
 
 	@Override

@@ -12,24 +12,26 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.internal.texteditor.EditPosition;
 import org.eclipse.ui.internal.texteditor.TextEditorPlugin;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.AiCoderImageKey;
 import de.hetzge.eclipse.aicoder.util.ContextUtils;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
 
-public class LastEditContextEntry extends ContextEntry {
+public class LastEditsContextEntry extends ContextEntry {
 
-	public static final String PREFIX = "LAST_EDIT";
-	private static final int CONTEXT_PADDING_LINE_COUNT = 10;
+	public static final String PREFIX = "LAST_EDITS";
+	private static final int CONTEXT_PADDING_LINE_COUNT = 10; // TODO preferences
 
 	private final List<CodeLocation> lastCodeLocations;
 
-	private LastEditContextEntry(List<CodeLocation> lastCodeLocations, Duration creationDuration) {
+	private LastEditsContextEntry(List<CodeLocation> lastCodeLocations, Duration creationDuration) {
 		super(List.of(), creationDuration);
 		this.lastCodeLocations = lastCodeLocations;
 	}
@@ -45,6 +47,11 @@ public class LastEditContextEntry extends ContextEntry {
 	}
 
 	@Override
+	public Image getImage() {
+		return AiCoderActivator.getImage(AiCoderImageKey.BEFORE_ICON);
+	}
+
+	@Override
 	public String getContent(ContextContext context) {
 		return ContextUtils.contentTemplate("Last edit locations", this.lastCodeLocations.stream()
 				.map(snippet -> ContextUtils.codeTemplate(snippet.name, snippet.content))
@@ -52,28 +59,18 @@ public class LastEditContextEntry extends ContextEntry {
 	}
 
 	@SuppressWarnings("restriction")
-	public static LastEditContextEntry create() throws CoreException {
+	public static LastEditsContextEntry create() throws CoreException {
 		final long before = System.currentTimeMillis();
 		final List<CodeLocation> codeLocations = new ArrayList<>();
 		try {
 			for (final EditPosition position : getLastEditPositions()) {
-				if (codeLocations.size() > 10) {
+				if (codeLocations.size() > 10) { // TODO preferences
 					break;
 				}
 				final IEditorInput input = position.getEditorInput();
-				// skip current edit position
-				if (EclipseUtils.getActiveEditor().stream().anyMatch(editor -> Objects.equals(editor.getEditorInput(), input))) {
-					final boolean skip = EclipseUtils.getActiveTextEditor().map(LambdaExceptionUtils.rethrowFunction(editor -> {
-						final int currentOffset = EclipseUtils.getCurrentOffsetInDocument(editor);
-						final int currentLine = Optional.ofNullable(EclipseUtils.getDocumentForEditor(editor.getEditorInput())).map(LambdaExceptionUtils.rethrowFunction(document -> document.getLineOfOffset(currentOffset))).orElse(0);
-						final int line = Optional.ofNullable(EclipseUtils.getDocumentForEditor(input)).map(LambdaExceptionUtils.rethrowFunction(document -> document.getLineOfOffset(currentOffset))).orElse(0);
-						return Math.abs(line - currentLine) < CONTEXT_PADDING_LINE_COUNT + 2;
-					})).orElse(false);
-					if (skip) {
-						continue;
-					}
+				if (isNearCurrentEditLocation(input)) {
+					continue;
 				}
-				final String name = input.getName();
 				final int offset = position.getPosition().getOffset();
 				if (offset < 0) {
 					continue;
@@ -88,15 +85,24 @@ public class LastEditContextEntry extends ContextEntry {
 				final int startOffset = document.getLineOffset(startLine);
 				final int endOffset = endLine + 1 < document.getNumberOfLines() ? document.getLineOffset(endLine + 1) - 1 : document.getLength() - 1;
 				final String content = document.get(startOffset, endOffset - startOffset);
-				final CodeLocation codeLocation = new CodeLocation(name, startLine, endLine, content);
+				final CodeLocation codeLocation = new CodeLocation(input.getName(), startLine, endLine, content);
 				// Merge overlapping code locations
 				codeLocations.removeAll(codeLocations.stream().filter(existing -> existing.doesOverlap(codeLocation)).toList());
 				codeLocations.add(codeLocations.stream().filter(existing -> existing.doesOverlap(codeLocation)).toList().stream().reduce(codeLocation, CodeLocation::merge));
 			}
-			return new LastEditContextEntry(codeLocations, Duration.ofMillis(System.currentTimeMillis() - before));
+			return new LastEditsContextEntry(codeLocations, Duration.ofMillis(System.currentTimeMillis() - before));
 		} catch (final BadLocationException exception) {
 			throw new CoreException(new Status(IStatus.ERROR, AiCoderActivator.PLUGIN_ID, "Failed to create last edit context entry", exception));
 		}
+	}
+
+	private static boolean isNearCurrentEditLocation(IEditorInput input) throws BadLocationException {
+		return EclipseUtils.getActiveEditor().stream().anyMatch(editor -> Objects.equals(editor.getEditorInput(), input)) && EclipseUtils.getActiveTextEditor().map(LambdaExceptionUtils.rethrowFunction(editor -> {
+			final int currentOffset = EclipseUtils.getCurrentOffsetInDocument(editor);
+			final int currentLine = Optional.ofNullable(EclipseUtils.getDocumentForEditor(editor.getEditorInput())).map(LambdaExceptionUtils.rethrowFunction(document -> document.getLineOfOffset(currentOffset))).orElse(0);
+			final int line = Optional.ofNullable(EclipseUtils.getDocumentForEditor(input)).map(LambdaExceptionUtils.rethrowFunction(document -> document.getLineOfOffset(currentOffset))).orElse(0);
+			return Math.abs(line - currentLine) < CONTEXT_PADDING_LINE_COUNT + 2;
+		})).orElse(false);
 	}
 
 	@SuppressWarnings("restriction") // Accessing internal is easier then cloning all the logic for now

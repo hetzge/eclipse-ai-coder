@@ -3,6 +3,10 @@ package de.hetzge.eclipse.aicoder.context;
 import java.time.Duration;
 import java.util.List;
 
+import org.eclipse.swt.graphics.Image;
+
+import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.AiCoderImageKey;
 import de.hetzge.eclipse.aicoder.util.ContextUtils;
 
 public class ProjectInformationContextEntry extends ContextEntry {
@@ -26,6 +30,11 @@ public class ProjectInformationContextEntry extends ContextEntry {
 	@Override
 	public String getLabel() {
 		return String.format("%s: %s", this.key, this.value);
+	}
+
+	@Override
+	public Image getImage() {
+		return AiCoderActivator.getImage(AiCoderImageKey.INFORMATIONS_ICON);
 	}
 
 	@Override

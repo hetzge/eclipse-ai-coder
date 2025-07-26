@@ -53,6 +53,10 @@ public class AiCoderActivator extends AbstractUIPlugin {
 			registerImage(registry, AiCoderImageKey.PIN_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/ovr16/pinned_ovr@2x.png").toURL()));
 			registerImage(registry, AiCoderImageKey.IMPORT_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/etool16/import_wiz.png").toURL()));
 			registerImage(registry, AiCoderImageKey.BLACKLIST_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/elcl16/trash.png").toURL()));
+			registerImage(registry, AiCoderImageKey.FILL_IN_MIDDLE_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui.workbench.texteditor/icons/full/elcl16/insert_template.png").toURL()));
+			registerImage(registry, AiCoderImageKey.INFORMATIONS_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/obj16/info_tsk.png").toURL()));
+			registerImage(registry, AiCoderImageKey.DEPENDENCIES_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.jdt.ui/icons/full/obj16/library_obj.png").toURL()));
+			registerImage(registry, AiCoderImageKey.EDITOR_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/etool16/editor_area.png").toURL()));
 		} catch (final MalformedURLException exception) {
 			throw new RuntimeException(exception);
 		}

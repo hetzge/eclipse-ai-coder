@@ -7,7 +7,10 @@ import java.util.List;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.swt.graphics.Image;
 
+import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.AiCoderImageKey;
 import de.hetzge.eclipse.aicoder.util.ContextUtils;
 
 public class ProjectInformationsContextEntry extends ContextEntry {
@@ -26,6 +29,11 @@ public class ProjectInformationsContextEntry extends ContextEntry {
 	@Override
 	public String getLabel() {
 		return "Project informations";
+	}
+
+	@Override
+	public Image getImage() {
+		return AiCoderActivator.getImage(AiCoderImageKey.INFORMATIONS_ICON);
 	}
 
 	@Override

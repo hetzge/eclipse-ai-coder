@@ -36,24 +36,23 @@ public final class Context {
 	// TODO use enum for prefixes, label, order
 
 	public static final Map<String, String> CONTEXT_TYPE_NAME_BY_CONTEXT_PREFIX = Map.ofEntries(
-			Map.entry(ProjectInformationsContextEntry.PREFIX, "Project Informations"),
+			Map.entry(ProjectInformationsContextEntry.PREFIX, "Project informations"),
 			Map.entry(DependenciesContextEntry.PREFIX, "Dependencies"),
-			Map.entry(OpenEditorsContextEntry.PREFIX, "Open Editors"),
+			Map.entry(OpenEditorsContextEntry.PREFIX, "Open editors"),
 			Map.entry(ImportsContextEntry.PREFIX, "Imports (Java)"),
 			Map.entry(SuperContextEntry.PREFIX, "Super (Java)"),
 			Map.entry(StickyContextEntry.PREFIX, "Sticky"),
 			Map.entry(TypeContextEntry.PREFIX, "Type (Java)"),
-			Map.entry(PrefixContextEntry.PREFIX, "Prefix"),
+			Map.entry(FillInMiddleContextEntry.PREFIX, "Fill in middle"),
 			Map.entry(CustomContextEntry.PREFIX, "Custom"),
 			Map.entry(ClipboardContextEntry.PREFIX, "Clipboard"),
-			Map.entry(LastEditContextEntry.PREFIX, "Last Edit"),
+			Map.entry(LastEditsContextEntry.PREFIX, "Last edits"),
 			Map.entry(EmptyContextEntry.PREFIX, "Empty"),
 			Map.entry(BlacklistedContextEntry.PREFIX, "Blacklisted"),
-			Map.entry(SuffixContextEntry.PREFIX, "Suffix"),
 			Map.entry(ScopeContextEntry.PREFIX, "Scope (Java)"),
 			Map.entry(UserContextEntry.PREFIX, "User"),
 			Map.entry(RootContextEntry.PREFIX, "Root"),
-			Map.entry(TypeMemberContextEntry.PREFIX, "Type Member (Java)"),
+			Map.entry(TypeMemberContextEntry.PREFIX, "Type member (Java)"),
 			Map.entry(PackageContextEntry.PREFIX, "Package (Java)"));
 
 	public static final List<String> DEFAULT_PREFIX_ORDER = List.of(
@@ -66,10 +65,9 @@ public final class Context {
 			PackageContextEntry.PREFIX,
 			StickyContextEntry.PREFIX,
 			UserContextEntry.PREFIX,
-			LastEditContextEntry.PREFIX,
+			LastEditsContextEntry.PREFIX,
 			ClipboardContextEntry.PREFIX,
-			PrefixContextEntry.PREFIX,
-			SuffixContextEntry.PREFIX);
+			FillInMiddleContextEntry.PREFIX);
 
 	public static Optional<? extends ContextEntry> create(ContextEntryKey key) throws CoreException {
 		final List<? extends Function<ContextEntryKey, Optional<? extends ContextEntry>>> factories = List.of(

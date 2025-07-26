@@ -31,8 +31,7 @@ import org.eclipse.ui.IWorkbenchPreferencePage;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.context.Context;
-import de.hetzge.eclipse.aicoder.context.PrefixContextEntry;
-import de.hetzge.eclipse.aicoder.context.SuffixContextEntry;
+import de.hetzge.eclipse.aicoder.context.FillInMiddleContextEntry;
 import de.hetzge.eclipse.aicoder.preferences.ContextPreferences.ContextTypePositionItem;
 
 public class ContextPreferencePage extends PreferencePage implements IWorkbenchPreferencePage {
@@ -76,13 +75,13 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 		// Table viewer
 		this.tableViewer = CheckboxTableViewer.newCheckList(composite, SWT.BORDER | SWT.FULL_SELECTION);
 		this.tableViewer.addCheckStateListener(new ICheckStateListener() {
-			  @Override
+			@Override
 			public void checkStateChanged(CheckStateChangedEvent event) {
-			     if (((ContextTypePositionItem) event.getElement()).isPrefixOrSuffix()) {
-			        Display.getDefault().asyncExec(() -> ContextPreferencePage.this.tableViewer.setChecked(event.getElement(), true));
-			     }
-			  }
-			});
+				if (((ContextTypePositionItem) event.getElement()).prefix().equals(FillInMiddleContextEntry.PREFIX)) {
+					Display.getDefault().asyncExec(() -> ContextPreferencePage.this.tableViewer.setChecked(event.getElement(), true));
+				}
+			}
+		});
 		final Table table = this.tableViewer.getTable();
 		table.setHeaderVisible(true);
 		table.setLinesVisible(true);
@@ -104,7 +103,7 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 
 			@Override
 			public Color getBackground(Object element) {
-				return ((ContextTypePositionItem) element).isPrefixOrSuffix() ? new Color(null, 240, 240, 240) : null;
+				return ((ContextTypePositionItem) element).prefix().equals(FillInMiddleContextEntry.PREFIX) ? new Color(null, 240, 240, 240) : null;
 			}
 		});
 
@@ -119,7 +118,7 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 
 			@Override
 			public Color getBackground(Object element) {
-				return ((ContextTypePositionItem) element).isPrefixOrSuffix() ? new Color(null, 240, 240, 240) : null;
+				return ((ContextTypePositionItem) element).prefix().equals(FillInMiddleContextEntry.PREFIX) ? new Color(null, 240, 240, 240) : null;
 			}
 		});
 
@@ -166,22 +165,13 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 		}
 		final ContextTypePositionItem selectedItem = (ContextTypePositionItem) selection.getFirstElement();
 		final int currentIndex = this.contextTypeItems.indexOf(selectedItem);
-		int newIndex = currentIndex + direction;
-
-		// Keep prefix/suffix type together
-		if (newIndex >= 0 && newIndex < this.contextTypeItems.size()) {
-			final String newIndexPrefix = this.contextTypeItems.get(newIndex).prefix();
-			if (newIndexPrefix.equals(PrefixContextEntry.PREFIX) || newIndexPrefix.equals(SuffixContextEntry.PREFIX)) {
-				newIndex += direction; // move one more step
-			}
-		}
+		final int newIndex = currentIndex + direction;
 
 		if (newIndex >= 0 && newIndex < this.contextTypeItems.size()) {
 			final ContextTypePositionItem otherItem = this.contextTypeItems.get(newIndex);
 			// Swap items
 			this.contextTypeItems.set(currentIndex, otherItem);
 			this.contextTypeItems.set(newIndex, selectedItem);
-
 			this.contextTypeItems = new ArrayList<>(this.contextTypeItems.stream().map(item -> item
 					.withPosition(this.contextTypeItems.indexOf(item) + 1)
 					.withEnabled(this.tableViewer.getChecked(item))).toList());
@@ -199,8 +189,8 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 		if (hasSelection) {
 			final ContextTypePositionItem selectedItem = (ContextTypePositionItem) selection.getFirstElement();
 			final int index = this.contextTypeItems.indexOf(selectedItem);
-			this.upButton.setEnabled(index > 0 && !selectedItem.isPrefixOrSuffix());
-			this.downButton.setEnabled(index < this.contextTypeItems.size() - 1 && !selectedItem.isPrefixOrSuffix());
+			this.upButton.setEnabled(index > 0);
+			this.downButton.setEnabled(index < this.contextTypeItems.size() - 1);
 		} else {
 			this.upButton.setEnabled(false);
 			this.downButton.setEnabled(false);

@@ -58,10 +58,9 @@ public class RootContextEntry extends ContextEntry {
 			entries.add(ImportsContextEntry.create(unit));
 			entries.add(PackageContextEntry.create(unit));
 		}
-		entries.add(LastEditContextEntry.create());
+		entries.add(LastEditsContextEntry.create());
 		entries.add(ClipboardContextEntry.create());
-		entries.add(PrefixContextEntry.create(filename, document, offset));
-		entries.add(SuffixContextEntry.create(document, offset));
+		entries.add(FillInMiddleContextEntry.create(filename, document, offset));
 		final List<String> orderedPrefixes = ContextPreferences.getContextTypePositions().stream()
 				.filter(item -> item.enabled())
 				.map(item -> item.prefix())

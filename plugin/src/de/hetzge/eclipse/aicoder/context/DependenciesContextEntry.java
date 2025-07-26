@@ -9,7 +9,10 @@ import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
+import org.eclipse.swt.graphics.Image;
 
+import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.AiCoderImageKey;
 import de.hetzge.eclipse.aicoder.util.ContextUtils;
 
 public class DependenciesContextEntry extends ContextEntry {
@@ -28,6 +31,11 @@ public class DependenciesContextEntry extends ContextEntry {
 	@Override
 	public String getLabel() {
 		return "Dependencies";
+	}
+
+	@Override
+	public Image getImage() {
+		return AiCoderActivator.getImage(AiCoderImageKey.DEPENDENCIES_ICON);
 	}
 
 	@Override

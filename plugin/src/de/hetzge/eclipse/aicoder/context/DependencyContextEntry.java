@@ -3,6 +3,10 @@ package de.hetzge.eclipse.aicoder.context;
 import java.time.Duration;
 import java.util.List;
 
+import org.eclipse.swt.graphics.Image;
+
+import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.AiCoderImageKey;
 import de.hetzge.eclipse.aicoder.util.ContextUtils;
 
 public class DependencyContextEntry extends ContextEntry {
@@ -29,6 +33,11 @@ public class DependencyContextEntry extends ContextEntry {
 	@Override
 	public String getContent(ContextContext context) {
 		return ContextUtils.listEntryTemplate(this.dependency);
+	}
+
+	@Override
+	public Image getImage() {
+		return AiCoderActivator.getImage(AiCoderImageKey.DEPENDENCIES_ICON);
 	}
 
 	public static DependencyContextEntry create(String dependency) {
