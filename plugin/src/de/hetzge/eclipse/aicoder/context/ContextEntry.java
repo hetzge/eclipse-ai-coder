@@ -35,7 +35,6 @@ public abstract class ContextEntry {
 	public String getContent(ContextContext context) {
 		return this.childContextEntries.stream()
 				.map(entry -> apply(entry, context))
-				// not using "\n" here because prefix/suffix should not be separated by line break
 				.collect(Collectors.joining());
 	}
 

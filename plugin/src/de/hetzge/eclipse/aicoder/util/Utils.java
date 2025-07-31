@@ -2,6 +2,8 @@ package de.hetzge.eclipse.aicoder.util;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.eclipse.jdt.core.Flags;
 import org.eclipse.jdt.core.IType;
@@ -91,6 +93,11 @@ public final class Utils {
 		final PrintWriter printWriter = new PrintWriter(stringWriter);
 		throwable.printStackTrace(printWriter);
 		return stringWriter.toString();
+	}
+
+	public static String stripCodeMarkdownTags(final String content) {
+		final List<String> lines = content.lines().toList();
+		return content.startsWith("```") ? lines.subList(1, lines.size() - 1).stream().collect(Collectors.joining("\n")) : content;
 	}
 
 }

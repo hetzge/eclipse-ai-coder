@@ -22,6 +22,7 @@ public class AiCoderHistoryEntry {
 	private final int outputTokenCount;
 	private final long durationMs;
 	private final long llmDurationMs;
+	private final String plainLlmResponse;
 
 	public AiCoderHistoryEntry(
 			LocalDateTime timestamp,
@@ -39,7 +40,8 @@ public class AiCoderHistoryEntry {
 			int inputTokenCount,
 			int outputTokenCount,
 			long durationMs,
-			long llmDurationMs) {
+			long llmDurationMs,
+			String plainLlmResponse) {
 		this.timestamp = timestamp;
 		this.provider = provider;
 		this.file = file;
@@ -56,6 +58,7 @@ public class AiCoderHistoryEntry {
 		this.outputTokenCount = outputTokenCount;
 		this.durationMs = durationMs;
 		this.llmDurationMs = llmDurationMs;
+		this.plainLlmResponse = plainLlmResponse;
 	}
 
 	public LocalDateTime getTimestamp() {
@@ -130,6 +133,10 @@ public class AiCoderHistoryEntry {
 		return formattedDuration(this.llmDurationMs);
 	}
 
+	public String getPlainLlmResponse() {
+		return plainLlmResponse;
+	}
+	
 	private static String formattedDuration(long milliseconds) {
 		if (milliseconds < 1000) {
 			return milliseconds + "ms";

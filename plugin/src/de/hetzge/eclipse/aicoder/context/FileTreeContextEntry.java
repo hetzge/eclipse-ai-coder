@@ -11,9 +11,11 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IFileEditorInput;
 
+import de.hetzge.eclipse.aicoder.util.ContextUtils;
+
 public class FileTreeContextEntry extends ContextEntry {
 
-	public static final String PREFIX = "filetree";
+	public static final String PREFIX = "FILE_TREE";
 
 	private final IProject project;
 
@@ -29,13 +31,13 @@ public class FileTreeContextEntry extends ContextEntry {
 
 	@Override
 	public String getContent(ContextContext context) {
-		final StringBuilder stringBuilder = new StringBuilder();
 		try {
+			final StringBuilder stringBuilder = new StringBuilder();
 			appendResourceTree(stringBuilder, this.project, 0);
+			return ContextUtils.codeTemplate("Project file tree", stringBuilder.toString());
 		} catch (final CoreException exception) {
 			throw new RuntimeException("Error reading file tree", exception);
 		}
-		return stringBuilder.toString();
 	}
 
 	@Override
@@ -44,18 +46,18 @@ public class FileTreeContextEntry extends ContextEntry {
 	}
 
 	private void appendResourceTree(StringBuilder stringBuilder, IResource resource, int depth) throws CoreException {
-		final String indent = "  ".repeat(depth);
-		stringBuilder.append(indent).append(resource.getName()).append("\n");
-
 		if (resource instanceof final IContainer container) {
-			for (final IResource child : container.members()) {
-				// Skip .git, target, bin folders and hidden files
-				if (child.getName().startsWith(".") ||
-						child.getName().equals("target") ||
-						child.getName().equals("bin")) {
-					continue;
+			final IResource[] members = container.members();
+			for (final IResource child : members) {
+				final String indent = "  ".repeat(depth);
+				stringBuilder.append(indent).append(child.getName());
+				if (child instanceof IContainer) {
+					stringBuilder.append("/");
 				}
-				appendResourceTree(stringBuilder, child, depth + 1);
+				stringBuilder.append("\n");
+				if (child instanceof final IContainer childContainer) {
+					appendResourceTree(stringBuilder, childContainer, depth + 1);
+				}
 			}
 		}
 	}

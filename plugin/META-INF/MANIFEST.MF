@@ -6,6 +6,7 @@ Bundle-Version: 1.0.0.qualifier
 Import-Package: jakarta.inject;version="[2.0.0,3.0.0)"
 Bundle-Activator: de.hetzge.eclipse.aicoder.AiCoderActivator
 Bundle-ClassPath: lib/mjson-1.4.2.jar,
+ lib/diff-match-patch-1.2.jar,
  .
 Require-Bundle: org.eclipse.ui,
  org.eclipse.core.runtime,

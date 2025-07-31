@@ -47,6 +47,7 @@ public class RootContextEntry extends ContextEntry {
 		final Optional<ICompilationUnit> compilationUnitOptional = EclipseUtils.getCompilationUnit(editorInput);
 		final List<ContextEntry> entries = new ArrayList<>();
 		entries.add(ProjectInformationsContextEntry.create(project));
+		entries.add(FileTreeContextEntry.create(editorInput));
 		entries.add(DependenciesContextEntry.create(project));
 		entries.add(OpenEditorsContextEntry.create());
 		entries.add(StickyContextEntry.create());

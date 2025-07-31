@@ -23,6 +23,13 @@ public final class LlmUtils {
 	private LlmUtils() {
 	}
 
+	/**
+	 * Execute the configured
+	 *
+	 * @param prompt the prompt
+	 * @param suffix the suffix (can be <code>null</code> if chat instead of fill in middle should be used)
+	 * @return the {@link LlmResponse}
+	 */
 	public static LlmResponse execute(String prompt, String suffix) throws IOException {
 		final AiProvider provider = AiCoderPreferences.getAiProvider();
 		switch (provider) {
@@ -41,12 +48,15 @@ public final class LlmUtils {
 		final Json json = Json.object()
 				.set("model", AiCoderPreferences.getOllamaModel())
 				.set("prompt", prompt)
-				.set("suffix", suffix)
 				.set("stream", false)
 				.set("options", Json.object()
-						.set("temperature", 0)
-						.set("num_predict", AiCoderPreferences.getMaxTokens())
-						.set("stop", Json.array().add(multilineEnabled ? "\n\n" : "\n")));
+						.set("temperature", 0));
+		if (suffix != null) {
+			json.set("suffix", suffix);
+			json.at("options")
+					.set("num_predict", AiCoderPreferences.getMaxTokens())
+					.set("stop", Json.array().add(multilineEnabled ? "\n\n" : "\n"));
+		}
 		final URL url = URI.create(urlString).resolve("/api/generate").toURL();
 		final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 		connection.setRequestMethod("POST");
@@ -57,16 +67,16 @@ public final class LlmUtils {
 			outputStream.write(json.toString().getBytes(StandardCharsets.UTF_8));
 		}
 		final int responseCode = connection.getResponseCode();
+		final String responseBody = readResponse(connection);
 		if (responseCode == HttpURLConnection.HTTP_OK) {
-			final String responseBody = readResponse(connection);
 			final Json responseJson = Json.read(responseBody);
 			final String content = responseJson.at("response").asString();
 			final int inputTokens = responseJson.at("prompt_eval_count").asInteger();
 			final int outputTokens = responseJson.at("eval_count").asInteger();
-			return new LlmResponse(content, inputTokens, outputTokens);
+			return new LlmResponse(content, responseBody, inputTokens, outputTokens);
 		} else {
 			AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", connection.getResponseMessage(), responseCode)));
-			return new LlmResponse("", 0, 0);
+			return new LlmResponse("", responseBody, 0, 0);
 		}
 	}
 
@@ -76,12 +86,19 @@ public final class LlmUtils {
 		final boolean multilineEnabled = AiCoderPreferences.isMultilineEnabled();
 		final Json json = Json.object()
 				.set("model", "codestral-latest")
-				.set("prompt", prompt)
-				.set("suffix", suffix)
-				.set("max_tokens", AiCoderPreferences.getMaxTokens())
-				.set("stop", Json.array().add(multilineEnabled ? "\n\n" : "\n"))
 				.set("temperature", 0);
-		final URL url = URI.create(urlString).resolve("/v1/fim/completions").toURL();
+		if (suffix != null) {
+			json.set("prompt", prompt)
+					.set("suffix", suffix)
+					.set("max_tokens", AiCoderPreferences.getMaxTokens())
+					.set("stop", Json.array().add(multilineEnabled ? "\n\n" : "\n"));
+		} else {
+			json.set("messages", Json.array().add(Json.object()
+					.set("role", "user")
+					.set("content", prompt)));
+		}
+		final String path = suffix != null ? "/v1/fim/completions" : "/v1/chat/completions";
+		final URL url = URI.create(urlString).resolve(path).toURL();
 		final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 		connection.setRequestMethod("POST");
 		connection.setRequestProperty("Content-Type", "application/json");
@@ -92,16 +109,16 @@ public final class LlmUtils {
 			outputStream.write(json.toString().getBytes(StandardCharsets.UTF_8));
 		}
 		final int responseCode = connection.getResponseCode();
+		final String responseBody = readResponse(connection);
 		if (responseCode == HttpURLConnection.HTTP_OK) {
-			final String responseBody = readResponse(connection);
 			final Json responseJson = Json.read(responseBody);
 			final String content = responseJson.at("choices").at(0).at("message").at("content").asString();
 			final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 			final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
-			return new LlmResponse(content, inputTokens, outputTokens);
+			return new LlmResponse(content, responseBody, inputTokens, outputTokens);
 		} else {
 			AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", connection.getResponseMessage(), responseCode)));
-			return new LlmResponse("", 0, 0);
+			return new LlmResponse("", responseBody, 0, 0);
 		}
 	}
 

@@ -92,6 +92,14 @@ public class AiCoderHistoryView extends ViewPart {
 				}
 			});
 		});
+		menuManager.addMenuListener(manager -> {
+			manager.add(new Action("Response") {
+				@Override
+				public void run() {
+					openLlmResponseDialog();
+				}
+			});
+		});
 		final Menu menu = menuManager.createContextMenu(this.viewer.getControl());
 		this.viewer.getControl().setMenu(menu);
 		getSite().registerContextMenu(menuManager, this.viewer);
@@ -112,6 +120,12 @@ public class AiCoderHistoryView extends ViewPart {
 	private void openOutputDialog() {
 		final Shell shell = this.viewer.getControl().getShell();
 		new ContentPreviewDialog(shell, "Output", ((AiCoderHistoryEntry) AiCoderHistoryView.this.viewer.getStructuredSelection().getFirstElement()).getOutput())
+				.open();
+	}
+
+	private void openLlmResponseDialog() {
+		final Shell shell = this.viewer.getControl().getShell();
+		new ContentPreviewDialog(shell, "LLM Response", ((AiCoderHistoryEntry) AiCoderHistoryView.this.viewer.getStructuredSelection().getFirstElement()).getPlainLlmResponse())
 				.open();
 	}
 

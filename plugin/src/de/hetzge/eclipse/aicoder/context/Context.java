@@ -41,6 +41,7 @@ public final class Context {
 			Map.entry(OpenEditorsContextEntry.PREFIX, "Open editors"),
 			Map.entry(ImportsContextEntry.PREFIX, "Imports (Java)"),
 			Map.entry(SuperContextEntry.PREFIX, "Super (Java)"),
+			Map.entry(FileTreeContextEntry.PREFIX, "File tree"),
 			Map.entry(StickyContextEntry.PREFIX, "Sticky"),
 			Map.entry(TypeContextEntry.PREFIX, "Type (Java)"),
 			Map.entry(FillInMiddleContextEntry.PREFIX, "Fill in middle"),
@@ -57,6 +58,7 @@ public final class Context {
 
 	public static final List<String> DEFAULT_PREFIX_ORDER = List.of(
 			ProjectInformationsContextEntry.PREFIX,
+			FileTreeContextEntry.PREFIX,
 			DependenciesContextEntry.PREFIX,
 			OpenEditorsContextEntry.PREFIX,
 			SuperContextEntry.PREFIX,
