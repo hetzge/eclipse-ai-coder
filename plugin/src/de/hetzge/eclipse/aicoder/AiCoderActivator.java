@@ -57,6 +57,8 @@ public class AiCoderActivator extends AbstractUIPlugin {
 			registerImage(registry, AiCoderImageKey.INFORMATIONS_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/obj16/info_tsk.png").toURL()));
 			registerImage(registry, AiCoderImageKey.DEPENDENCIES_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.jdt.ui/icons/full/obj16/library_obj.png").toURL()));
 			registerImage(registry, AiCoderImageKey.EDITOR_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/etool16/editor_area.png").toURL()));
+			registerImage(registry, AiCoderImageKey.ACCEPT_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.jdt.junit/icons/full/obj16/testok.png").toURL()));
+			registerImage(registry, AiCoderImageKey.REJECT_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.jdt.junit/icons/full/obj16/testerr.png").toURL()));
 		} catch (final MalformedURLException exception) {
 			throw new RuntimeException(exception);
 		}

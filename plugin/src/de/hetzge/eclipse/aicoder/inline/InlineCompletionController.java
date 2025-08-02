@@ -11,11 +11,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.bitbucket.cowwoc.diffmatchpatch.DiffMatchPatch;
-import org.bitbucket.cowwoc.diffmatchpatch.DiffMatchPatch.Diff;
-import org.bitbucket.cowwoc.diffmatchpatch.DiffMatchPatch.Operation;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.DocumentEvent;
@@ -41,7 +37,6 @@ import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
-import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.FontMetrics;
 import org.eclipse.swt.graphics.GlyphMetrics;
 import org.eclipse.swt.graphics.Point;
@@ -77,16 +72,7 @@ public final class InlineCompletionController {
 	public static InlineCompletionController setup(ITextEditor textEditor) {
 		final ITextViewer textViewer = EclipseUtils.getTextViewer(textEditor);
 		return CONTROLLER_BY_VIEWER.computeIfAbsent(textViewer, ignore -> {
-
-			final Font font = Display.getDefault().syncCall(() -> {
-				final FontData[] fontData = textViewer.getTextWidget().getFont().getFontData();
-				for (int i = 0; i < fontData.length; ++i) {
-					fontData[i].setStyle(fontData[i].getStyle() | SWT.ITALIC);
-				}
-				return new Font(textViewer.getTextWidget().getDisplay(), fontData);
-			});
-
-			final InlineCompletionController controller = new InlineCompletionController(textViewer, textEditor, font);
+			final InlineCompletionController controller = new InlineCompletionController(textViewer, textEditor);
 			Display.getDefault().syncExec(() -> {
 				((ITextViewerExtension2) textViewer).addPainter(controller.painter);
 				textViewer.getTextWidget().addPaintListener(controller.paintListener);
@@ -108,7 +94,6 @@ public final class InlineCompletionController {
 	private final PainterImplementation painter;
 	private final ISelectionChangedListener selectionListener;
 	private final CaretListener caretListener;
-	private final Font font;
 	private List<InlineCompletion> completions;
 	private IContextActivation context;
 	private Job job;
@@ -116,8 +101,10 @@ public final class InlineCompletionController {
 	private long lastChangeCounter;
 	private final Debouncer debouncer;
 	private boolean abortDisabled;
+	private SuggestionPopupDialog suggestionPopupDialog;
+	private Suggestion suggestion;
 
-	private InlineCompletionController(ITextViewer textViewer, ITextEditor textEditor, Font font) {
+	private InlineCompletionController(ITextViewer textViewer, ITextEditor textEditor) {
 		this.textViewer = textViewer;
 		this.textEditor = textEditor;
 		this.widget = textViewer.getTextWidget();
@@ -127,7 +114,6 @@ public final class InlineCompletionController {
 		this.painter = new PainterImplementation();
 		this.selectionListener = new SelectionListenerImplementation();
 		this.caretListener = new CaretListenerImplementation();
-		this.font = font;
 		this.completions = new ArrayList<>();
 		this.context = null;
 		this.job = null;
@@ -135,6 +121,8 @@ public final class InlineCompletionController {
 		this.lastChangeCounter = 0;
 		this.debouncer = new Debouncer(Display.getDefault(), AiCoderPreferences::getDebounceDuration);
 		this.abortDisabled = false;
+		this.suggestionPopupDialog = null;
+		this.suggestion = null;
 	}
 
 	private void triggerAutocomplete() {
@@ -157,6 +145,9 @@ public final class InlineCompletionController {
 		AiCoderActivator.log().info("Trigger");
 		final long startTime = System.currentTimeMillis();
 		abort("Trigger");
+		final StyledText widget = InlineCompletionController.this.textViewer.getTextWidget();
+		final int lineHeight = widget.getLineHeight();
+		final int defaultLineSpacing = widget.getLineSpacing();
 		this.job = Job.create("AI inline completion", monitor -> {
 			String contextString = "";
 			try {
@@ -167,8 +158,6 @@ public final class InlineCompletionController {
 					addHistoryEntry("Aborted");
 					return;
 				}
-				final int lineHeight = Display.getDefault().syncCall(() -> InlineCompletionController.this.textViewer.getTextWidget().getLineHeight());
-				final int defaultLineSpacing = Display.getDefault().syncCall(() -> InlineCompletionController.this.textViewer.getTextWidget().getLineSpacing());
 				contextString = ContextEntry.apply(rootContextEntry, new ContextContext());
 				// IMPORTANT: DO this after ContextEntry.apply(...)
 				updateContextView(rootContextEntry);
@@ -180,13 +169,13 @@ public final class InlineCompletionController {
 				final String prefix = contextParts[0];
 				final String suffix = contextParts.length > 1 ? contextParts[1] : "";
 				final boolean hasSelection = hasSelection();
-				final String selection = getSelection();
+				final String selectionText = getSelectionText();
 				final long llmStartTime = System.currentTimeMillis();
 				LlmResponse llmResponse;
 				if (hasSelection) {
 					// TODO context
 					// TODO filetype
-					llmResponse = LlmUtils.execute(LlmPromptTemplates.changeCodePrompt("java", selection, "Fix/complete the code"), null);
+					llmResponse = LlmUtils.execute(LlmPromptTemplates.changeCodePrompt("java", selectionText, "Fix/complete the code"), null);
 				} else {
 					llmResponse = LlmUtils.execute(prefix, suffix);
 				}
@@ -196,74 +185,31 @@ public final class InlineCompletionController {
 				final boolean isMultilineContent = content.contains("\n");
 				final boolean isBlank = content.isBlank();
 				final boolean isMoved = currentModelOffset != modelOffset;
-				final boolean isSame = isMultilineContent && suffix.replaceAll("\\s", "").startsWith(content.replaceAll("\\s", ""));
+				final boolean isSame = hasSelection
+						? false
+						: isMultilineContent && suffix.replaceAll("\\s", "").startsWith(content.replaceAll("\\s", ""));
 				if (monitor.isCanceled()) {
 					addHistoryEntry("Aborted");
 					return;
 				}
 				if (!isBlank && !isMoved && !isSame) {
-					if (!hasSelection) {
+					if (hasSelection) {
+						// TODO History content, type
+						setup(new Suggestion(
+								Utils.stripCodeMarkdownTags(content),
+								modelOffset,
+								selectionText.length(),
+								getWidgetLine(modelOffset) + (int) selectionText.lines().count() - 1,
+								Math.max((int) Utils.stripCodeMarkdownTags(content).lines().count() - (int) selectionText.lines().count(), 0) + 2)); // + 2 for popup toolbar
+					} else {
 						setup(List.of(InlineCompletion.create(
 								document,
-								Operation.INSERT,
 								modelOffset,
 								getWidgetOffset(modelOffset),
 								getWidgetLine(modelOffset),
 								content,
 								lineHeight,
 								defaultLineSpacing)));
-					} else {
-						// TODO History content, type
-						final List<InlineCompletion> completions = new ArrayList<>();
-						final DiffMatchPatch diffMatchPatch = new DiffMatchPatch();
-						diffMatchPatch.matchDistance = 0;
-						diffMatchPatch.matchThreshold = 0.0f;
-						diffMatchPatch.patchDeleteThreshold = 0.0f;
-						final List<Diff> diffs = diffMatchPatch.diffMain(selection, Utils.stripCodeMarkdownTags(content));
-						System.out.println("Diffs " + diffs); // TODO remove
-						int offset = 0;
-						for (final Diff diff : diffs) {
-							if (diff.operation == Operation.DELETE) {
-								final List<String> diffLines = diff.text.lines().toList();
-								for (int i = 0; i < diffLines.size(); i++) {
-									final String diffLine = diffLines.get(i);
-									final int completionModelOffset = modelOffset + offset;
-									final int completionWidgetOffset = getWidgetOffset(completionModelOffset);
-									final int completionWidgetLine = getWidgetLine(completionModelOffset);
-									completions.add(InlineCompletion.create(
-											document,
-											diff.operation,
-											completionModelOffset,
-											completionWidgetOffset,
-											completionWidgetLine,
-											diffLine,
-											lineHeight,
-											defaultLineSpacing));
-									offset += diffLine.length();
-									if (i < diffLines.size() - 1) {
-										// add the linebreak to offset
-										offset += 1; // TODO +2 for windows?
-									}
-								}
-							} else if (diff.operation == Operation.INSERT) {
-								final int completionModelOffset = modelOffset + offset;
-								final int completionWidgetOffset = getWidgetOffset(completionModelOffset);
-								final int completionWidgetLine = getWidgetLine(completionModelOffset);
-								completions.add(InlineCompletion.create(
-										document,
-										diff.operation,
-										completionModelOffset,
-										completionWidgetOffset,
-										completionWidgetLine,
-										diff.text,
-										lineHeight,
-										defaultLineSpacing));
-							} else if (diff.operation == Operation.EQUAL) {
-								offset += diff.text.length();
-							}
-						}
-						unsetSelection();
-						setup(completions);
 					}
 				}
 				String status;
@@ -292,7 +238,7 @@ public final class InlineCompletionController {
 		return Display.getDefault().syncCall(() -> InlineCompletionController.this.textViewer.getSelectedRange().y > 0);
 	}
 
-	private String getSelection() {
+	private String getSelectionText() {
 		return Display.getDefault().syncCall(() -> InlineCompletionController.this.textViewer.getSelectionProvider().getSelection() instanceof final ITextSelection textSelection ? textSelection.getText() : "");
 	}
 
@@ -400,11 +346,25 @@ public final class InlineCompletionController {
 	}
 
 	private void setup(List<InlineCompletion> completions) {
-		AiCoderActivator.log().info("Activate context");
-		for (final InlineCompletion completion : completions) {
-			AiCoderActivator.log().info("Debug:\n" + completion.toDebugString());
-		}
+		AiCoderActivator.log().info("Activate context (completion)");
 		this.completions = new ArrayList<>(completions);
+		setupContext();
+	}
+
+	private void setup(Suggestion suggestion) {
+		AiCoderActivator.log().info("Activate context (content)");
+		this.suggestion = suggestion;
+		setupContext();
+		Display.getDefault().syncExec(() -> {
+			final Runnable acceptListener = () -> accept();
+			final Runnable rejectListener = () -> abort("Dismiss");
+			this.suggestionPopupDialog = new SuggestionPopupDialog(this.widget, suggestion, acceptListener, rejectListener);
+			this.suggestionPopupDialog.open();
+			unsetSelection();
+		});
+	}
+
+	private void setupContext() {
 		Display.getDefault().syncExec(() -> {
 			this.context = EclipseUtils.getContextService(this.textEditor).activateContext("de.hetzge.eclipse.codestral.inlineCompletionVisible");
 		});
@@ -413,6 +373,16 @@ public final class InlineCompletionController {
 	public boolean abort(String reason) {
 		if (this.abortDisabled) {
 			return false;
+		}
+		if (this.suggestionPopupDialog != null) {
+			AiCoderActivator.log().info(String.format("Close suggestion popup dialog (reason: '%s')", reason));
+			this.suggestionPopupDialog.close();
+			this.suggestionPopupDialog = null;
+		}
+		if (this.suggestion != null) {
+			AiCoderActivator.log().info(String.format("Unset suggestion (reason: '%s')", reason));
+			this.suggestion = null;
+			this.paintListener.resetMetrics();
 		}
 		if (this.job != null) {
 			AiCoderActivator.log().info(String.format("Abort job (reason: '%s')", reason));
@@ -443,7 +413,12 @@ public final class InlineCompletionController {
 		}
 	}
 
-	public void accept() throws CoreException {
+	public void accept() {
+		acceptInlineCompletion();
+		acceptSuggestion();
+	}
+
+	private void acceptInlineCompletion() {
 		if (this.completions.isEmpty()) {
 			return;
 		}
@@ -453,17 +428,10 @@ public final class InlineCompletionController {
 				int offset = 0;
 				// TODO do as one replace/change?! is this possible?
 				for (final InlineCompletion completion : this.completions) {
-					if (completion.operation() == Operation.INSERT) {
-						final int replaceOffset = completion.modelRegion().getOffset() + offset;
-						final int replaceLength = completion.modelRegion().getLength();
-						document.replace(replaceOffset, replaceLength, completion.content());
-						offset += (completion.content().length() - completion.modelRegion().getLength());
-					} else if (completion.operation() == Operation.DELETE) {
-						final int replaceOffset = completion.modelRegion().getOffset() + offset;
-						final int replaceLength = completion.content().length();
-						document.replace(replaceOffset, replaceLength, "");
-						offset -= completion.content().length();
-					}
+					final int replaceOffset = completion.modelRegion().getOffset() + offset;
+					final int replaceLength = completion.modelRegion().getLength();
+					document.replace(replaceOffset, replaceLength, completion.content());
+					offset += (completion.content().length() - completion.modelRegion().getLength());
 					this.textViewer.setSelectedRange(completion.modelRegion().getOffset() + completion.content().length(), 0);
 				}
 				AiCoderHistoryView.get().ifPresent(view -> {
@@ -471,7 +439,22 @@ public final class InlineCompletionController {
 				});
 			}, "Accepted");
 		} catch (final BadLocationException exception) {
-			throw new CoreException(Status.error("Failed to accept inline completion", exception));
+			throw new RuntimeException("Failed to accept inline completion", exception);
+		}
+	}
+
+	private void acceptSuggestion() {
+		if (this.suggestion == null) {
+			return;
+		}
+		try {
+			final IDocument document = this.textViewer.getDocument();
+			final int offset = this.suggestion.modelOffset();
+			final int length = this.suggestion.originalLength();
+			document.replace(offset, length, this.suggestion.content());
+			this.textViewer.setSelectedRange(offset + length, 0);
+		} catch (final BadLocationException exception) {
+			throw new RuntimeException("Failed to accept suggestion", exception);
 		}
 	}
 
@@ -502,16 +485,6 @@ public final class InlineCompletionController {
 				return;
 			}
 			final ITextSelection textSelection = (ITextSelection) selection;
-
-			try {
-				final IDocument document = InlineCompletionController.this.textEditor.getDocumentProvider().getDocument(InlineCompletionController.this.textEditor.getEditorInput());
-				final String text = document.get(textSelection.getOffset(), textSelection.getLength());
-				System.out.println("Offset: " + textSelection.getOffset() + ", Length: " + textSelection.getLength() + ", Text: " + text + ", Text length: " + text.length());
-			} catch (final BadLocationException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-
 			if (textSelection.getLength() <= 0) {
 				return;
 			}
@@ -522,10 +495,15 @@ public final class InlineCompletionController {
 	private class StyledTextLineSpacingProviderImplementation implements StyledTextLineSpacingProvider {
 		@Override
 		public Integer getLineSpacing(int lineIndex) {
-			for (final InlineCompletion completion : InlineCompletionController.this.completions) {
-				if (completion != null && completion.lineIndex() == lineIndex) {
+			final List<InlineCompletion> completions = InlineCompletionController.this.completions;
+			for (final InlineCompletion completion : completions) {
+				if (completion.widgetLineIndex() == lineIndex) {
 					return completion.lineSpacing();
 				}
+			}
+			final Suggestion suggestion = InlineCompletionController.this.suggestion;
+			if (suggestion != null && suggestion.widgetLastLine() == lineIndex) {
+				return suggestion.additionalLines() * InlineCompletionController.this.widget.getLineHeight();
 			}
 			return null;
 		}
@@ -541,36 +519,30 @@ public final class InlineCompletionController {
 		@Override
 		public void paintControl(PaintEvent event) {
 			final StyledText widget = InlineCompletionController.this.textViewer.getTextWidget();
+			final Font font = widget.getFont();
 			for (final InlineCompletion completion : InlineCompletionController.this.completions) {
 				final Point location = widget.getLocationAtOffset(completion.widgetOffset());
-				if (completion.operation() == Operation.DELETE) {
-					event.gc.setBackground(new Color(255, 200, 200));
-					event.gc.setForeground(widget.getDisplay().getSystemColor(SWT.COLOR_DARK_RED));
-					event.gc.setFont(InlineCompletionController.this.font);
-					event.gc.drawText(completion.content(), location.x, location.y, false);
-				} else if (completion.operation() == Operation.INSERT) {
-					final List<String> lines = completion.content().lines().toList();
-					event.gc.setBackground(new Color(200, 255, 200));
-					event.gc.setForeground(widget.getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
-					event.gc.setFont(InlineCompletionController.this.font);
-					for (int i = 0; i < lines.size(); i++) {
-						final String line = lines.get(i);
-						if (i == 0) {
-							// first line
-							event.gc.drawText(completion.firstLineContent(), location.x, location.y, true);
-							if (completion.firstLineSuffixCharacter() != null) {
-								final int suffixCharacterWidth = event.gc.textExtent(completion.firstLineSuffixCharacter()).x;
-								final int contentWidth = event.gc.textExtent(completion.firstLineContent()).x;
-								final StyleRange styleRange = widget.getStyleRangeAtOffset(completion.widgetOffset());
-								final int metricWidth = contentWidth + suffixCharacterWidth;
-								if (needMetricUpdate(styleRange, metricWidth)) {
-									updateMetrics(event, completion, widget, metricWidth);
-								}
-								event.gc.drawText(completion.firstLineSuffixCharacter(), location.x + contentWidth, location.y, false);
+				final List<String> lines = completion.content().lines().toList();
+				event.gc.setBackground(new Color(200, 255, 200));
+				event.gc.setForeground(widget.getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
+				event.gc.setFont(font);
+				for (int i = 0; i < lines.size(); i++) {
+					final String line = lines.get(i);
+					if (i == 0) {
+						// first line
+						event.gc.drawText(completion.firstLineContent(), location.x, location.y, true);
+						if (completion.firstLineSuffixCharacter() != null) {
+							final int suffixCharacterWidth = event.gc.textExtent(completion.firstLineSuffixCharacter()).x;
+							final int contentWidth = event.gc.textExtent(completion.firstLineContent()).x;
+							final StyleRange styleRange = widget.getStyleRangeAtOffset(completion.widgetOffset());
+							final int metricWidth = contentWidth + suffixCharacterWidth;
+							if (needMetricUpdate(styleRange, metricWidth)) {
+								updateMetrics(event, completion, widget, metricWidth);
 							}
-						} else {
-							event.gc.drawText(line.replace("\t", " ".repeat(InlineCompletionController.this.widget.getTabs())), -widget.getHorizontalPixel(), location.y + i * completion.lineHeight(), true);
+							event.gc.drawText(completion.firstLineSuffixCharacter(), location.x + contentWidth, location.y, false);
 						}
+					} else {
+						event.gc.drawText(line.replace("\t", " ".repeat(InlineCompletionController.this.widget.getTabs())), -widget.getHorizontalPixel(), location.y + i * completion.lineHeight(), true);
 					}
 				}
 			}
@@ -605,7 +577,6 @@ public final class InlineCompletionController {
 	private class PainterImplementation implements IPainter {
 		@Override
 		public void dispose() {
-			InlineCompletionController.this.font.dispose();
 			CONTROLLER_BY_VIEWER.remove(InlineCompletionController.this.textViewer);
 		}
 
