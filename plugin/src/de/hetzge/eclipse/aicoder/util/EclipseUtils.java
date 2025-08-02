@@ -37,7 +37,10 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.contexts.IContextService;
 import org.eclipse.ui.ide.FileStoreEditorInput;
+import org.eclipse.ui.part.AbstractMultiEditor;
 import org.eclipse.ui.part.FileEditorInput;
+import org.eclipse.ui.part.MultiPageEditorPart;
+import org.eclipse.ui.texteditor.AbstractTextEditor;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 public class EclipseUtils {
@@ -60,11 +63,21 @@ public class EclipseUtils {
 		});
 	}
 
-	public static Optional<ITextEditor> getActiveTextEditor() {
+	public static Optional<AbstractTextEditor> getActiveTextEditor() {
 		return getActiveWorkbenchPage()
-				.map(IWorkbenchPage::getActiveEditor)
-				.filter(ITextEditor.class::isInstance)
-				.map(ITextEditor.class::cast);
+				.map(it -> it.getActivePart())
+				.map(it -> getActiveTextEditor(it));
+	}
+
+	private static AbstractTextEditor getActiveTextEditor(IWorkbenchPart part) {
+		if (part instanceof AbstractTextEditor) {
+			return (AbstractTextEditor) part;
+		} else if ((part instanceof AbstractMultiEditor) && ((AbstractMultiEditor) part).getActiveEditor() instanceof AbstractTextEditor) {
+			return (AbstractTextEditor) ((AbstractMultiEditor) part).getActiveEditor();
+		} else if ((part instanceof MultiPageEditorPart) && ((MultiPageEditorPart) part).getSelectedPage() instanceof AbstractTextEditor) {
+			return (AbstractTextEditor) ((MultiPageEditorPart) part).getSelectedPage();
+		}
+		return part != null ? part.getAdapter(AbstractTextEditor.class) : null;
 	}
 
 	public static Optional<IEditorPart> getActiveEditor() {
