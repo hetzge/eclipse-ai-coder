@@ -209,25 +209,24 @@ public class EclipseUtils {
 	}
 
 	public static Optional<String> stringFromInput(IEditorInput input, IWorkbenchPart part) throws IOException, CoreException {
-		if (input instanceof IFileEditorInput) {
-			final IFile file = ((IFileEditorInput) input).getFile();
-			try (InputStream in = file.getContents()) {
-				return Optional.of(new String(in.readAllBytes(), file.getCharset()));
-			}
-		}
-
 		if (part instanceof ITextEditor) {
 			final IDocument doc = ((ITextEditor) part).getDocumentProvider().getDocument(input);
 			return doc != null ? Optional.of(doc.get()) : Optional.empty();
 		}
-
+		if (input instanceof IFileEditorInput) {
+			final IFile file = ((IFileEditorInput) input).getFile();
+			if (file.exists()) {
+				try (InputStream in = file.getContents()) {
+					return Optional.of(new String(in.readAllBytes(), file.getCharset()));
+				}
+			}
+		}
 		if (input instanceof FileStoreEditorInput) {
 			final URI uri = ((FileStoreEditorInput) input).getURI();
 			try (InputStream in = uri.toURL().openStream()) {
 				return Optional.of(new String(in.readAllBytes(), StandardCharsets.UTF_8));
 			}
 		}
-
 		return Optional.empty();
 	}
 

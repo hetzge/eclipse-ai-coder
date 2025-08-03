@@ -1,5 +1,7 @@
 package de.hetzge.eclipse.aicoder.inline;
 
+import java.util.Objects;
+
 import org.eclipse.jface.dialogs.PopupDialog;
 import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.swt.SWT;
@@ -13,6 +15,7 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.swt.widgets.ToolItem;
 
@@ -101,23 +104,32 @@ public final class SuggestionPopupDialog extends PopupDialog {
 	}
 
 	public void updateSizeAndLocation() {
-		getShell().setSize(calculateSize(this.parentStyledText, this.suggestion.content(), this.suggestion.modelOffset()));
-		getShell().setLocation(calculateLocation(this.parentStyledText, this.suggestion.modelOffset()));
+		final Shell shell = getShell();
+		final Point newLocation = calculateLocation(this.parentStyledText, this.suggestion.modelOffset());
+		if (!Objects.equals(shell.getLocation(), newLocation)) {
+			shell.setLocation(newLocation);
+			shell.layout();
+		}
+		final Point newSize = calculateSize(this.parentStyledText, this.suggestion.content(), this.suggestion.modelOffset());
+		if (!Objects.equals(shell.getSize(), newSize)) {
+			shell.setSize(newSize);
+			shell.layout();
+		}
 	}
 
 	private static Point calculateSize(StyledText parentStyledText, String content, int modelOffset) {
 		final Point location = parentStyledText.getLocationAtOffset(modelOffset);
 		final int width = parentStyledText.getSize().x - location.x - 24; // space for scrollbar
-		final int height = content.lines().toList().size() * parentStyledText.getLineHeight() + TOOLBAR_HEIGHT + 10;
+		final int height = (int) (content.lines().count() * parentStyledText.getLineHeight() + TOOLBAR_HEIGHT + 10);
 		return new Point(width, height);
 	}
 
 	private static Point calculateLocation(StyledText parentStyledText, int modelOffset) {
-		final Point locationAtOffset = parentStyledText.getLocationAtOffset(modelOffset);
+		final Point location = parentStyledText.getLocationAtOffset(modelOffset);
 		// border offset
-		locationAtOffset.x -= 2;
-		locationAtOffset.y -= 2;
-		return parentStyledText.toDisplay(locationAtOffset);
+		location.x -= 2;
+		location.y -= 2;
+		return parentStyledText.toDisplay(location);
 	}
 
 	private final class PaintListenerImplementation implements PaintListener {

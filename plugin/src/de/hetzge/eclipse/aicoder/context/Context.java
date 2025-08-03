@@ -29,6 +29,8 @@ import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
  * TODO trigger inline completion when rename is entered
  * TODO trigger comment complete (ctrl + shift + space when comment is selected)
  * TODO trigger ai refactor (ctrl + shift + space when code is selected)
+ * TODO mark context entries with error that occured while creation
+ * TODO mark sticky / disabled in resource tree
  */
 
 public final class Context {

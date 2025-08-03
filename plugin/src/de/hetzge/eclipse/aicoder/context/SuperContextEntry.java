@@ -2,6 +2,7 @@ package de.hetzge.eclipse.aicoder.context;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -50,8 +51,14 @@ public class SuperContextEntry extends ContextEntry {
 			return Stream.of();
 		}
 		return Stream.concat(
-				Optional.ofNullable(type.getSuperclassName()).stream().map(LambdaExceptionUtils.rethrowFunction(name -> type.getJavaProject().findType(type.resolveType(name)[0][0], type.resolveType(name)[0][1]))),
-				Stream.of(type.getSuperInterfaceNames()).map(LambdaExceptionUtils.rethrowFunction(name -> type.getJavaProject().findType(type.resolveType(name)[0][0], type.resolveType(name)[0][1]))))
+				Optional.ofNullable(type.getSuperclassName()).stream()
+						.map(LambdaExceptionUtils.rethrowFunction(name -> type.resolveType(name)))
+						.filter(Objects::nonNull)
+						.map(LambdaExceptionUtils.rethrowFunction(resolvedType -> type.getJavaProject().findType(resolvedType[0][0], resolvedType[0][1]))),
+				Stream.of(type.getSuperInterfaceNames())
+						.map(LambdaExceptionUtils.rethrowFunction(name -> type.resolveType(name)))
+						.filter(Objects::nonNull)
+						.map(LambdaExceptionUtils.rethrowFunction(resolvedType -> type.getJavaProject().findType(resolvedType[0][0], resolvedType[0][1]))))
 				.flatMap(LambdaExceptionUtils.rethrowFunction(it -> Stream.concat(Stream.of(it), getSuperTypes(it))));
 	}
 

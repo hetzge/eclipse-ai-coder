@@ -10,7 +10,6 @@ import java.util.stream.Stream;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jdt.core.ICompilationUnit;
-import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorInput;
@@ -87,7 +86,10 @@ public class OpenEditorsContextEntry extends ContextEntry {
 				.toList();
 	}
 
-	private static Stream<? extends ContextEntry> createTypeContextEntry(ICompilationUnit unit) throws JavaModelException, CoreException {
+	private static Stream<? extends ContextEntry> createTypeContextEntry(ICompilationUnit unit) throws CoreException {
+		if (!unit.exists()) {
+			return Stream.empty();
+		}
 		return Optional.ofNullable(unit)
 				.map(LambdaExceptionUtils.rethrowFunction(ICompilationUnit::getAllTypes))
 				.stream()

@@ -148,7 +148,7 @@ public final class InlineCompletionController {
 		final StyledText widget = InlineCompletionController.this.textViewer.getTextWidget();
 		final int lineHeight = widget.getLineHeight();
 		final int defaultLineSpacing = widget.getLineSpacing();
-		this.job = Job.create("AI inline completion", monitor -> {
+		this.job = Job.create("AI completion", monitor -> {
 			String contextString = "";
 			try {
 				final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
