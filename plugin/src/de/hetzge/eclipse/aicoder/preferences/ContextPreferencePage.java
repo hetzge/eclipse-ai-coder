@@ -36,6 +36,8 @@ import de.hetzge.eclipse.aicoder.preferences.ContextPreferences.ContextTypePosit
 
 public class ContextPreferencePage extends PreferencePage implements IWorkbenchPreferencePage {
 
+	public static final String ID = "de.hetzge.eclipse.aicoder.preferences.context";
+
 	private CheckboxTableViewer tableViewer;
 	private List<ContextTypePositionItem> contextTypeItems;
 	private Button upButton;
@@ -52,7 +54,7 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 		final Map<String, ContextTypePositionItem> calculatedItemByPrefix = new HashMap<>(preferenceItemByPrefix);
 		for (final String prefix : Context.DEFAULT_PREFIX_ORDER) {
 			if (!calculatedItemByPrefix.containsKey(prefix)) {
-				final boolean enabled = preferenceItemByPrefix.isEmpty(); // if user has already stored preferences, then do not enable by default
+				final boolean enabled = Context.DEFAULT_ACTIVE_PREFIXES.contains(prefix) && preferenceItemByPrefix.isEmpty(); // if user has already stored preferences, then do not enable by default
 				calculatedItemByPrefix.put(prefix, new ContextTypePositionItem(prefix, enabled, calculatedItemByPrefix.size() + 1));
 			}
 		}
@@ -207,10 +209,13 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 
 	@Override
 	protected void performDefaults() {
-		this.contextTypeItems = new ArrayList<>(Context.DEFAULT_PREFIX_ORDER.stream().map(prefix -> new ContextTypePositionItem(prefix, true, Context.DEFAULT_PREFIX_ORDER.indexOf(prefix) + 1)).toList());
+		this.contextTypeItems = new ArrayList<>(Context.DEFAULT_PREFIX_ORDER.stream()
+				.map(prefix -> new ContextTypePositionItem(prefix, Context.DEFAULT_ACTIVE_PREFIXES.contains(prefix), Context.DEFAULT_PREFIX_ORDER.indexOf(prefix) + 1)).toList());
 		this.contextTypeItems.sort((a, b) -> Integer.compare(a.position(), b.position()));
 		this.tableViewer.setInput(this.contextTypeItems);
-		this.tableViewer.setCheckedElements(this.contextTypeItems.toArray());
+		this.tableViewer.setCheckedElements(this.contextTypeItems.stream()
+				.filter(ContextTypePositionItem::enabled)
+				.toArray());
 		super.performDefaults();
 	}
 }

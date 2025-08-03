@@ -6,7 +6,7 @@ import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
 import org.eclipse.jface.preference.IPreferenceStore;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
-import de.hetzge.eclipse.aicoder.AiProvider;
+import de.hetzge.eclipse.aicoder.LlmProvider;
 
 public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 
@@ -26,7 +26,7 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	@Override
 	public void initializeDefaultPreferences() {
 		final IPreferenceStore store = getStore();
-		store.setDefault(AI_PROVIDER_KEY, AiProvider.MISTRAL.name());
+		store.setDefault(AI_PROVIDER_KEY, LlmProvider.MISTRAL.name());
 		store.setDefault(CODESTRAL_API_KEY, "");
 		store.setDefault(OLLAMA_BASE_URL_KEY, "http://localhost:11434");
 		store.setDefault(OLLAMA_MODEL_KEY, "qwen2.5-coder:3b");
@@ -40,9 +40,9 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(DEBOUNCE_IN_MS_KEY, 400);
 	}
 
-	public static AiProvider getAiProvider() {
+	public static LlmProvider getAiProvider() {
 		final String providerId = getStore().getString(AI_PROVIDER_KEY);
-		return AiProvider.valueOf(providerId.toUpperCase());
+		return LlmProvider.valueOf(providerId.toUpperCase());
 	}
 
 	public static String getCodestralApiKey() {

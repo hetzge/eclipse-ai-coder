@@ -48,6 +48,7 @@ import org.eclipse.ui.texteditor.ITextEditor;
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderHistoryEntry;
 import de.hetzge.eclipse.aicoder.AiCoderHistoryView;
+import de.hetzge.eclipse.aicoder.CompletionMode;
 import de.hetzge.eclipse.aicoder.ContextView;
 import de.hetzge.eclipse.aicoder.Debouncer;
 import de.hetzge.eclipse.aicoder.context.ContextContext;
@@ -149,35 +150,38 @@ public final class InlineCompletionController {
 		final int lineHeight = widget.getLineHeight();
 		final int defaultLineSpacing = widget.getLineSpacing();
 		this.job = Job.create("AI completion", monitor -> {
-			String contextString = "";
+			String prompt = "";
+			final boolean hasSelection = hasSelection();
+			final CompletionMode mode = hasSelection ? CompletionMode.EDIT : CompletionMode.INLINE;
 			try {
 				final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
 				final IDocument document = this.textViewer.getDocument();
 				final RootContextEntry rootContextEntry = RootContextEntry.create(document, this.textEditor.getEditorInput(), modelOffset);
 				if (monitor.isCanceled()) {
-					addHistoryEntry("Aborted");
+					addHistoryEntry(mode, "Aborted");
 					return;
 				}
-				contextString = ContextEntry.apply(rootContextEntry, new ContextContext());
+				final String contextString = ContextEntry.apply(rootContextEntry, new ContextContext());
 				// IMPORTANT: DO this after ContextEntry.apply(...)
 				updateContextView(rootContextEntry);
 				if (monitor.isCanceled()) {
-					addHistoryEntry("Aborted");
+					addHistoryEntry(mode, "Aborted");
 					return;
 				}
 				final String[] contextParts = contextString.split(FillInMiddleContextEntry.FILL_HERE_PLACEHOLDER);
 				final String prefix = contextParts[0];
 				final String suffix = contextParts.length > 1 ? contextParts[1] : "";
-				final boolean hasSelection = hasSelection();
+
 				final String selectionText = getSelectionText();
 				final long llmStartTime = System.currentTimeMillis();
 				LlmResponse llmResponse;
 				if (hasSelection) {
-					// TODO context
-					// TODO filetype
-					llmResponse = LlmUtils.execute(LlmPromptTemplates.changeCodePrompt("java", selectionText, "Fix/complete the code"), null);
+					final String systemPrompt = LlmPromptTemplates.changeCodeSystemPrompt();
+					prompt = LlmPromptTemplates.changeCodePrompt("java", selectionText, "Fix/complete the code", prefix, suffix);
+					llmResponse = LlmUtils.execute(systemPrompt, prompt, null);
 				} else {
-					llmResponse = LlmUtils.execute(prefix, suffix);
+					prompt = prefix + suffix;
+					llmResponse = LlmUtils.execute(null, prefix, suffix);
 				}
 				final String content = llmResponse.getContent();
 				final long llmDuration = System.currentTimeMillis() - llmStartTime;
@@ -189,12 +193,11 @@ public final class InlineCompletionController {
 						? false
 						: isMultilineContent && suffix.replaceAll("\\s", "").startsWith(content.replaceAll("\\s", ""));
 				if (monitor.isCanceled()) {
-					addHistoryEntry("Aborted");
+					addHistoryEntry(mode, "Aborted");
 					return;
 				}
 				if (!isBlank && !isMoved && !isSame) {
 					if (hasSelection) {
-						// TODO History content, type
 						setup(new Suggestion(
 								Utils.stripCodeMarkdownTags(content),
 								modelOffset,
@@ -223,12 +226,12 @@ public final class InlineCompletionController {
 					status = "Generated";
 				}
 				final long duration = System.currentTimeMillis() - startTime;
-				addHistoryEntry(contextString, content, status, duration, llmDuration, llmResponse);
+				addHistoryEntry(mode, prompt, content, status, duration, llmDuration, llmResponse);
 			} catch (final IOException | BadLocationException | UnsupportedFlavorException exception) {
 				AiCoderActivator.log().error("AI Coder completion failed", exception);
 				final long duration = System.currentTimeMillis() - startTime;
 				final String stacktrace = Utils.getStacktraceString(exception);
-				addHistoryEntry(contextString, stacktrace, "Error: " + Optional.ofNullable(exception.getMessage()).orElse("-"), duration, 0, null);
+				addHistoryEntry(mode, prompt, stacktrace, "Error: " + Optional.ofNullable(exception.getMessage()).orElse("-"), duration, 0, null);
 			}
 		});
 		this.job.schedule();
@@ -301,11 +304,11 @@ public final class InlineCompletionController {
 		}
 	}
 
-	private void addHistoryEntry(String status) {
-		addHistoryEntry("", "", status, 0, 0, null);
+	private void addHistoryEntry(CompletionMode mode, String status) {
+		addHistoryEntry(mode, "", "", status, 0, 0, null);
 	}
 
-	private void addHistoryEntry(String input, String output, String status, long duration, long llmDuration, LlmResponse llmResponse) {
+	private void addHistoryEntry(CompletionMode mode, String input, String output, String status, long duration, long llmDuration, LlmResponse llmResponse) {
 		Display.getDefault().asyncExec(() -> {
 			final IEditorInput editorInput = this.textEditor.getEditorInput();
 			final String filePath = editorInput.getName();
@@ -323,6 +326,7 @@ public final class InlineCompletionController {
 			final AiCoderHistoryEntry entry = new AiCoderHistoryEntry(
 					LocalDateTime.now(),
 					AiCoderPreferences.getAiProvider(),
+					mode,
 					filePath,
 					status,
 					input,
@@ -357,7 +361,12 @@ public final class InlineCompletionController {
 		setupContext();
 		Display.getDefault().syncExec(() -> {
 			final Runnable acceptListener = () -> accept();
-			final Runnable rejectListener = () -> abort("Dismiss");
+			final Runnable rejectListener = () -> {
+				abort("Dismiss");
+				AiCoderHistoryView.get().ifPresent(view -> {
+					view.setLatestRejected();
+				});
+			};
 			this.suggestionPopupDialog = new SuggestionPopupDialog(this.widget, suggestion, acceptListener, rejectListener);
 			this.suggestionPopupDialog.open();
 			unsetSelection();
@@ -453,6 +462,9 @@ public final class InlineCompletionController {
 			final int length = this.suggestion.originalLength();
 			document.replace(offset, length, this.suggestion.content());
 			this.textViewer.setSelectedRange(offset + length, 0);
+			AiCoderHistoryView.get().ifPresent(view -> {
+				view.setLatestAccepted();
+			});
 		} catch (final BadLocationException exception) {
 			throw new RuntimeException("Failed to accept suggestion", exception);
 		}

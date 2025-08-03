@@ -27,7 +27,7 @@ public class ClipboardContextEntry extends ContextEntry {
 
 	@Override
 	public String getContent(ContextContext context) {
-		return ContextUtils.contentTemplate("Clipboard content", this.content);
+		return ContextUtils.codeTemplate("Clipboard content", this.content);
 	}
 
 	@Override

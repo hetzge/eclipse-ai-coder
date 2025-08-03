@@ -4,7 +4,7 @@ public final class LlmPromptTemplates {
 	private LlmPromptTemplates() {
 	}
 
-	public static String changeCodePrompt(String fileType, String code, String instructions) {
+	public static String changeCodeSystemPrompt() {
 		return """
 				You are a software developer assistant. Your task is to change the given code according to the given instructions.
 				IMPORTANT:
@@ -12,13 +12,21 @@ public final class LlmPromptTemplates {
 				- Do not provide any explanations or comments.
 				- Do not edit or mention code that is not provided to you.
 				- Do not edit/add lines that are not part of the provided code.
-				Here is the code to edit:
+				""".trim();
+	}
+
+	public static String changeCodePrompt(String fileType, String code, String instructions, String prefix, String suffix) {
+		return """
+				Here is some context:
+				%s<<<SELECTION LOCATION>>>%s
+
+				# Here is the code to edit:
 				```%s
 				%s
 				```
-				Here are the instructions:
+				# Here are the instructions:
 				%s
-				""".trim().formatted(fileType, code, instructions);
+				""".trim().formatted(prefix, suffix, fileType, code, instructions);
 
 	}
 }

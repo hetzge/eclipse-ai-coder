@@ -1,6 +1,6 @@
 package de.hetzge.eclipse.aicoder;
 
-public enum AiProvider {
+public enum LlmProvider {
     OLLAMA,
     MISTRAL
 }

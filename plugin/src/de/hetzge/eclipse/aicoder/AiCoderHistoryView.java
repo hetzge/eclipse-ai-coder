@@ -174,6 +174,16 @@ public class AiCoderHistoryView extends ViewPart {
 			}
 		});
 
+		// Mode column
+		column = createTableViewerColumn("Mode", 80);
+		column.setLabelProvider(new ColumnLabelProvider() {
+			@Override
+			public String getText(Object element) {
+				final AiCoderHistoryEntry entry = (AiCoderHistoryEntry) element;
+				return entry.getMode().name();
+			}
+		});
+
 		// File column
 		column = createTableViewerColumn("File", 220);
 		column.setLabelProvider(new ColumnLabelProvider() {

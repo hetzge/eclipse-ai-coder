@@ -28,8 +28,8 @@ public final class SuggestionPopupDialog extends PopupDialog {
 
 	private final StyledText parentStyledText;
 	private final Suggestion suggestion;
-	private final Runnable acceptListener;
-	private final Runnable rejectListener;
+	private Runnable acceptListener;
+	private Runnable rejectListener;
 
 	private StyledText styledText;
 
@@ -50,16 +50,17 @@ public final class SuggestionPopupDialog extends PopupDialog {
 		container.setLayout(layout);
 		this.styledText = SuggestionStyledText.create(container, this.parentStyledText, this.suggestion.content());
 		this.styledText.setLayoutData(GridDataFactory.fillDefaults().grab(true, true).create());
-		final ToolBar toolBar = new ToolBar(container, SWT.HORIZONTAL);
+		final ToolBar toolBar = new ToolBar(container, SWT.HORIZONTAL | SWT.TRAIL);
 		toolBar.setLayoutData(GridDataFactory.fillDefaults().grab(true, false).hint(SWT.DEFAULT, TOOLBAR_HEIGHT).create());
-		final ToolItem acceptItem = new ToolItem(toolBar, SWT.FLAT | SWT.PUSH);
+		final ToolItem acceptItem = new ToolItem(toolBar, SWT.PUSH);
+		acceptItem.setText("Accept");
 		acceptItem.setImage(AiCoderActivator.getImage(AiCoderImageKey.ACCEPT_ICON));
-		acceptItem.addSelectionListener(SelectionListener.widgetSelectedAdapter(event -> this.acceptListener.run()));
-		acceptItem.setToolTipText("Accept");
-		final ToolItem rejectItem = new ToolItem(toolBar, SWT.FLAT | SWT.PUSH);
+		acceptItem.addSelectionListener(SelectionListener.widgetSelectedAdapter(event -> accept()));
+		final ToolItem rejectItem = new ToolItem(toolBar, SWT.PUSH);
+		rejectItem.setText("Reject");
 		rejectItem.setImage(AiCoderActivator.getImage(AiCoderImageKey.REJECT_ICON));
-		rejectItem.addSelectionListener(SelectionListener.widgetSelectedAdapter(event -> this.rejectListener.run()));
-		rejectItem.setToolTipText("Reject");
+		rejectItem.addSelectionListener(SelectionListener.widgetSelectedAdapter(event -> reject()));
+		toolBar.pack();
 		final ControlListener controlListener = new ControlListenerImplementation();
 		final PaintListener paintListener = new PaintListenerImplementation();
 		this.parentStyledText.getShell().addControlListener(controlListener);
@@ -74,7 +75,7 @@ public final class SuggestionPopupDialog extends PopupDialog {
 			if (event.type == SWT.Traverse && event.detail == SWT.TRAVERSE_ESCAPE) {
 				event.doit = false;
 				event.detail = SWT.TRAVERSE_NONE;
-				this.rejectListener.run();
+				reject();
 			}
 		});
 		this.styledText.addListener(SWT.Traverse, event -> {
@@ -82,10 +83,43 @@ public final class SuggestionPopupDialog extends PopupDialog {
 					(event.detail == SWT.TRAVERSE_TAB_NEXT || event.detail == SWT.TRAVERSE_TAB_PREVIOUS)) {
 				event.doit = false;
 				event.detail = SWT.TRAVERSE_NONE;
-				this.acceptListener.run();
+				accept();
 			}
 		});
+		this.styledText.addListener(SWT.MouseWheel, event -> {
+			// event.count is positive when wheel scrolls up, negative when down
+			final int deltaLines = -event.count; // SWT uses inverted sign for wheel by default
+			final int newTop = Math.max(0, this.parentStyledText.getTopIndex() + deltaLines);
+			this.parentStyledText.setTopIndex(newTop);
+			// Prevent default scrolling of the source if desired:
+			event.type = SWT.None;
+		});
 		return container;
+	}
+
+	private void accept() {
+		if (this.acceptListener == null) {
+			return;
+		}
+		final Runnable acceptListener = this.acceptListener;
+		this.acceptListener = null; // unset to prevent double execution
+		acceptListener.run();
+	}
+
+	private void reject() {
+		if (this.rejectListener == null) {
+			return;
+		}
+		final Runnable rejectListener = this.rejectListener;
+		this.rejectListener = null; // unset to prevent double execution
+		rejectListener.run();
+	}
+
+	@Override
+	public boolean close() {
+		final boolean close = super.close();
+		reject();
+		return close;
 	}
 
 	@Override

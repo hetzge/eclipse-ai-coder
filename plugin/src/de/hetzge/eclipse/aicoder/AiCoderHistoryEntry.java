@@ -4,7 +4,8 @@ import java.time.LocalDateTime;
 
 public class AiCoderHistoryEntry {
 	private final LocalDateTime timestamp;
-	private final AiProvider provider;
+	private final LlmProvider provider;
+	private final CompletionMode mode;
 	private final String file;
 	private String status;
 	// Input stats
@@ -26,7 +27,8 @@ public class AiCoderHistoryEntry {
 
 	public AiCoderHistoryEntry(
 			LocalDateTime timestamp,
-			AiProvider provider,
+			LlmProvider provider,
+			CompletionMode mode,
 			String file,
 			String status,
 			String input,
@@ -44,6 +46,7 @@ public class AiCoderHistoryEntry {
 			String plainLlmResponse) {
 		this.timestamp = timestamp;
 		this.provider = provider;
+		this.mode = mode;
 		this.file = file;
 		this.status = status;
 		this.input = input;
@@ -65,8 +68,12 @@ public class AiCoderHistoryEntry {
 		return this.timestamp;
 	}
 
-	public AiProvider getProvider() {
+	public LlmProvider getProvider() {
 		return this.provider;
+	}
+
+	public CompletionMode getMode() {
+		return this.mode;
 	}
 
 	public String getFile() {
@@ -134,9 +141,9 @@ public class AiCoderHistoryEntry {
 	}
 
 	public String getPlainLlmResponse() {
-		return plainLlmResponse;
+		return this.plainLlmResponse;
 	}
-	
+
 	private static String formattedDuration(long milliseconds) {
 		if (milliseconds < 1000) {
 			return milliseconds + "ms";

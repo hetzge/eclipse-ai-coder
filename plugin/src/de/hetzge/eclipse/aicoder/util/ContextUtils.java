@@ -10,7 +10,7 @@ public final class ContextUtils {
 	}
 
 	public static String codeTemplate(String title, String code) {
-		return String.format("## %s\n```\n%s\n```\n", title, code);
+		return String.format("## %s\n````\n%s\n````\n", title, code);
 	}
 
 	public static String listEntryTemplate(String text) {

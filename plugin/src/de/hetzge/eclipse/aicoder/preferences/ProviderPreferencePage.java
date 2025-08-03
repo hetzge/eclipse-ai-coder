@@ -10,7 +10,7 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
-import de.hetzge.eclipse.aicoder.AiProvider;
+import de.hetzge.eclipse.aicoder.LlmProvider;
 
 public class ProviderPreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
 
@@ -28,10 +28,10 @@ public class ProviderPreferencePage extends FieldEditorPreferencePage implements
 	}
 
 	private void updateVisibility(String selectedProvider) {
-		this.ollamaGroup.setVisible(AiProvider.OLLAMA.name().equals(selectedProvider));
-		((GridData) this.ollamaGroup.getLayoutData()).exclude = !AiProvider.OLLAMA.name().equals(selectedProvider);
-		this.mistralGroup.setVisible(AiProvider.MISTRAL.name().equals(selectedProvider));
-		((GridData) this.mistralGroup.getLayoutData()).exclude = !AiProvider.MISTRAL.name().equals(selectedProvider);
+		this.ollamaGroup.setVisible(LlmProvider.OLLAMA.name().equals(selectedProvider));
+		((GridData) this.ollamaGroup.getLayoutData()).exclude = !LlmProvider.OLLAMA.name().equals(selectedProvider);
+		this.mistralGroup.setVisible(LlmProvider.MISTRAL.name().equals(selectedProvider));
+		((GridData) this.mistralGroup.getLayoutData()).exclude = !LlmProvider.MISTRAL.name().equals(selectedProvider);
 		getFieldEditorParent().layout(true, true);
 	}
 
@@ -43,8 +43,8 @@ public class ProviderPreferencePage extends FieldEditorPreferencePage implements
 				"AI Provider:",
 				1,
 				new String[][] {
-						{ "Ollama", AiProvider.OLLAMA.name() },
-						{ "Mistral", AiProvider.MISTRAL.name() }
+						{ "Ollama", LlmProvider.OLLAMA.name() },
+						{ "Mistral", LlmProvider.MISTRAL.name() }
 				},
 				getFieldEditorParent()) {
 			@Override

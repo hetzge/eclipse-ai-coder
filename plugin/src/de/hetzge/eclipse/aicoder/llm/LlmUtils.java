@@ -14,7 +14,7 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
-import de.hetzge.eclipse.aicoder.AiProvider;
+import de.hetzge.eclipse.aicoder.LlmProvider;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import mjson.Json;
 
@@ -24,25 +24,28 @@ public final class LlmUtils {
 	}
 
 	/**
-	 * Execute the configured
+	 * Execute the configured.
 	 *
-	 * @param prompt the prompt
-	 * @param suffix the suffix (can be <code>null</code> if chat instead of fill in middle should be used)
+	 * @param systemPrompt the system prompt
+	 * @param prompt       the prompt
+	 * @param suffix       the suffix (can be <code>null</code> if chat instead of fill in middle should be used)
 	 * @return the {@link LlmResponse}
+	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
-	public static LlmResponse execute(String prompt, String suffix) throws IOException {
-		final AiProvider provider = AiCoderPreferences.getAiProvider();
+	public static LlmResponse execute(String systemPrompt, String prompt, String suffix) throws IOException {
+		final LlmProvider provider = AiCoderPreferences.getAiProvider();
 		switch (provider) {
 		case OLLAMA:
-			return executeOllama(prompt, suffix);
+			return executeOllama(systemPrompt, prompt, suffix);
 		case MISTRAL:
-			return executeMistral(prompt, suffix);
+			return executeMistral(systemPrompt, prompt, suffix);
 		default:
 			throw new IllegalStateException("Illegal provider: " + provider);
 		}
 	}
 
-	private static LlmResponse executeOllama(String prompt, String suffix) throws IOException {
+	private static LlmResponse executeOllama(String systemPrompt, String prompt, String suffix) throws IOException {
+		final boolean isFillInTheMiddle = suffix != null;
 		final String urlString = AiCoderPreferences.getOllamaBaseUrl();
 		final boolean multilineEnabled = AiCoderPreferences.isMultilineEnabled();
 		final Json json = Json.object()
@@ -51,7 +54,10 @@ public final class LlmUtils {
 				.set("stream", false)
 				.set("options", Json.object()
 						.set("temperature", 0));
-		if (suffix != null) {
+		if (systemPrompt != null) {
+			json.set("system", systemPrompt);
+		}
+		if (isFillInTheMiddle) {
 			json.set("suffix", suffix);
 			json.at("options")
 					.set("num_predict", AiCoderPreferences.getMaxTokens())
@@ -80,22 +86,30 @@ public final class LlmUtils {
 		}
 	}
 
-	private static LlmResponse executeMistral(String prompt, String suffix) throws IOException {
+	private static LlmResponse executeMistral(String systemPrompt, String prompt, String suffix) throws IOException {
+		final boolean isFillInTheMiddle = suffix != null;
 		final String urlString = "https://codestral.mistral.ai";
 		final String codestralApiKey = AiCoderPreferences.getCodestralApiKey();
 		final boolean multilineEnabled = AiCoderPreferences.isMultilineEnabled();
 		final Json json = Json.object()
 				.set("model", "codestral-latest")
 				.set("temperature", 0);
-		if (suffix != null) {
+		if (isFillInTheMiddle) {
 			json.set("prompt", prompt)
 					.set("suffix", suffix)
 					.set("max_tokens", AiCoderPreferences.getMaxTokens())
 					.set("stop", Json.array().add(multilineEnabled ? "\n\n" : "\n"));
 		} else {
-			json.set("messages", Json.array().add(Json.object()
+			final Json messagesJson = Json.array();
+			if(systemPrompt != null) {
+				messagesJson.add(Json.object()
+							.set("role", "system")
+							.set("content", systemPrompt));
+			}
+			messagesJson.add(Json.object()
 					.set("role", "user")
-					.set("content", prompt)));
+					.set("content", prompt));
+			json.set("messages", messagesJson);
 		}
 		final String path = suffix != null ? "/v1/fim/completions" : "/v1/chat/completions";
 		final URL url = URI.create(urlString).resolve(path).toURL();

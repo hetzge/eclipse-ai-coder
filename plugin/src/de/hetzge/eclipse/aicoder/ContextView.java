@@ -14,6 +14,7 @@ import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.preference.PreferenceDialog;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.viewers.DecoratingLabelProvider;
 import org.eclipse.jface.viewers.IColorProvider;
@@ -38,6 +39,7 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.dialogs.PreferencesUtil;
 import org.eclipse.ui.menus.CommandContributionItem;
 import org.eclipse.ui.menus.CommandContributionItemParameter;
 import org.eclipse.ui.part.DrillDownAdapter;
@@ -51,6 +53,7 @@ import de.hetzge.eclipse.aicoder.context.CustomContextEntry;
 import de.hetzge.eclipse.aicoder.context.EmptyContextEntry;
 import de.hetzge.eclipse.aicoder.context.UserContextEntry;
 import de.hetzge.eclipse.aicoder.handler.ToggleMultilineHandler;
+import de.hetzge.eclipse.aicoder.preferences.ContextPreferencePage;
 import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
 import jakarta.inject.Inject;
 
@@ -95,6 +98,7 @@ public class ContextView extends ViewPart {
 						null,
 						ToggleMultilineHandler.COMMAND_ID,
 						CommandContributionItem.STYLE_CHECK)));
+		menuManager.add(new OpenContextPreferencesAction());
 	}
 
 	private void hookContextMenu() {
@@ -288,6 +292,18 @@ public class ContextView extends ViewPart {
 		return workbench.getDisplay().syncCall(() -> {
 			return Optional.ofNullable(workbench.getActiveWorkbenchWindow().getActivePage().findView(ID)).map(view -> (ContextView) view);
 		});
+	}
+
+	private static class OpenContextPreferencesAction extends Action {
+		private OpenContextPreferencesAction() {
+			super("Context preferences");
+		}
+
+		@Override
+		public void run() {
+			final PreferenceDialog dialog = PreferencesUtil.createPreferenceDialogOn(null, ContextPreferencePage.ID, null, null);
+			dialog.open();
+		}
 	}
 
 	private class ViewContentProvider implements ITreeContentProvider {

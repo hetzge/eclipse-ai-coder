@@ -44,7 +44,7 @@ public class FillInMiddleContextEntry extends ContextEntry {
 
 	@Override
 	public String getContent(ContextContext context) {
-		return ContextUtils.contentTemplate(String.format("Current file: %s", this.filename), this.prefix + FILL_HERE_PLACEHOLDER + this.suffix);
+		return ContextUtils.contentTemplate(String.format("Current edit location: %s", this.filename), this.prefix + FILL_HERE_PLACEHOLDER + this.suffix);
 	}
 
 	public static FillInMiddleContextEntry create(String filename, IDocument document, int modelOffset) throws BadLocationException {

@@ -3,6 +3,7 @@ package de.hetzge.eclipse.aicoder.context;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 
 import org.eclipse.core.runtime.CoreException;
@@ -72,6 +73,8 @@ public final class Context {
 			LastEditsContextEntry.PREFIX,
 			ClipboardContextEntry.PREFIX,
 			FillInMiddleContextEntry.PREFIX);
+
+	public static final Set<String> DEFAULT_ACTIVE_PREFIXES = Set.of(FillInMiddleContextEntry.PREFIX);
 
 	public static Optional<? extends ContextEntry> create(ContextEntryKey key) throws CoreException {
 		final List<? extends Function<ContextEntryKey, Optional<? extends ContextEntry>>> factories = List.of(
