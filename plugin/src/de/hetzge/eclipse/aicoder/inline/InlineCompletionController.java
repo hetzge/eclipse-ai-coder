@@ -137,12 +137,12 @@ public final class InlineCompletionController {
 		}
 		this.debouncer.debounce(() -> {
 			if (!hasSelection() && isAutocompleteAllowed()) {
-				trigger();
+				trigger(null);
 			}
 		});
 	}
 
-	public void trigger() {
+	public void trigger(String instruction) {
 		AiCoderActivator.log().info("Trigger");
 		final long startTime = System.currentTimeMillis();
 		abort("Trigger");
@@ -157,27 +157,18 @@ public final class InlineCompletionController {
 				final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
 				final IDocument document = this.textViewer.getDocument();
 				final RootContextEntry rootContextEntry = RootContextEntry.create(document, this.textEditor.getEditorInput(), modelOffset);
-				if (monitor.isCanceled()) {
-					addHistoryEntry(mode, "Aborted");
-					return;
-				}
 				final String contextString = ContextEntry.apply(rootContextEntry, new ContextContext());
 				// IMPORTANT: DO this after ContextEntry.apply(...)
 				updateContextView(rootContextEntry);
-				if (monitor.isCanceled()) {
-					addHistoryEntry(mode, "Aborted");
-					return;
-				}
 				final String[] contextParts = contextString.split(FillInMiddleContextEntry.FILL_HERE_PLACEHOLDER);
 				final String prefix = contextParts[0];
 				final String suffix = contextParts.length > 1 ? contextParts[1] : "";
-
 				final String selectionText = getSelectionText();
 				final long llmStartTime = System.currentTimeMillis();
 				LlmResponse llmResponse;
 				if (hasSelection) {
 					final String systemPrompt = LlmPromptTemplates.changeCodeSystemPrompt();
-					prompt = LlmPromptTemplates.changeCodePrompt("java", selectionText, "Fix/complete the code", prefix, suffix);
+					prompt = LlmPromptTemplates.changeCodePrompt("java", selectionText, instruction, prefix, suffix);
 					llmResponse = LlmUtils.execute(systemPrompt, prompt, null);
 				} else {
 					prompt = prefix + suffix;
