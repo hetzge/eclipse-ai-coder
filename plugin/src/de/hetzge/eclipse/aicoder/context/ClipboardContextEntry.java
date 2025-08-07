@@ -1,7 +1,5 @@
 package de.hetzge.eclipse.aicoder.context;
 
-import java.awt.datatransfer.UnsupportedFlavorException;
-import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 
@@ -50,7 +48,11 @@ public class ClipboardContextEntry extends ContextEntry {
 		return List.of();
 	}
 
-	public static ClipboardContextEntry create() throws UnsupportedFlavorException, IOException {
+	public static ContextEntryFactory factory() {
+		return new ContextEntryFactory(PREFIX, () -> create());
+	}
+
+	public static ClipboardContextEntry create() {
 		final long before = System.currentTimeMillis();
 		return Display.getDefault().syncCall(() -> {
 			final String clipboardContent = (String) new Clipboard(Display.getDefault()).getContents(TextTransfer.getInstance());

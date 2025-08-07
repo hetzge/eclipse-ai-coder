@@ -51,6 +51,10 @@ public class PackageContextEntry extends ContextEntry {
 		return AiCoderActivator.getImage(AiCoderImageKey.PACKAGE_ICON);
 	}
 
+	public static ContextEntryFactory factory(ICompilationUnit unit) {
+		return new ContextEntryFactory(PREFIX, () -> create(unit));
+	}
+
 	public static PackageContextEntry create(ICompilationUnit unit) throws CoreException {
 		return create((IPackageFragment) unit.getAncestor(IJavaElement.PACKAGE_FRAGMENT));
 	}

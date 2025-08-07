@@ -53,6 +53,10 @@ public class ScopeContextEntry extends ContextEntry {
 		return AiCoderActivator.getImage(AiCoderImageKey.SCOPE_ICON);
 	}
 
+	public static ContextEntryFactory factory(ICompilationUnit unit, int offset) {
+		return new ContextEntryFactory(PREFIX, () -> create(unit, offset));
+	}
+
 	public static ScopeContextEntry create(ICompilationUnit unit, int offset) throws CoreException {
 		final long before = System.currentTimeMillis();
 		final CompilationUnit parsedUnit = parseUnit(unit);

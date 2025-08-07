@@ -3,6 +3,8 @@ package de.hetzge.eclipse.aicoder.context;
 import java.time.Duration;
 import java.util.List;
 
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.swt.graphics.Image;
@@ -47,11 +49,19 @@ public class FillInMiddleContextEntry extends ContextEntry {
 		return ContextUtils.contentTemplate(String.format("Current edit location: %s", this.filename), this.prefix + FILL_HERE_PLACEHOLDER + this.suffix);
 	}
 
-	public static FillInMiddleContextEntry create(String filename, IDocument document, int modelOffset) throws BadLocationException {
-		final long before = System.currentTimeMillis();
-		final String prefix = getPrefix(document, modelOffset);
-		final String suffix = getSuffix(document, modelOffset);
-		return new FillInMiddleContextEntry(filename, prefix, suffix, Duration.ofMillis(System.currentTimeMillis() - before));
+	public static ContextEntryFactory factory(String filename, IDocument document, int modelOffset) {
+		return new ContextEntryFactory(PREFIX, () -> create(filename, document, modelOffset));
+	}
+
+	public static FillInMiddleContextEntry create(String filename, IDocument document, int modelOffset) throws CoreException {
+		try {
+			final long before = System.currentTimeMillis();
+			final String prefix = getPrefix(document, modelOffset);
+			final String suffix = getSuffix(document, modelOffset);
+			return new FillInMiddleContextEntry(filename, prefix, suffix, Duration.ofMillis(System.currentTimeMillis() - before));
+		} catch (final BadLocationException exception) {
+			throw new CoreException(Status.error("Failed to create fill in the middle context entry", exception));
+		}
 	}
 
 	private static String getPrefix(IDocument document, int modelOffset) throws BadLocationException {

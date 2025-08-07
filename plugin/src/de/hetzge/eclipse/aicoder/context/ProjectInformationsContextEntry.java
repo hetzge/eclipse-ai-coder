@@ -41,7 +41,11 @@ public class ProjectInformationsContextEntry extends ContextEntry {
 		return ContextUtils.contentTemplate("General project informations", super.getContent(context));
 	}
 
-	public static ProjectInformationsContextEntry create(IProject project) {
+	public static ContextEntryFactory factory(IProject project) {
+		return new ContextEntryFactory(PREFIX, () -> create(project));
+	}
+
+	public static ContextEntry create(IProject project) {
 		final long before = System.currentTimeMillis();
 		final List<ProjectInformationContextEntry> entries = new ArrayList<>();
 		if (project != null) {

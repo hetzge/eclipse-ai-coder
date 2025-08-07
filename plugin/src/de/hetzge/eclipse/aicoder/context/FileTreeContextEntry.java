@@ -62,7 +62,11 @@ public class FileTreeContextEntry extends ContextEntry {
 		}
 	}
 
-	public static FileTreeContextEntry create(IEditorInput editorInput) throws CoreException {
+	public static ContextEntryFactory factory(IEditorInput editorInput) {
+		return new ContextEntryFactory(PREFIX, () -> create(editorInput));
+	}
+
+	public static ContextEntry create(IEditorInput editorInput) throws CoreException {
 		if (editorInput instanceof final IFileEditorInput fileEditorInput) {
 			final IFile file = fileEditorInput.getFile();
 			final IProject project = file.getProject();

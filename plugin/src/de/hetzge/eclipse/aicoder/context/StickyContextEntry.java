@@ -41,6 +41,10 @@ public class StickyContextEntry extends ContextEntry {
 		return AiCoderActivator.getImage(AiCoderImageKey.PIN_ICON);
 	}
 
+	public static ContextEntryFactory factory() {
+		return new ContextEntryFactory(PREFIX, () -> create());
+	}
+
 	public static StickyContextEntry create() throws CoreException {
 		final long before = System.currentTimeMillis();
 		final List<? extends ContextEntry> entries = ContextPreferences.getStickylist().stream()

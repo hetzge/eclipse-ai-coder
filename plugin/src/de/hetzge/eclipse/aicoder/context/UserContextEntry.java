@@ -27,6 +27,10 @@ public class UserContextEntry extends ContextEntry {
 		return super.getContent(context) + "\n";
 	}
 
+	public static ContextEntryFactory factory() {
+		return new ContextEntryFactory(PREFIX, () -> create());
+	}
+
 	public static UserContextEntry create() {
 		final long before = System.currentTimeMillis();
 		final List<CustomContextEntry> entries = ContextPreferences.getCustomContextEntries();

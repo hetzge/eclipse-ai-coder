@@ -43,6 +43,10 @@ public class DependenciesContextEntry extends ContextEntry {
 		return ContextUtils.contentTemplate("Dependencies", super.getContent(context));
 	}
 
+	public static ContextEntryFactory factory(IProject project) {
+		return new ContextEntryFactory(PREFIX, () -> create(project));
+	}
+
 	public static DependenciesContextEntry create(IProject project) throws JavaModelException {
 		final long before = System.currentTimeMillis();
 		final List<DependencyContextEntry> entries = new ArrayList<>();

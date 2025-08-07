@@ -17,6 +17,7 @@ import org.eclipse.ui.IEditorInput;
 
 import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
+import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
 
 public class RootContextEntry extends ContextEntry {
 	public static final String PREFIX = "ROOT";
@@ -45,29 +46,30 @@ public class RootContextEntry extends ContextEntry {
 		final String filename = EclipseUtils.getFilename(editorInput).orElse("Active File");
 		final long before = System.currentTimeMillis();
 		final Optional<ICompilationUnit> compilationUnitOptional = EclipseUtils.getCompilationUnit(editorInput);
-		final List<ContextEntry> entries = new ArrayList<>();
-		entries.add(ProjectInformationsContextEntry.create(project));
-		entries.add(FileTreeContextEntry.create(editorInput));
-		entries.add(DependenciesContextEntry.create(project));
-		entries.add(OpenEditorsContextEntry.create());
-		entries.add(StickyContextEntry.create());
-		entries.add(UserContextEntry.create());
+		final List<ContextEntryFactory> factories = new ArrayList<>();
+		factories.add(ProjectInformationsContextEntry.factory(project));
+		factories.add(FileTreeContextEntry.factory(editorInput));
+		factories.add(DependenciesContextEntry.factory(project));
+		factories.add(OpenEditorsContextEntry.factory());
+		factories.add(StickyContextEntry.factory());
+		factories.add(UserContextEntry.factory());
 		if (compilationUnitOptional.isPresent()) {
 			final ICompilationUnit unit = compilationUnitOptional.get();
-			entries.add(SuperContextEntry.create(unit, offset));
-			entries.add(ScopeContextEntry.create(unit, offset));
-			entries.add(ImportsContextEntry.create(unit));
-			entries.add(PackageContextEntry.create(unit));
+			factories.add(SuperContextEntry.factory(unit, offset));
+			factories.add(ScopeContextEntry.factory(unit, offset));
+			factories.add(ImportsContextEntry.factory(unit));
+			factories.add(PackageContextEntry.factory(unit));
 		}
-		entries.add(LastEditsContextEntry.create());
-		entries.add(ClipboardContextEntry.create());
-		entries.add(FillInMiddleContextEntry.create(filename, document, offset));
+		factories.add(LastEditsContextEntry.factory());
+		factories.add(ClipboardContextEntry.factory());
+		factories.add(FillInMiddleContextEntry.factory(filename, document, offset));
 		final List<String> orderedPrefixes = ContextPreferences.getContextTypePositions().stream()
 				.filter(item -> item.enabled())
 				.map(item -> item.prefix())
 				.toList();
-		final List<ContextEntry> filteredAndSortedEntries = entries.stream()
-				.filter(entry -> orderedPrefixes.contains(entry.getKey().prefix()))
+		final List<ContextEntry> filteredAndSortedEntries = factories.parallelStream()
+				.filter(factory -> orderedPrefixes.contains(factory.prefix()))
+				.map(LambdaExceptionUtils.rethrowFunction(factory -> factory.supplier().get()))
 				.sorted(Comparator.comparingInt(entry -> orderedPrefixes.indexOf(entry.getKey().prefix())))
 				.toList();
 		return new RootContextEntry(filteredAndSortedEntries, Duration.ofMillis(System.currentTimeMillis() - before));

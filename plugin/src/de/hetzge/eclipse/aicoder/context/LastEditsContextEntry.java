@@ -58,6 +58,10 @@ public class LastEditsContextEntry extends ContextEntry {
 				.collect(Collectors.joining("\n")));
 	}
 
+	public static ContextEntryFactory factory() {
+		return new ContextEntryFactory(PREFIX, () -> create());
+	}
+
 	@SuppressWarnings("restriction")
 	public static LastEditsContextEntry create() throws CoreException {
 		final long before = System.currentTimeMillis();

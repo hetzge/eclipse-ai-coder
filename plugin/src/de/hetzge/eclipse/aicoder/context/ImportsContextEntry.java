@@ -43,6 +43,10 @@ public class ImportsContextEntry extends ContextEntry {
 		return new ContextEntryKey(PREFIX, PREFIX);
 	}
 
+	public static ContextEntryFactory factory(ICompilationUnit unit) {
+		return new ContextEntryFactory(PREFIX, () -> create(unit));
+	}
+
 	public static ImportsContextEntry create(ICompilationUnit unit) throws CoreException {
 		final long before = System.currentTimeMillis();
 		final List<TypeContextEntry> entries = Stream.of(unit.getImports())

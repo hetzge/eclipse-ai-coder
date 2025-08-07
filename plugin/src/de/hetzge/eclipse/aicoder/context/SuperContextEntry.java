@@ -36,6 +36,10 @@ public class SuperContextEntry extends ContextEntry {
 		return ContextUtils.contentTemplate("Supertypes (classes and interfaces)", super.getContent(context));
 	}
 
+	public static ContextEntryFactory factory(ICompilationUnit unit, int offset) {
+		return new ContextEntryFactory(PREFIX, () -> create(unit, offset));
+	}
+
 	public static SuperContextEntry create(ICompilationUnit unit, int offset) throws JavaModelException, CoreException {
 		final long before = System.currentTimeMillis();
 		final List<TypeContextEntry> entries = Stream.of(unit.getTypes())

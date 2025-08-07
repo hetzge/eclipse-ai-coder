@@ -54,6 +54,10 @@ public class OpenEditorsContextEntry extends ContextEntry {
 		return ContextUtils.contentTemplate("Open editors", super.getContent(context));
 	}
 
+	public static ContextEntryFactory factory() {
+		return new ContextEntryFactory(PREFIX, () -> create());
+	}
+
 	public static OpenEditorsContextEntry create() throws CoreException {
 		final long before = System.currentTimeMillis();
 		final List<? extends ContextEntry> entries = createEntries();
