@@ -230,4 +230,14 @@ public class EclipseUtils {
 		return Optional.empty();
 	}
 
+	public static String getFileExtension(IEditorInput input) {
+		if (input instanceof IFileEditorInput) {
+			return ((IFileEditorInput) input).getFile().getFileExtension();
+		}
+		return getFilename(input).map(name -> {
+			final int index = name.lastIndexOf('.');
+			return index == -1 ? null : name.substring(index + 1);
+		}).orElse("");
+	}
+
 }

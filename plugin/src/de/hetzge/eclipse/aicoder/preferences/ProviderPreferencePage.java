@@ -1,7 +1,9 @@
 package de.hetzge.eclipse.aicoder.preferences;
 
+import java.util.Arrays;
+
+import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
-import org.eclipse.jface.preference.RadioGroupFieldEditor;
 import org.eclipse.jface.preference.StringFieldEditor;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
@@ -10,12 +12,10 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
-import de.hetzge.eclipse.aicoder.LlmProvider;
+import de.hetzge.eclipse.aicoder.llm.LlmModels;
+import de.hetzge.eclipse.aicoder.llm.LlmProvider;
 
 public class ProviderPreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
-
-	private Group ollamaGroup;
-	private Group mistralGroup;
 
 	public ProviderPreferencePage() {
 		super(GRID);
@@ -27,64 +27,74 @@ public class ProviderPreferencePage extends FieldEditorPreferencePage implements
 	public void init(IWorkbench workbench) {
 	}
 
-	private void updateVisibility(String selectedProvider) {
-		this.ollamaGroup.setVisible(LlmProvider.OLLAMA.name().equals(selectedProvider));
-		((GridData) this.ollamaGroup.getLayoutData()).exclude = !LlmProvider.OLLAMA.name().equals(selectedProvider);
-		this.mistralGroup.setVisible(LlmProvider.MISTRAL.name().equals(selectedProvider));
-		((GridData) this.mistralGroup.getLayoutData()).exclude = !LlmProvider.MISTRAL.name().equals(selectedProvider);
-		getFieldEditorParent().layout(true, true);
+	@Override
+	protected void createFieldEditors() {
+		// Ollama
+		final Group ollamaGroup = new Group(getFieldEditorParent(), SWT.NONE);
+		ollamaGroup.setText("Ollama");
+		ollamaGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
+		addField(new StringFieldEditor(
+				AiCoderPreferences.OLLAMA_BASE_URL_KEY,
+				"Base url:",
+				ollamaGroup));
+
+		// Mistral
+		final Group mistralGroup = new Group(getFieldEditorParent(), SWT.NONE);
+		mistralGroup.setText("Mistral");
+		mistralGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
+		final StringFieldEditor codestralApiKeyFieldEditor = new StringFieldEditor(
+				AiCoderPreferences.CODESTRAL_API_KEY_KEY,
+				"Codestral API key:",
+				mistralGroup);
+		codestralApiKeyFieldEditor.getTextControl(mistralGroup).setEchoChar('*');
+		addField(codestralApiKeyFieldEditor);
+
+		// OpenAI
+		final Group openAiGroup = new Group(getFieldEditorParent(), SWT.NONE);
+		openAiGroup.setText("OpenAI");
+		openAiGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
+		addField(new StringFieldEditor(
+				AiCoderPreferences.OPENAI_BASE_URL_KEY,
+				"Base url:",
+				openAiGroup));
+		final StringFieldEditor openAiApiKeyFieldEditor = new StringFieldEditor(
+				AiCoderPreferences.OPENAI_API_KEY_KEY,
+				"API key:",
+				openAiGroup);
+		openAiApiKeyFieldEditor.getTextControl(openAiGroup).setEchoChar('*');
+		addField(openAiApiKeyFieldEditor);
+
+		// Model selection
+		final Group modelGroup = new Group(getFieldEditorParent(), SWT.NONE);
+		modelGroup.setText("Model selection");
+		modelGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
+		addField(new ComboFieldEditor(
+				AiCoderPreferences.FILL_IN_MIDDLE_PROVIDER_KEY,
+				"Fill in middle provider:",
+				Arrays.stream(LlmProvider.values())
+						.map(provider -> new String[] { provider.name(), provider.name() })
+						.toList().toArray(new String[0][]),
+				modelGroup));
+		addField(new StringFieldEditor(
+				AiCoderPreferences.FILL_IN_MIDDLE_MODEL_KEY,
+				"Fill in middle model:",
+				modelGroup));
+		addField(new ComboFieldEditor(
+				AiCoderPreferences.EDIT_PROVIDER_KEY,
+				"Edit provider:",
+				Arrays.stream(LlmProvider.values())
+						.map(provider -> new String[] { provider.name(), provider.name() })
+						.toList().toArray(new String[0][]),
+				modelGroup));
+		addField(new StringFieldEditor(
+				AiCoderPreferences.EDIT_MODEL_KEY,
+				"Edit model:",
+				modelGroup));
 	}
 
 	@Override
-	protected void createFieldEditors() {
-		// Create the main selection for AI Provider
-		final RadioGroupFieldEditor providerEditor = new RadioGroupFieldEditor(
-				AiCoderPreferences.AI_PROVIDER_KEY,
-				"AI Provider:",
-				1,
-				new String[][] {
-						{ "Ollama", LlmProvider.OLLAMA.name() },
-						{ "Mistral", LlmProvider.MISTRAL.name() }
-				},
-				getFieldEditorParent()) {
-			@Override
-			protected void fireValueChanged(String property, Object oldValue, Object newValue) {
-				super.fireValueChanged(property, oldValue, newValue);
-				if ("field_editor_value".equals(property)) {
-					updateVisibility((String) newValue);
-				}
-			}
-		};
-		addField(providerEditor);
-
-		// Ollama
-		this.ollamaGroup = new Group(getFieldEditorParent(), SWT.NONE);
-		this.ollamaGroup.setText("Ollama Settings");
-		this.ollamaGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
-
-		addField(new StringFieldEditor(
-				AiCoderPreferences.OLLAMA_BASE_URL_KEY,
-				"Ollama Base URL:",
-				this.ollamaGroup));
-
-		addField(new StringFieldEditor(
-				AiCoderPreferences.OLLAMA_MODEL_KEY,
-				"Ollama Model:",
-				this.ollamaGroup));
-
-		// Mistral
-		this.mistralGroup = new Group(getFieldEditorParent(), SWT.NONE);
-		this.mistralGroup.setText("Mistral Settings");
-		this.mistralGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
-
-		final StringFieldEditor codestralApiKeyFieldEditor = new StringFieldEditor(
-				AiCoderPreferences.CODESTRAL_API_KEY,
-				"Codestral API Key:",
-				this.mistralGroup);
-		codestralApiKeyFieldEditor.getTextControl(this.mistralGroup).setEchoChar('*');
-		addField(codestralApiKeyFieldEditor);
-
-		// Initialize visibility based on current selection
-		updateVisibility(getPreferenceStore().getString(AiCoderPreferences.AI_PROVIDER_KEY));
+	protected void performApply() {
+		super.performApply();
+		LlmModels.INSTANCE.reset();
 	}
 }

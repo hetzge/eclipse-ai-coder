@@ -165,12 +165,12 @@ public class AiCoderHistoryView extends ViewPart {
 		});
 
 		// Provider column
-		column = createTableViewerColumn("Provider", 80);
+		column = createTableViewerColumn("LLM", 80);
 		column.setLabelProvider(new ColumnLabelProvider() {
 			@Override
 			public String getText(Object element) {
 				final AiCoderHistoryEntry entry = (AiCoderHistoryEntry) element;
-				return entry.getProvider().name();
+				return entry.getModelLabel();
 			}
 		});
 

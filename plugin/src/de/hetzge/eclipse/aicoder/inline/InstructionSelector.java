@@ -1,7 +1,8 @@
 package de.hetzge.eclipse.aicoder.inline;
 
 import java.util.List;
-import java.util.function.Consumer;
+import java.util.Optional;
+import java.util.function.BiConsumer;
 
 import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.jface.layout.TableColumnLayout;
@@ -9,6 +10,7 @@ import org.eclipse.jface.viewers.ColumnWeightData;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.MouseListener;
+import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
@@ -19,16 +21,20 @@ import org.eclipse.swt.widgets.Text;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
+import de.hetzge.eclipse.aicoder.llm.LlmModelOption;
+import de.hetzge.eclipse.aicoder.llm.LlmSelector;
 
 public class InstructionSelector extends Composite {
 	private final Composite inputComposite;
 	private final Text input;
 	private final Table table;
-	private final Consumer<Instruction> onSelect;
-	private List<Instruction> instructions;
+	private final BiConsumer<EditInstruction, LlmModelOption> onSelect;
+	private List<EditInstruction> instructions;
 	private final Composite tableComposite;
+	private Button applyButton;
+	private LlmSelector llmSelector;
 
-	public InstructionSelector(Composite parent, Consumer<Instruction> onSelect) {
+	public InstructionSelector(Composite parent, BiConsumer<EditInstruction, LlmModelOption> onSelect) {
 		super(parent, SWT.NONE);
 		this.onSelect = onSelect;
 		this.instructions = List.of();
@@ -39,21 +45,21 @@ public class InstructionSelector extends Composite {
 		layout.marginHeight = 0;
 		this.inputComposite.setLayout(layout);
 		this.input = new Text(this.inputComposite, SWT.BORDER | SWT.MULTI | SWT.WRAP);
-		final Button applyButton = new Button(this.inputComposite, SWT.NONE);
-		applyButton.addListener(SWT.Selection, event -> applyCustomPrompt());
+		this.applyButton = new Button(this.inputComposite, SWT.NONE);
+		this.applyButton.addListener(SWT.Selection, event -> applyCustomPrompt());
 		this.input.addKeyListener(KeyListener.keyPressedAdapter(event -> {
 			if (event.keyCode == SWT.CR && (event.stateMask & SWT.CTRL) != 0) {
 				applyCustomPrompt();
 			}
 		}));
-		applyButton.setEnabled(false);
+		this.applyButton.setEnabled(false);
 		this.input.addModifyListener(event -> {
-			applyButton.setEnabled(!this.input.getText().isBlank());
+			updateApplyButton();
 			refreshTable();
 		});
 		this.input.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.FILL).grab(true, true).hint(SWT.DEFAULT, SWT.DEFAULT).create());
-		applyButton.setImage(AiCoderActivator.getImage(AiCoderImageKey.RUN_ICON));
-		applyButton.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.FILL).grab(false, true).hint(35, SWT.DEFAULT).create());
+		this.applyButton.setImage(AiCoderActivator.getImage(AiCoderImageKey.RUN_ICON));
+		this.applyButton.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.FILL).grab(false, true).hint(35, SWT.DEFAULT).create());
 		this.tableComposite = new Composite(this, SWT.NONE);
 		final TableColumnLayout tableColumnLayout = new TableColumnLayout();
 		this.tableComposite.setLayout(tableColumnLayout);
@@ -72,7 +78,7 @@ public class InstructionSelector extends Composite {
 				event.doit = false;
 			}
 			if (event.keyCode == SWT.ARROW_RIGHT) {
-				final Instruction instruction = (Instruction) this.table.getSelection()[0].getData();
+				final EditInstruction instruction = (EditInstruction) this.table.getSelection()[0].getData();
 				this.input.setText(instruction.content());
 				this.input.setFocus();
 				this.input.setSelection(InstructionSelector.this.input.getText().length());
@@ -85,38 +91,57 @@ public class InstructionSelector extends Composite {
 			}
 		});
 		this.input.addKeyListener(KeyListener.keyPressedAdapter(event -> {
-			if (event.keyCode == SWT.ARROW_DOWN && this.table.getItemCount() > 0) {
+			if (this.table.getItemCount() == 0) {
+				return;
+			}
+			if (event.keyCode == SWT.ARROW_UP && this.input.getCaretPosition() == 0) {
+				this.table.setFocus();
+				this.table.setSelection(this.table.getItemCount() - 1);
+				event.doit = false;
+			} else if (event.keyCode == SWT.ARROW_DOWN && this.input.getCaretPosition() == this.input.getText().length()) {
 				this.table.setFocus();
 				this.table.setSelection(0);
 				event.doit = false;
 			}
 		}));
+		this.llmSelector = new LlmSelector(this, SWT.NONE);
+		this.llmSelector.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.TOP).grab(true, false).create());
+		this.llmSelector.init(LlmModelOption.createEditModelOptionFromPreferences());
+		this.llmSelector.addSelectionListener(SelectionListener.widgetSelectedAdapter(event -> {
+			updateApplyButton();
+		}));
+	}
+
+	private void updateApplyButton() {
+		this.applyButton.setEnabled(!this.input.getText().isBlank() && this.llmSelector.getSelectedOption().isPresent());
 	}
 
 	public Text getSearchInput() {
 		return this.input;
 	}
 
-	public void setInstructions(List<Instruction> instructions) {
+	public void setInstructions(List<EditInstruction> instructions) {
 		this.instructions = instructions;
 		refreshTable();
 	}
 
 	private void applyCustomPrompt() {
-		this.onSelect.accept(new Instruction("Custom", this.input.getText()));
+		this.onSelect.accept(new EditInstruction("Custom", this.input.getText()), this.llmSelector.getSelectedOption().orElseThrow());
 	}
 
 	private void handleTableSelection() {
-		if (this.table.getSelectionCount() == 1) {
-			final Instruction instruction = (Instruction) this.table.getSelection()[0].getData();
-			this.onSelect.accept(instruction);
+		final Optional<LlmModelOption> llmModelOptionOptional = this.llmSelector.getSelectedOption();
+		if (this.table.getSelectionCount() == 1 && llmModelOptionOptional.isPresent()) {
+			final EditInstruction instruction = (EditInstruction) this.table.getSelection()[0].getData();
+			this.onSelect.accept(instruction, llmModelOptionOptional.orElseThrow());
 		}
 	}
 
 	private void refreshTable() {
+		final String query = this.input.getText().toLowerCase().trim();
+		final int beforeItemCount = this.table.getItemCount();
 		this.table.removeAll();
-		for (final Instruction instruction : this.instructions) {
-			final String query = this.input.getText().toLowerCase().trim();
+		for (final EditInstruction instruction : this.instructions) {
 			if (!query.isBlank() && (!instruction.title().toLowerCase().contains(query)
 					&& !instruction.content().toLowerCase().contains(query))) {
 				continue;
@@ -126,6 +151,12 @@ public class InstructionSelector extends Composite {
 			item.setText(0, instruction.title());
 			item.setText(1, instruction.content());
 		}
+		if (this.table.getItemCount() != beforeItemCount) {
+			updateLayout();
+		}
+	}
+
+	private void updateLayout() {
 		if (this.table.getItemCount() > 0) {
 			this.table.select(0);
 			this.inputComposite.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.FILL).grab(true, false).hint(SWT.DEFAULT, 75).create());

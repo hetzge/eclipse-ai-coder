@@ -96,8 +96,15 @@ public final class Utils {
 	}
 
 	public static String stripCodeMarkdownTags(final String content) {
-		final List<String> lines = content.lines().toList();
-		return content.startsWith("```") ? lines.subList(1, lines.size() - 1).stream().collect(Collectors.joining("\n")) : content;
+		final int firstIndex = content.indexOf("```");
+		final int lastIndex = content.lastIndexOf("```");
+		if (firstIndex == -1) {
+			return content;
+		}
+		if (firstIndex == lastIndex) {
+			return content;
+		}
+		final List<String> lines = content.substring(firstIndex, lastIndex + 3).trim().lines().toList();
+		return lines.subList(1, lines.size() - 1).stream().collect(Collectors.joining("\n"));
 	}
-
 }

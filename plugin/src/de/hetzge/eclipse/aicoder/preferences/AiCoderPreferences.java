@@ -6,14 +6,19 @@ import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
 import org.eclipse.jface.preference.IPreferenceStore;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
-import de.hetzge.eclipse.aicoder.LlmProvider;
+import de.hetzge.eclipse.aicoder.llm.LlmModelOption;
+import de.hetzge.eclipse.aicoder.llm.LlmProvider;
 
 public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 
-	public static final String AI_PROVIDER_KEY = "de.hetzge.eclipse.aicoder.ai_provider";
-	public static final String CODESTRAL_API_KEY = "de.hetzge.eclipse.aicoder.codestral_api_key";
+	public static final String CODESTRAL_API_KEY_KEY = "de.hetzge.eclipse.aicoder.codestral_api_key";
 	public static final String OLLAMA_BASE_URL_KEY = "de.hetzge.eclipse.aicoder.ollama_base_url";
-	public static final String OLLAMA_MODEL_KEY = "de.hetzge.eclipse.aicoder.ollama_model";
+	public static final String OPENAI_BASE_URL_KEY = "de.hetzge.eclipse.aicoder.openai_base_url";
+	public static final String OPENAI_API_KEY_KEY = "de.hetzge.eclipse.aicoder.openai_api_key";
+	public static final String FILL_IN_MIDDLE_PROVIDER_KEY = "de.hetzge.eclipse.aicoder.fill_in_middle_provider";
+	public static final String FILL_IN_MIDDLE_MODEL_KEY = "de.hetzge.eclipse.aicoder.fill_in_middle_model";
+	public static final String EDIT_PROVIDER_KEY = "de.hetzge.eclipse.aicoder.edit_provider";
+	public static final String EDIT_MODEL_KEY = "de.hetzge.eclipse.aicoder.edit_model";
 	public static final String ENABLE_MULTILINE_KEY = "de.hetzge.eclipse.aicoder.enable_multiline";
 	public static final String ENABLE_AUTOCOMPLETE_KEY = "de.hetzge.eclipse.aicoder.enable_autocomplete";
 	public static final String ONLY_ON_CHANGE_AUTOCOMPLETE_KEY = "de.hetzge.eclipse.aicoder.only_on_change_autocomplete";
@@ -26,10 +31,14 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	@Override
 	public void initializeDefaultPreferences() {
 		final IPreferenceStore store = getStore();
-		store.setDefault(AI_PROVIDER_KEY, LlmProvider.MISTRAL.name());
-		store.setDefault(CODESTRAL_API_KEY, "");
+		store.setDefault(CODESTRAL_API_KEY_KEY, "");
 		store.setDefault(OLLAMA_BASE_URL_KEY, "http://localhost:11434");
-		store.setDefault(OLLAMA_MODEL_KEY, "qwen2.5-coder:3b");
+		store.setDefault(OPENAI_BASE_URL_KEY, "https://api.openai.com");
+		store.setDefault(OPENAI_API_KEY_KEY, "");
+		store.setDefault(FILL_IN_MIDDLE_PROVIDER_KEY, LlmProvider.MISTRAL.name());
+		store.setDefault(FILL_IN_MIDDLE_MODEL_KEY, "codestral-latest");
+		store.setDefault(EDIT_PROVIDER_KEY, LlmProvider.MISTRAL.name());
+		store.setDefault(EDIT_MODEL_KEY, "codestral-latest");
 		store.setDefault(ENABLE_MULTILINE_KEY, true);
 		store.setDefault(ENABLE_AUTOCOMPLETE_KEY, true);
 		store.setDefault(ONLY_ON_CHANGE_AUTOCOMPLETE_KEY, true);
@@ -40,21 +49,41 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(DEBOUNCE_IN_MS_KEY, 400);
 	}
 
-	public static LlmProvider getAiProvider() {
-		final String providerId = getStore().getString(AI_PROVIDER_KEY);
-		return LlmProvider.valueOf(providerId.toUpperCase());
-	}
-
 	public static String getCodestralApiKey() {
-		return getStore().getString(CODESTRAL_API_KEY);
+		return getStore().getString(CODESTRAL_API_KEY_KEY);
 	}
 
 	public static String getOllamaBaseUrl() {
 		return getStore().getString(OLLAMA_BASE_URL_KEY);
 	}
 
-	public static String getOllamaModel() {
-		return getStore().getString(OLLAMA_MODEL_KEY);
+	public static String getOpenAiBaseUrl() {
+		return getStore().getString(OPENAI_BASE_URL_KEY);
+	}
+
+	public static String getOpenAiApiKey() {
+		return getStore().getString(OPENAI_API_KEY_KEY);
+	}
+
+	public static LlmProvider getFillInMiddleProvider() {
+		return LlmProvider.valueOf(getStore().getString(FILL_IN_MIDDLE_PROVIDER_KEY));
+	}
+
+	public static String getFillInMiddleModel() {
+		return getStore().getString(FILL_IN_MIDDLE_MODEL_KEY);
+	}
+
+	public static LlmProvider getEditProvider() {
+		return LlmProvider.valueOf(getStore().getString(EDIT_PROVIDER_KEY));
+	}
+
+	public static String getEditModel() {
+		return getStore().getString(EDIT_MODEL_KEY);
+	}
+
+	public static void setEditLlmModelOption(LlmModelOption llmModelOption) {
+		getStore().setValue(EDIT_PROVIDER_KEY, llmModelOption.provider().name());
+		getStore().setValue(EDIT_MODEL_KEY, llmModelOption.modelKey());
 	}
 
 	public static boolean isMultilineEnabled() {

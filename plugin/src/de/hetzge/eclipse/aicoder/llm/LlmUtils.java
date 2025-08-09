@@ -1,21 +1,16 @@
 package de.hetzge.eclipse.aicoder.llm;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
-import de.hetzge.eclipse.aicoder.LlmProvider;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
+import de.hetzge.eclipse.aicoder.util.HttpUtils;
 import mjson.Json;
 
 public final class LlmUtils {
@@ -23,33 +18,34 @@ public final class LlmUtils {
 	private LlmUtils() {
 	}
 
-	/**
-	 * Execute the configured.
-	 *
-	 * @param systemPrompt the system prompt
-	 * @param prompt       the prompt
-	 * @param suffix       the suffix (can be <code>null</code> if chat instead of fill in middle should be used)
-	 * @return the {@link LlmResponse}
-	 * @throws IOException Signals that an I/O exception has occurred.
-	 */
-	public static LlmResponse execute(String systemPrompt, String prompt, String suffix) throws IOException {
-		final LlmProvider provider = AiCoderPreferences.getAiProvider();
+	public static LlmResponse executeGenerate(String systemPrompt, String prompt) throws IOException {
+		return execute(LlmModelOption.createEditModelOptionFromPreferences(), systemPrompt, prompt, null);
+	}
+
+	public static LlmResponse executeFillInTheMiddle(String prefix, String suffix) throws IOException {
+		return execute(LlmModelOption.createFillInMiddleModelOptionFromPreferences(), null, prefix, suffix);
+	}
+
+	private static LlmResponse execute(LlmModelOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
+		final LlmProvider provider = llmModelOption.provider();
 		switch (provider) {
 		case OLLAMA:
-			return executeOllama(systemPrompt, prompt, suffix);
+			return executeOllama(llmModelOption, systemPrompt, prompt, suffix);
 		case MISTRAL:
-			return executeMistral(systemPrompt, prompt, suffix);
+			return executeMistral(llmModelOption, systemPrompt, prompt, suffix);
+		case OPENAI:
+			return executeOpenAi(llmModelOption, systemPrompt, prompt, suffix);
 		default:
 			throw new IllegalStateException("Illegal provider: " + provider);
 		}
 	}
 
-	private static LlmResponse executeOllama(String systemPrompt, String prompt, String suffix) throws IOException {
+	private static LlmResponse executeOllama(LlmModelOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
 		final boolean isFillInTheMiddle = suffix != null;
 		final String urlString = AiCoderPreferences.getOllamaBaseUrl();
 		final boolean multilineEnabled = AiCoderPreferences.isMultilineEnabled();
 		final Json json = Json.object()
-				.set("model", AiCoderPreferences.getOllamaModel())
+				.set("model", llmModelOption.modelKey())
 				.set("prompt", prompt)
 				.set("stream", false)
 				.set("options", Json.object()
@@ -69,30 +65,28 @@ public final class LlmUtils {
 		connection.setRequestProperty("Content-Type", "application/json");
 		connection.setRequestProperty("Accept", "application/json");
 		connection.setDoOutput(true);
-		try (OutputStream outputStream = connection.getOutputStream()) {
-			outputStream.write(json.toString().getBytes(StandardCharsets.UTF_8));
-		}
+		HttpUtils.writeRequestBody(connection, json);
 		final int responseCode = connection.getResponseCode();
-		final String responseBody = readResponse(connection);
+		final String responseBody = HttpUtils.readResponseBody(connection);
 		if (responseCode == HttpURLConnection.HTTP_OK) {
 			final Json responseJson = Json.read(responseBody);
 			final String content = responseJson.at("response").asString();
 			final int inputTokens = responseJson.at("prompt_eval_count").asInteger();
 			final int outputTokens = responseJson.at("eval_count").asInteger();
-			return new LlmResponse(content, responseBody, inputTokens, outputTokens);
+			return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens);
 		} else {
 			AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", connection.getResponseMessage(), responseCode)));
-			return new LlmResponse("", responseBody, 0, 0);
+			return new LlmResponse(llmModelOption, "", responseBody, 0, 0);
 		}
 	}
 
-	private static LlmResponse executeMistral(String systemPrompt, String prompt, String suffix) throws IOException {
+	private static LlmResponse executeMistral(LlmModelOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
 		final boolean isFillInTheMiddle = suffix != null;
 		final String urlString = "https://codestral.mistral.ai";
 		final String codestralApiKey = AiCoderPreferences.getCodestralApiKey();
 		final boolean multilineEnabled = AiCoderPreferences.isMultilineEnabled();
 		final Json json = Json.object()
-				.set("model", "codestral-latest")
+				.set("model", llmModelOption.modelKey())
 				.set("temperature", 0);
 		if (isFillInTheMiddle) {
 			json.set("prompt", prompt)
@@ -101,10 +95,10 @@ public final class LlmUtils {
 					.set("stop", Json.array().add(multilineEnabled ? "\n\n" : "\n"));
 		} else {
 			final Json messagesJson = Json.array();
-			if(systemPrompt != null) {
+			if (systemPrompt != null) {
 				messagesJson.add(Json.object()
-							.set("role", "system")
-							.set("content", systemPrompt));
+						.set("role", "system")
+						.set("content", systemPrompt));
 			}
 			messagesJson.add(Json.object()
 					.set("role", "user")
@@ -119,33 +113,60 @@ public final class LlmUtils {
 		connection.setRequestProperty("Accept", "application/json");
 		connection.setRequestProperty("Authorization", "Bearer " + codestralApiKey);
 		connection.setDoOutput(true);
-		try (OutputStream outputStream = connection.getOutputStream()) {
-			outputStream.write(json.toString().getBytes(StandardCharsets.UTF_8));
-		}
+		HttpUtils.writeRequestBody(connection, json);
 		final int responseCode = connection.getResponseCode();
-		final String responseBody = readResponse(connection);
+		final String responseBody = HttpUtils.readResponseBody(connection);
 		if (responseCode == HttpURLConnection.HTTP_OK) {
 			final Json responseJson = Json.read(responseBody);
 			final String content = responseJson.at("choices").at(0).at("message").at("content").asString();
 			final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 			final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
-			return new LlmResponse(content, responseBody, inputTokens, outputTokens);
+			return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens);
 		} else {
 			AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", connection.getResponseMessage(), responseCode)));
-			return new LlmResponse("", responseBody, 0, 0);
+			return new LlmResponse(llmModelOption, "", responseBody, 0, 0);
 		}
 	}
 
-	private static String readResponse(final HttpURLConnection connection) throws IOException {
-		final StringBuilder responseBody = new StringBuilder();
-		try (InputStream inputStream = connection.getInputStream();
-				BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
-			String line;
-			while ((line = reader.readLine()) != null) {
-				responseBody.append(line);
-			}
+	private static LlmResponse executeOpenAi(LlmModelOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
+		if (suffix != null) {
+			throw new IllegalStateException("Fill-in-the-middle is not supported by OpenAI");
 		}
-		return responseBody.toString();
-	}
+		final String urlString = AiCoderPreferences.getOpenAiBaseUrl();
+		final String openAiApiKey = AiCoderPreferences.getOpenAiApiKey();
+		final Json json = Json.object()
+				.set("model", llmModelOption.modelKey())
+				.set("temperature", 0);
+		final Json messagesJson = Json.array();
+		if (systemPrompt != null) {
+			messagesJson.add(Json.object()
+					.set("role", "system")
+					.set("content", systemPrompt));
+		}
+		messagesJson.add(Json.object()
+				.set("role", "user")
+				.set("content", prompt));
+		json.set("messages", messagesJson);
 
+		final URL url = URI.create(urlString + "/").resolve("./v1/chat/completions").toURL();
+		final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+		connection.setRequestMethod("POST");
+		connection.setRequestProperty("Content-Type", "application/json");
+		connection.setRequestProperty("Accept", "application/json");
+		connection.setRequestProperty("Authorization", "Bearer " + openAiApiKey);
+		connection.setDoOutput(true);
+		HttpUtils.writeRequestBody(connection, json);
+		final int responseCode = connection.getResponseCode();
+		final String responseBody = HttpUtils.readResponseBody(connection);
+		if (responseCode == HttpURLConnection.HTTP_OK) {
+			final Json responseJson = Json.read(responseBody);
+			final String content = responseJson.at("choices").at(0).at("message").at("content").asString();
+			final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
+			final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
+			return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens);
+		} else {
+			AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", connection.getResponseMessage(), responseCode)));
+			return new LlmResponse(llmModelOption, "", responseBody, 0, 0);
+		}
+	}
 }

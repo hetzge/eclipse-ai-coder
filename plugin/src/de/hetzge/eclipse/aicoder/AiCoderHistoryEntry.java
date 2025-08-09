@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 
 public class AiCoderHistoryEntry {
 	private final LocalDateTime timestamp;
-	private final LlmProvider provider;
+	private final String modelLabel;
 	private final CompletionMode mode;
 	private final String file;
 	private String status;
@@ -27,7 +27,7 @@ public class AiCoderHistoryEntry {
 
 	public AiCoderHistoryEntry(
 			LocalDateTime timestamp,
-			LlmProvider provider,
+			String modelLabel,
 			CompletionMode mode,
 			String file,
 			String status,
@@ -45,7 +45,7 @@ public class AiCoderHistoryEntry {
 			long llmDurationMs,
 			String plainLlmResponse) {
 		this.timestamp = timestamp;
-		this.provider = provider;
+		this.modelLabel = modelLabel;
 		this.mode = mode;
 		this.file = file;
 		this.status = status;
@@ -68,8 +68,8 @@ public class AiCoderHistoryEntry {
 		return this.timestamp;
 	}
 
-	public LlmProvider getProvider() {
-		return this.provider;
+	public String getModelLabel() {
+		return this.modelLabel;
 	}
 
 	public CompletionMode getMode() {

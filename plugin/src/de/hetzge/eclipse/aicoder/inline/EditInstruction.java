@@ -1,6 +1,6 @@
 package de.hetzge.eclipse.aicoder.inline;
 
-public record Instruction(
+public record EditInstruction(
 		String title,
 		String content) {
 }

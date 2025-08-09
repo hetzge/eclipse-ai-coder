@@ -15,7 +15,7 @@ public class TriggerHandler extends AbstractHandler {
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		AiCoderActivator.log().info("Execute trigger handler");
 		final ITextEditor textEditor = EclipseUtils.getActiveTextEditor().orElseThrow(() -> new ExecutionException("No active text editor"));
-		InlineCompletionController.setup(textEditor).trigger("Fix/complete the code");
+		InlineCompletionController.setup(textEditor).trigger(null);
 		return null;
 	}
 
