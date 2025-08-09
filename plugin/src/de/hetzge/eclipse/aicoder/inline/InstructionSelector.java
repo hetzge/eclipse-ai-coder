@@ -52,7 +52,6 @@ public class InstructionSelector extends Composite {
 				applyCustomPrompt();
 			}
 		}));
-		this.applyButton.setEnabled(false);
 		this.input.addModifyListener(event -> {
 			updateApplyButton();
 			refreshTable();
@@ -60,6 +59,7 @@ public class InstructionSelector extends Composite {
 		this.input.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.FILL).grab(true, true).hint(SWT.DEFAULT, SWT.DEFAULT).create());
 		this.applyButton.setImage(AiCoderActivator.getImage(AiCoderImageKey.RUN_ICON));
 		this.applyButton.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.FILL).grab(false, true).hint(35, SWT.DEFAULT).create());
+		this.applyButton.setEnabled(false);
 		this.tableComposite = new Composite(this, SWT.NONE);
 		final TableColumnLayout tableColumnLayout = new TableColumnLayout();
 		this.tableComposite.setLayout(tableColumnLayout);
@@ -85,7 +85,7 @@ public class InstructionSelector extends Composite {
 			}
 		}));
 		this.table.addMouseListener(MouseListener.mouseDoubleClickAdapter(event -> handleTableSelection()));
-		this.addTraverseListener(event -> {
+		this.table.addTraverseListener(event -> {
 			if (event.detail == SWT.TRAVERSE_RETURN) {
 				handleTableSelection();
 			}
