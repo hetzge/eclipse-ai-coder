@@ -18,7 +18,10 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.jdt.core,
  org.eclipse.ui.ide,
  org.eclipse.jdt.ui,
- org.eclipse.ui.editors
+ org.eclipse.ui.editors,
+ io.modelcontextprotocol.sdk.mcp;bundle-version="0.11.1",
+ com.fasterxml.jackson.core.jackson-databind,
+ com.fasterxml.jackson.core.jackson-core
 Bundle-RequiredExecutionEnvironment: JavaSE-21
 Automatic-Module-Name: codestral.eclipse
 Bundle-ActivationPolicy: lazy

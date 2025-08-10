@@ -7,6 +7,8 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
+import de.hetzge.eclipse.aicoder.mcp.McpClients;
+
 public class AiCoderActivator extends AbstractUIPlugin {
 
 	public static final String PLUGIN_ID = "de.hetzge.eclipse.aicoder";
@@ -20,6 +22,9 @@ public class AiCoderActivator extends AbstractUIPlugin {
 	public void start(BundleContext context) throws Exception {
 		super.start(context);
 		plugin = this;
+		McpClients.INSTANCE.reload(() -> {
+			log().info("MCP clients loaded: " + McpClients.INSTANCE.getMcpStatusCountsString());
+		});
 	}
 
 	@Override

@@ -8,6 +8,7 @@ import org.eclipse.jface.preference.IPreferenceStore;
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.llm.LlmModelOption;
 import de.hetzge.eclipse.aicoder.llm.LlmProvider;
+import mjson.Json;
 
 public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 
@@ -27,6 +28,7 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String MAX_TOKENS_KEY = "de.hetzge.eclipse.aicoder.max_tokens";
 	public static final String IGNORE_JRE_CLASSES_KEY = "de.hetzge.eclipse.aicoder.ignore_jre_classes";
 	public static final String DEBOUNCE_IN_MS_KEY = "de.hetzge.eclipse.aicoder.debounce_in_ms";
+	public static final String MCP_SERVER_CONFIGURATIONS_KEY = "de.hetzge.eclipse.aicoder.mcp.server_configurations";
 
 	@Override
 	public void initializeDefaultPreferences() {
@@ -47,6 +49,7 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(MAX_TOKENS_KEY, 1024);
 		store.setDefault(IGNORE_JRE_CLASSES_KEY, true);
 		store.setDefault(DEBOUNCE_IN_MS_KEY, 400);
+		store.setDefault(MCP_SERVER_CONFIGURATIONS_KEY, "{}");
 	}
 
 	public static String getCodestralApiKey() {
@@ -120,6 +123,18 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 
 	public static Duration getDebounceDuration() {
 		return Duration.ofMillis(getStore().getInt(DEBOUNCE_IN_MS_KEY));
+	}
+
+	public static Json getMcpServerConfigurations() {
+		return Json.read(getStore().getString(MCP_SERVER_CONFIGURATIONS_KEY));
+	}
+
+	public static Json getDefaultMcpServerConfigurations() {
+		return Json.read(getStore().getDefaultString(MCP_SERVER_CONFIGURATIONS_KEY));
+	}
+
+	public static void setMcpServerConfigurations(Json json) {
+		getStore().setValue(MCP_SERVER_CONFIGURATIONS_KEY, json.toString());
 	}
 
 	private static IPreferenceStore getStore() {

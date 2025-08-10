@@ -44,7 +44,7 @@ public class InstructionSelector extends Composite {
 		layout.marginWidth = 0;
 		layout.marginHeight = 0;
 		this.inputComposite.setLayout(layout);
-		this.input = new Text(this.inputComposite, SWT.BORDER | SWT.MULTI | SWT.WRAP);
+		this.input = new Text(this.inputComposite, SWT.BORDER | SWT.MULTI | SWT.WRAP | SWT.V_SCROLL);
 		this.applyButton = new Button(this.inputComposite, SWT.NONE);
 		this.applyButton.addListener(SWT.Selection, event -> applyCustomPrompt());
 		this.input.addKeyListener(KeyListener.keyPressedAdapter(event -> {
@@ -64,8 +64,8 @@ public class InstructionSelector extends Composite {
 		final TableColumnLayout tableColumnLayout = new TableColumnLayout();
 		this.tableComposite.setLayout(tableColumnLayout);
 		this.table = new Table(this.tableComposite, SWT.SINGLE | SWT.FULL_SELECTION);
-		tableColumnLayout.setColumnData(new TableColumn(this.table, SWT.NONE), new ColumnWeightData(0, 100));
-		tableColumnLayout.setColumnData(new TableColumn(this.table, SWT.NONE), new ColumnWeightData(100, 100));
+		tableColumnLayout.setColumnData(new TableColumn(this.table, SWT.NONE), new ColumnWeightData(0, 300));
+		tableColumnLayout.setColumnData(new TableColumn(this.table, SWT.NONE), new ColumnWeightData(100, 300));
 		this.table.addKeyListener(KeyListener.keyPressedAdapter(event -> {
 			if (event.keyCode == SWT.ARROW_UP && InstructionSelector.this.table.getSelectionIndex() == 0) {
 				this.input.setFocus();
@@ -126,7 +126,7 @@ public class InstructionSelector extends Composite {
 	}
 
 	private void applyCustomPrompt() {
-		this.onSelect.accept(new EditInstruction("Custom", this.input.getText()), this.llmSelector.getSelectedOption().orElseThrow());
+		this.onSelect.accept(new EditInstruction("Custom", "Custom", this.input.getText()), this.llmSelector.getSelectedOption().orElseThrow());
 	}
 
 	private void handleTableSelection() {
@@ -138,18 +138,17 @@ public class InstructionSelector extends Composite {
 	}
 
 	private void refreshTable() {
-		final String query = this.input.getText().toLowerCase().trim();
+		final String query = this.input.getText().trim();
 		final int beforeItemCount = this.table.getItemCount();
 		this.table.removeAll();
 		for (final EditInstruction instruction : this.instructions) {
-			if (!query.isBlank() && (!instruction.title().toLowerCase().contains(query)
-					&& !instruction.content().toLowerCase().contains(query))) {
+			if (!query.isBlank() && !instruction.match(query)) {
 				continue;
 			}
 			final TableItem item = new TableItem(this.table, SWT.NONE);
 			item.setData(instruction);
-			item.setText(0, instruction.title());
-			item.setText(1, instruction.content());
+			item.setText(0, instruction.key() != null ? instruction.key() : "");
+			item.setText(1, instruction.title() != null ? instruction.title() : "");
 		}
 		if (this.table.getItemCount() != beforeItemCount) {
 			updateLayout();
@@ -159,7 +158,7 @@ public class InstructionSelector extends Composite {
 	private void updateLayout() {
 		if (this.table.getItemCount() > 0) {
 			this.table.select(0);
-			this.inputComposite.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.FILL).grab(true, false).hint(SWT.DEFAULT, 75).create());
+			this.inputComposite.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.FILL).grab(true, false).hint(SWT.DEFAULT, 110).create());
 			this.tableComposite.setLayoutData(GridDataFactory.fillDefaults().grab(true, true).create());
 		} else {
 			this.inputComposite.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.FILL).grab(true, true).hint(SWT.DEFAULT, SWT.DEFAULT).create());

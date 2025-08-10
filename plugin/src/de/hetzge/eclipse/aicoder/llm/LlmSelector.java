@@ -36,7 +36,9 @@ public final class LlmSelector extends Composite {
 	}
 
 	public void init(LlmModelOption option) {
-		this.modelCombo.setText("Loading...");
+		this.options = List.of(option);
+		this.modelCombo.setItems(new String[] { option.getLabel() });
+		this.modelCombo.select(0);
 		new Job("Load llm models") {
 			@Override
 			protected IStatus run(IProgressMonitor monitor) {

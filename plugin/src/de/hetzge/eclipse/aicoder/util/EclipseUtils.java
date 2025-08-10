@@ -20,6 +20,7 @@ import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.internal.ui.text.javadoc.JavadocContentAccess2;
 import org.eclipse.jdt.ui.JavaUI;
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.text.ITextViewer;
@@ -238,6 +239,22 @@ public class EclipseUtils {
 			final int index = name.lastIndexOf('.');
 			return index == -1 ? null : name.substring(index + 1);
 		}).orElse("");
+	}
+
+	public static int getWidgetLine(ITextViewer textViewer, int modelOffset) throws BadLocationException {
+		if (textViewer instanceof final ITextViewerExtension5 extension5) {
+			return extension5.modelLine2WidgetLine(textViewer.getDocument().getLineOfOffset(modelOffset));
+		} else {
+			return textViewer.getDocument().getLineOfOffset(modelOffset);
+		}
+	}
+
+	public static int getWidgetOffset(ITextViewer textViewer, int modelOffset) {
+		if (textViewer instanceof final ITextViewerExtension5 extension5) {
+			return extension5.modelOffset2WidgetOffset(modelOffset);
+		} else {
+			return modelOffset;
+		}
 	}
 
 }

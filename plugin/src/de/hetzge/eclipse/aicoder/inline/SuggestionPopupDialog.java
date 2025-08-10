@@ -4,6 +4,7 @@ import java.util.Objects;
 
 import org.eclipse.jface.dialogs.PopupDialog;
 import org.eclipse.jface.layout.GridDataFactory;
+import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.ControlEvent;
@@ -21,21 +22,23 @@ import org.eclipse.swt.widgets.ToolItem;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
+import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 
 public final class SuggestionPopupDialog extends PopupDialog {
 
 	private static final int TOOLBAR_HEIGHT = 24;
 
+	private final ITextViewer parentTextViewer;
 	private final StyledText parentStyledText;
 	private final Suggestion suggestion;
 	private Runnable acceptListener;
 	private Runnable rejectListener;
-
 	private StyledText styledText;
 
-	public SuggestionPopupDialog(StyledText parentStyledText, Suggestion suggestion, Runnable acceptListener, Runnable rejectListener) {
-		super(parentStyledText.getShell(), SWT.ON_TOP, true, false, false, false, false, null, null);
-		this.parentStyledText = parentStyledText;
+	public SuggestionPopupDialog(ITextViewer parentTextViewer, Suggestion suggestion, Runnable acceptListener, Runnable rejectListener) {
+		super(parentTextViewer.getTextWidget().getShell(), SWT.ON_TOP, true, false, false, false, false, null, null);
+		this.parentTextViewer = parentTextViewer;
+		this.parentStyledText = parentTextViewer.getTextWidget();
 		this.suggestion = suggestion;
 		this.acceptListener = acceptListener;
 		this.rejectListener = rejectListener;
@@ -129,41 +132,43 @@ public final class SuggestionPopupDialog extends PopupDialog {
 
 	@Override
 	public Point getDefaultSize() {
-		return calculateSize(this.parentStyledText, this.suggestion.content(), this.suggestion.modelOffset());
+		return calculateSize(this.parentTextViewer, this.suggestion.content(), this.suggestion.modelOffset());
 	}
 
 	@Override
 	public Point getDefaultLocation(Point initialSize) {
-		return calculateLocation(this.parentStyledText, this.suggestion.modelOffset());
+		return calculateLocation(this.parentTextViewer, this.suggestion.modelOffset());
 	}
 
 	public void updateSizeAndLocation() {
 		final Shell shell = getShell();
-		final Point newLocation = calculateLocation(this.parentStyledText, this.suggestion.modelOffset());
+		final Point newLocation = calculateLocation(this.parentTextViewer, this.suggestion.modelOffset());
 		if (!Objects.equals(shell.getLocation(), newLocation)) {
 			shell.setLocation(newLocation);
 			shell.layout();
 		}
-		final Point newSize = calculateSize(this.parentStyledText, this.suggestion.content(), this.suggestion.modelOffset());
+		final Point newSize = calculateSize(this.parentTextViewer, this.suggestion.content(), this.suggestion.modelOffset());
 		if (!Objects.equals(shell.getSize(), newSize)) {
 			shell.setSize(newSize);
 			shell.layout();
 		}
 	}
 
-	private static Point calculateSize(StyledText parentStyledText, String content, int modelOffset) {
-		final Point location = parentStyledText.getLocationAtOffset(modelOffset);
-		final int width = parentStyledText.getSize().x - location.x - 24; // space for scrollbar
-		final int height = (int) (content.lines().count() * parentStyledText.getLineHeight() + TOOLBAR_HEIGHT + 10);
+	private static Point calculateSize(ITextViewer parentTextViewer, String content, int modelOffset) {
+		final int widgetOffset = EclipseUtils.getWidgetOffset(parentTextViewer, modelOffset);
+		final Point location = parentTextViewer.getTextWidget().getLocationAtOffset(widgetOffset);
+		final int width = parentTextViewer.getTextWidget().getSize().x - location.x - 24; // space for scrollbar
+		final int height = (int) (content.lines().count() * parentTextViewer.getTextWidget().getLineHeight() + TOOLBAR_HEIGHT + 10);
 		return new Point(width, height);
 	}
 
-	private static Point calculateLocation(StyledText parentStyledText, int modelOffset) {
-		final Point location = parentStyledText.getLocationAtOffset(modelOffset);
+	private static Point calculateLocation(ITextViewer parentTextViewer, int modelOffset) {
+		final int widgetOffset = EclipseUtils.getWidgetOffset(parentTextViewer, modelOffset);
+		final Point location = parentTextViewer.getTextWidget().getLocationAtOffset(widgetOffset);
 		// border offset
 		location.x -= 2;
 		location.y -= 2;
-		return parentStyledText.toDisplay(location);
+		return parentTextViewer.getTextWidget().toDisplay(location);
 	}
 
 	private final class PaintListenerImplementation implements PaintListener {

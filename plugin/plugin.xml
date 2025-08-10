@@ -168,6 +168,12 @@
            id="de.hetzge.eclipse.aicoder.preferences.provider"
            name="Provider">
      </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences"
+           class="de.hetzge.eclipse.aicoder.preferences.McpPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.mcp"
+           name="MCP">
+     </page>
   </extension> 
  <extension
        point="org.eclipse.core.runtime.preferences">

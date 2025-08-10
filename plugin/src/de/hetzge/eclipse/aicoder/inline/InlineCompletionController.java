@@ -23,7 +23,6 @@ import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.ITextViewerExtension2;
-import org.eclipse.jface.text.ITextViewerExtension5;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
@@ -204,14 +203,14 @@ public final class InlineCompletionController {
 								Utils.stripCodeMarkdownTags(content),
 								modelOffset,
 								selectionText.length(),
-								getWidgetLine(modelOffset) + (int) selectionText.lines().count() - 1,
+								EclipseUtils.getWidgetLine(this.textViewer, modelOffset) + (int) selectionText.lines().count() - 1,
 								Math.max((int) Utils.stripCodeMarkdownTags(content).lines().count() - (int) selectionText.lines().count(), 0) + 2)); // + 2 for popup toolbar
 					} else {
 						setup(List.of(InlineCompletion.create(
 								document,
 								modelOffset,
-								getWidgetOffset(modelOffset),
-								getWidgetLine(modelOffset),
+								EclipseUtils.getWidgetOffset(this.textViewer, modelOffset),
+								EclipseUtils.getWidgetLine(this.textViewer, modelOffset),
 								Utils.stripCodeMarkdownTags(content), // TODO?
 								lineHeight,
 								defaultLineSpacing)));
@@ -290,22 +289,6 @@ public final class InlineCompletionController {
 		});
 	}
 
-	private int getWidgetLine(int modelOffset) throws BadLocationException {
-		if (this.textViewer instanceof final ITextViewerExtension5 extension5) {
-			return extension5.modelLine2WidgetLine(this.textViewer.getDocument().getLineOfOffset(modelOffset));
-		} else {
-			return this.textViewer.getDocument().getLineOfOffset(modelOffset);
-		}
-	}
-
-	private int getWidgetOffset(int modelOffset) {
-		if (this.textViewer instanceof final ITextViewerExtension5 extension5) {
-			return extension5.modelOffset2WidgetOffset(modelOffset);
-		} else {
-			return modelOffset;
-		}
-	}
-
 	private void addHistoryEntry(CompletionMode mode, String status) {
 		addHistoryEntry(null, mode, "", "", status, 0, 0, null);
 	}
@@ -369,7 +352,7 @@ public final class InlineCompletionController {
 					view.setLatestRejected();
 				});
 			};
-			this.suggestionPopupDialog = new SuggestionPopupDialog(this.widget, suggestion, acceptListener, rejectListener);
+			this.suggestionPopupDialog = new SuggestionPopupDialog(this.textViewer, suggestion, acceptListener, rejectListener);
 			this.suggestionPopupDialog.open();
 			unsetSelection();
 		});
