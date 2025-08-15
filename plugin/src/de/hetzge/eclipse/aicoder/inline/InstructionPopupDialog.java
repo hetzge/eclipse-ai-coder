@@ -1,8 +1,6 @@
 package de.hetzge.eclipse.aicoder.inline;
 
-import java.util.List;
 import java.util.function.BiConsumer;
-import java.util.stream.Stream;
 
 import org.eclipse.jface.dialogs.PopupDialog;
 import org.eclipse.swt.SWT;
@@ -13,8 +11,9 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Shell;
 
+import de.hetzge.eclipse.aicoder.content.EditInstruction;
+import de.hetzge.eclipse.aicoder.content.InstructionUtils;
 import de.hetzge.eclipse.aicoder.llm.LlmModelOption;
-import de.hetzge.eclipse.aicoder.mcp.McpClients;
 
 public class InstructionPopupDialog extends PopupDialog {
 
@@ -34,17 +33,7 @@ public class InstructionPopupDialog extends PopupDialog {
 			close();
 			this.onSelect.accept(instruction, llmModelOption);
 		});
-		this.instructionSelector.setInstructions(Stream.concat(
-				McpClients.INSTANCE.getAllEditInstructions().stream(),
-				List.of(
-						new EditInstruction("Complete", "Fix/complete the code", "Fix/complete the code"),
-						new EditInstruction("Modernize", "Modernize the code", "Modernize the code"),
-						new EditInstruction("Explain", "Document each step", "Document each step of the code with a meaningful comment. Provide interesting insights and hints."),
-						new EditInstruction("Names", "Use better variable names", "Use better variable names"),
-						new EditInstruction("For-loop", "Convert to for loop", "Convert to for loop"),
-						new EditInstruction("Stream", "Convert to stream", "Convert to stream"),
-						new EditInstruction("Monads", "Use monadic abstraction", "Make the code more readable by using monadic code (map, flatMap...) if possible")).stream())
-				.toList());
+		this.instructionSelector.setInstructions(InstructionUtils.getAllEditInstructions());
 		this.instructionSelector.addPaintListener(event -> {
 			final Rectangle clientArea = this.instructionSelector.getClientArea();
 			event.gc.setForeground(getShell().getDisplay().getSystemColor(SWT.COLOR_GRAY));

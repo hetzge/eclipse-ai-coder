@@ -29,6 +29,7 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String IGNORE_JRE_CLASSES_KEY = "de.hetzge.eclipse.aicoder.ignore_jre_classes";
 	public static final String DEBOUNCE_IN_MS_KEY = "de.hetzge.eclipse.aicoder.debounce_in_ms";
 	public static final String MCP_SERVER_CONFIGURATIONS_KEY = "de.hetzge.eclipse.aicoder.mcp.server_configurations";
+	public static final String CLEANUP_CODE_ON_APPLY_KEY = "de.hetzge.eclipse.aicoder.cleanup_code_on_apply";
 
 	@Override
 	public void initializeDefaultPreferences() {
@@ -50,6 +51,7 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(IGNORE_JRE_CLASSES_KEY, true);
 		store.setDefault(DEBOUNCE_IN_MS_KEY, 400);
 		store.setDefault(MCP_SERVER_CONFIGURATIONS_KEY, "{}");
+		store.setDefault(CLEANUP_CODE_ON_APPLY_KEY, true);
 	}
 
 	public static String getCodestralApiKey() {
@@ -139,5 +141,9 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 
 	private static IPreferenceStore getStore() {
 		return AiCoderActivator.getDefault().getPreferenceStore();
+	}
+
+	public static boolean isCleanupCodeOnApplyEnabled() {
+		return getStore().getBoolean(CLEANUP_CODE_ON_APPLY_KEY);
 	}
 }

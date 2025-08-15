@@ -12,7 +12,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.DocumentEvent;
 import org.eclipse.jface.text.IDocument;
@@ -136,7 +138,7 @@ public final class InlineCompletionController {
 			return;
 		}
 		this.debouncer.debounce(() -> {
-			if (!hasSelection() && isAutocompleteAllowed()) {
+			if (!EclipseUtils.hasSelection(this.textViewer) && isAutocompleteAllowed()) {
 				trigger(null);
 			}
 		});
@@ -151,7 +153,7 @@ public final class InlineCompletionController {
 		final int defaultLineSpacing = widget.getLineSpacing();
 		this.job = Job.create("AI completion", monitor -> {
 			String prompt = "";
-			final boolean hasSelection = hasSelection();
+			final boolean hasSelection = EclipseUtils.hasSelection(this.textViewer);
 			final CompletionMode mode = hasSelection
 					? CompletionMode.EDIT
 					: instruction == null
@@ -168,7 +170,7 @@ public final class InlineCompletionController {
 				final String[] contextParts = contextString.split(FillInMiddleContextEntry.FILL_HERE_PLACEHOLDER);
 				final String prefix = contextParts[0];
 				final String suffix = contextParts.length > 1 ? contextParts[1] : "";
-				final String selectionText = getSelectionText();
+				final String selectionText = EclipseUtils.getSelectionText(this.textViewer);
 				final long llmStartTime = System.currentTimeMillis();
 				if (mode == CompletionMode.EDIT || mode == CompletionMode.GENERATE) {
 					final String fileType = EclipseUtils.getFileExtension(this.textEditor.getEditorInput());
@@ -236,14 +238,6 @@ public final class InlineCompletionController {
 			}
 		});
 		this.job.schedule();
-	}
-
-	private boolean hasSelection() {
-		return Display.getDefault().syncCall(() -> InlineCompletionController.this.textViewer.getSelectedRange().y > 0);
-	}
-
-	private String getSelectionText() {
-		return Display.getDefault().syncCall(() -> InlineCompletionController.this.textViewer.getSelectionProvider().getSelection() instanceof final ITextSelection textSelection ? textSelection.getText() : "");
 	}
 
 	private void unsetSelection() {
@@ -410,6 +404,18 @@ public final class InlineCompletionController {
 	public void accept() {
 		acceptInlineCompletion();
 		acceptSuggestion();
+
+		if (AiCoderPreferences.isCleanupCodeOnApplyEnabled()) {
+			final Optional<ICompilationUnit> compilationUnitOptional = EclipseUtils.getCompilationUnit(this.textEditor.getEditorInput());
+			if (compilationUnitOptional.isPresent()) {
+				final ICompilationUnit compilationUnit = compilationUnitOptional.get();
+				try {
+					AiCoderCodeCleanupUtils.triggerSaveActions(compilationUnit);
+				} catch (OperationCanceledException | CoreException exception) {
+					AiCoderActivator.log().error("Failed to cleanup code", exception);
+				}
+			}
+		}
 	}
 
 	private void acceptInlineCompletion() {

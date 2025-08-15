@@ -1,5 +1,6 @@
 package de.hetzge.eclipse.aicoder.inline;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -14,6 +15,7 @@ import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
@@ -21,6 +23,8 @@ import org.eclipse.swt.widgets.Text;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
+import de.hetzge.eclipse.aicoder.Debouncer;
+import de.hetzge.eclipse.aicoder.content.EditInstruction;
 import de.hetzge.eclipse.aicoder.llm.LlmModelOption;
 import de.hetzge.eclipse.aicoder.llm.LlmSelector;
 
@@ -33,11 +37,13 @@ public class InstructionSelector extends Composite {
 	private final Composite tableComposite;
 	private Button applyButton;
 	private LlmSelector llmSelector;
+	private final Debouncer debouncer;
 
 	public InstructionSelector(Composite parent, BiConsumer<EditInstruction, LlmModelOption> onSelect) {
 		super(parent, SWT.NONE);
 		this.onSelect = onSelect;
 		this.instructions = List.of();
+		this.debouncer = new Debouncer(getDisplay(), () -> Duration.ofMillis(250L));
 		setLayout(new GridLayout(1, false));
 		this.inputComposite = new Composite(this, SWT.NONE);
 		final GridLayout layout = new GridLayout(2, false);
@@ -54,7 +60,11 @@ public class InstructionSelector extends Composite {
 		}));
 		this.input.addModifyListener(event -> {
 			updateApplyButton();
-			refreshTable();
+			this.debouncer.debounce(() -> {
+				Display.getDefault().syncExec(() -> {
+					refreshTable();
+				});
+			});
 		});
 		this.input.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.FILL).grab(true, true).hint(SWT.DEFAULT, SWT.DEFAULT).create());
 		this.applyButton.setImage(AiCoderActivator.getImage(AiCoderImageKey.RUN_ICON));

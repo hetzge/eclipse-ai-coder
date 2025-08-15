@@ -181,4 +181,12 @@
           class="de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences">
     </initializer>
  </extension>
+ <extension
+       point="org.eclipse.ui.quickAccess">
+    <computer
+          class="de.hetzge.eclipse.aicoder.AiCoderInstructionsQuickAccessComputer"
+          name="AI Coder Instructions"
+          requiresUIAccess="false">
+    </computer>
+ </extension>
 </plugin>

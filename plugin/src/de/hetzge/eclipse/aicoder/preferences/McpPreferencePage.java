@@ -6,12 +6,14 @@ import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.jface.layout.GridLayoutFactory;
 import org.eclipse.jface.preference.PreferencePage;
 import org.eclipse.jface.text.TextViewer;
+import org.eclipse.jface.viewers.TableViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.ProgressBar;
+import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
@@ -21,6 +23,7 @@ import org.eclipse.ui.IWorkbenchPreferencePage;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import de.hetzge.eclipse.aicoder.ContentPreviewDialog;
 import de.hetzge.eclipse.aicoder.mcp.AiCoderMcpContent;
 import de.hetzge.eclipse.aicoder.mcp.McpClients;
 import mjson.Json;
@@ -58,7 +61,13 @@ public class McpPreferencePage extends PreferencePage implements IWorkbenchPrefe
 		this.progressBar = new ProgressBar(control, SWT.INDETERMINATE);
 		this.progressBar.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.TOP).grab(true, false).create());
 		this.progressBar.setVisible(false);
-		this.table = new Table(control, SWT.BORDER | SWT.FULL_SELECTION);
+		final TableViewer tableViewer = new TableViewer(control, SWT.BORDER | SWT.FULL_SELECTION);
+		tableViewer.addDoubleClickListener(event -> {
+			final Shell shell = tableViewer.getControl().getShell();
+			final ContentPreviewDialog dialog = new ContentPreviewDialog(shell, "Output", ((AiCoderMcpContent) tableViewer.getStructuredSelection().getFirstElement()).output());
+			dialog.open();
+		});
+		this.table = tableViewer.getTable();
 		this.table.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.FILL).grab(true, true).create());
 		this.table.setHeaderVisible(true);
 		this.table.setLinesVisible(true);
@@ -83,6 +92,7 @@ public class McpPreferencePage extends PreferencePage implements IWorkbenchPrefe
 		this.table.removeAll();
 		for (final AiCoderMcpContent content : contents) {
 			final TableItem item = new TableItem(this.table, SWT.NONE);
+			item.setData(content);
 			item.setText(0, content.key());
 			item.setText(1, content.success() ? "OK" : "Error");
 			item.setText(2, content.title() != null ? content.title() : "");

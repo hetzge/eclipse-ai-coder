@@ -82,5 +82,11 @@ public class GeneralPreferencePage extends FieldEditorPreferencePage implements 
 				generalGroup);
 		debounceInMsEditor.setValidRange(0, 10000);
 		addField(debounceInMsEditor);
+
+		// Cleanup code on apply
+		addField(new BooleanFieldEditor(
+				AiCoderPreferences.CLEANUP_CODE_ON_APPLY_KEY,
+				"Cleanup code on apply",
+				generalGroup));
 	}
 }

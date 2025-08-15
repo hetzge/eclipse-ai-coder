@@ -51,7 +51,7 @@ public final class SuggestionPopupDialog extends PopupDialog {
 		layout.marginWidth = 0;
 		layout.marginHeight = 0;
 		container.setLayout(layout);
-		this.styledText = SuggestionStyledText.create(container, this.parentStyledText, this.suggestion.content());
+		this.styledText = SuggestionStyledText.create(container, this.parentTextViewer, this.suggestion.content());
 		this.styledText.setLayoutData(GridDataFactory.fillDefaults().grab(true, true).create());
 		final ToolBar toolBar = new ToolBar(container, SWT.HORIZONTAL | SWT.TRAIL);
 		toolBar.setLayoutData(GridDataFactory.fillDefaults().grab(true, false).hint(SWT.DEFAULT, TOOLBAR_HEIGHT).create());

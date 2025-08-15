@@ -21,7 +21,7 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
-import de.hetzge.eclipse.aicoder.inline.EditInstruction;
+import de.hetzge.eclipse.aicoder.content.EditInstruction;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
 import io.modelcontextprotocol.client.McpClient;
@@ -51,7 +51,7 @@ public enum McpClients {
 		return this.contentByMcpKey.values().stream().toList();
 	}
 
-	public List<EditInstruction> getAllEditInstructions() {
+	public List<EditInstruction> getEditInstructions() {
 		return this.contentByMcpKey.values().stream()
 				.filter(AiCoderMcpContent::success)
 				.flatMap(content -> content.editInstructions().stream())

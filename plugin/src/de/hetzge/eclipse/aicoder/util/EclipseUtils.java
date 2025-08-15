@@ -257,4 +257,11 @@ public class EclipseUtils {
 		}
 	}
 
+	public static boolean hasSelection(ITextViewer textViewer) {
+		return Display.getDefault().syncCall(() -> textViewer.getSelectedRange().y > 0);
+	}
+
+	public static String getSelectionText(ITextViewer textViewer) {
+		return Display.getDefault().syncCall(() -> textViewer.getSelectionProvider().getSelection() instanceof final ITextSelection textSelection ? textSelection.getText() : "");
+	}
 }

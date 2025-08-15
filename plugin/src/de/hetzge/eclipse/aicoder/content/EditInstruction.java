@@ -1,4 +1,4 @@
-package de.hetzge.eclipse.aicoder.inline;
+package de.hetzge.eclipse.aicoder.content;
 
 public record EditInstruction(
 		String key,

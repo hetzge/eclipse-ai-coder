@@ -6,12 +6,14 @@ import java.util.stream.Collectors;
 import org.bitbucket.cowwoc.diffmatchpatch.DiffMatchPatch;
 import org.bitbucket.cowwoc.diffmatchpatch.DiffMatchPatch.Diff;
 import org.bitbucket.cowwoc.diffmatchpatch.DiffMatchPatch.Operation;
+import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.widgets.Composite;
 
+import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 import de.hetzge.eclipse.aicoder.util.Utils;
 
 public final class SuggestionStyledText {
@@ -19,29 +21,26 @@ public final class SuggestionStyledText {
 	private SuggestionStyledText() {
 	}
 
-	public static StyledText create(Composite parent, StyledText originalStyledText, String content) {
+	public static StyledText create(Composite parent, ITextViewer parentTextViewer, String content) {
+		final StyledText parentStyledText = parentTextViewer.getTextWidget();
 		final DiffMatchPatch diffMatchPatch = new DiffMatchPatch();
-//		diffMatchPatch.matchDistance = 1000;
-//		diffMatchPatch.diffEditCost = 1;
-//		diffMatchPatch.matchThreshold = 0.5f;
-//		diffMatchPatch.patchDeleteThreshold = 0.5f;
-		final List<Diff> diffs = diffMatchPatch.diffMain(originalStyledText.getSelectionText(), Utils.stripCodeMarkdownTags(content));
+		final List<Diff> diffs = diffMatchPatch.diffMain(EclipseUtils.getSelectionText(parentTextViewer), Utils.stripCodeMarkdownTags(content));
 		final StyledText suggestionStyledText = new StyledText(parent, SWT.BORDER);
 		suggestionStyledText.setEditable(false);
-		suggestionStyledText.setTabs(originalStyledText.getTabs());
-		suggestionStyledText.setTabStops(originalStyledText.getTabStops());
-		suggestionStyledText.setFont(originalStyledText.getFont());
-		suggestionStyledText.setForeground(originalStyledText.getForeground());
-		suggestionStyledText.setBackground(originalStyledText.getBackground());
-		suggestionStyledText.setLineSpacing(originalStyledText.getLineSpacing());
+		suggestionStyledText.setTabs(parentStyledText.getTabs());
+		suggestionStyledText.setTabStops(parentStyledText.getTabStops());
+		suggestionStyledText.setFont(parentStyledText.getFont());
+		suggestionStyledText.setForeground(parentStyledText.getForeground());
+		suggestionStyledText.setBackground(parentStyledText.getBackground());
+		suggestionStyledText.setLineSpacing(parentStyledText.getLineSpacing());
 		suggestionStyledText.setText(diffs.stream().map(it -> it.text).collect(Collectors.joining("")));
-		int originalOffset = originalStyledText.getSelectionRange().x;
+		int originalOffset = parentStyledText.getSelectionRange().x; // TODO handle collapsed
 		int suggestionOffset = 0;
 		for (final Diff diff : diffs) {
 			if (diff.operation == Operation.DELETE) {
 				int i = 0;
 				while (i < diff.text.length()) {
-					final StyleRange originalStyleRange = originalStyledText.getStyleRangeAtOffset(originalOffset + i);
+					final StyleRange originalStyleRange = parentStyledText.getStyleRangeAtOffset(originalOffset + i);
 					if (originalStyleRange == null) {
 						i++;
 						continue;
@@ -65,7 +64,7 @@ public final class SuggestionStyledText {
 			} else if (diff.operation == Operation.EQUAL) {
 				int i = 0;
 				while (i < diff.text.length()) {
-					final StyleRange originalStyleRange = originalStyledText.getStyleRangeAtOffset(originalOffset + i);
+					final StyleRange originalStyleRange = parentStyledText.getStyleRangeAtOffset(originalOffset + i);
 					if (originalStyleRange == null) {
 						i++;
 						continue;

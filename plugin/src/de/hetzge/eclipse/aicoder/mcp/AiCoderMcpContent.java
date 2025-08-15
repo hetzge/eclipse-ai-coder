@@ -2,7 +2,7 @@ package de.hetzge.eclipse.aicoder.mcp;
 
 import java.util.List;
 
-import de.hetzge.eclipse.aicoder.inline.EditInstruction;
+import de.hetzge.eclipse.aicoder.content.EditInstruction;
 
 public record AiCoderMcpContent(
 		String key,
