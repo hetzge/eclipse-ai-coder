@@ -114,6 +114,9 @@
 				<li><b>Insights</b> about each request: Word count, durations, status</li>
 				<li>Deep understanding of <b>Java</b> projects. Adds imports and variables in scope to the prompt</li>
 				<li>Toggle between <b>single</b> and <b>multiline</b> completion</li>
+				<li>Complete selected code</li>
+				<li>Apply instructions on selected code</li>
+				<li>Inline generate code by instructions</li>
 			</ul>
 		</section>
 		<section>
@@ -256,6 +259,54 @@
 				<li>Option B: Install from updatesite: <input value="https://eclipse.hetzge.de/aicoder/repository" readonly onclick="this.select();" style="width: 320px" /></li>
 				<li>Option C: <a href="https://eclipse.hetzge.de/aicoder/repository/plugins/de.hetzge.eclipse.aicoder_1.0.0.202507142020.jar">Download</a> the JAR</li>
 			</ul>
+		</section>
+		<section>
+			<h2>Controls</h2>
+			<table>
+				<thead>
+					<tr>
+						<th>Shortcut</th>
+						<th>Selection</th>
+						<th>Action</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">Space</span></td>
+						<td>❌</td>
+						<td>Trigger inline completion at the position of the cursor</td>
+					</tr>
+					<tr>
+						<td><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">Space</span></td>
+						<td>✅</td>
+						<td>Trigger completion/correction of the selected code</td>
+					</tr>
+					<tr>
+						<td><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">1</span></td>
+						<td>❌</td>
+						<td>Trigger dialog to enter instruction to generate code at the position of the cursor</td>
+					</tr>
+					<tr>
+						<td><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">1</span></td>
+						<td>✅</td>
+						<td>Trigger dialog to enter instruction to edit the selected code</td>
+					</tr>
+					<tr>
+						<td><span class="key">Ctrl</span> + <span class="key">3</span></td>
+						<td>❌</td>
+						<td>Open quick access (which provides access to available instructions to generate code at the position of the cursor)</td>
+					</tr>
+					<tr>
+						<td><span class="key">Ctrl</span> + <span class="key">3</span></td>
+						<td>✅</td>
+						<td>Open quick access (which provides access to available instructions to edit the selected code)</td>
+					</tr>
+				</tbody>
+			</table>
+		</section>
+		<section>
+			<h2>LLM Provider</h2>
+			<h3>Codestral</h3>
 			<p>
 				You require a (currently free) Codestral API key. You can get one <a href="https://console.mistral.ai/codestral">here</a>.
 				<img src="images/codestral.png" alt="Screenshot Mistral Console" />
@@ -264,9 +315,7 @@
 				The Codestral API key can then be configured in the Eclipse preferences like in the following screenshot:
 				<img src="images/settings.png" alt="Settings Screenshot">
 			</p>
-		</section>
-		<section>
-			<h2>Ollama</h2>
+			<h3>Ollama</h3>
 			<p>You can also use <a href="https://ollama.com/">Ollama</a> to run a local LLM.</p>
 			<p>
 				Here is an example how to run the <a href="https://ollama.com/library/qwen2.5-coder">Qwen2.5-Coder</a>:
@@ -275,16 +324,21 @@
 				<li>Run
 					<pre>ollama pull qwen2.5-coder:3b</pre> to download the LLM
 				</li>
-				<li>In Eclipse go to Window > Preferences > AI Coder</li>
+				<li>In Eclipse go to Window > Preferences > AI Coder > Provider</li>
 				<li>Setup the Ollama base url
 					<pre>http://localhost:11434</pre> and model
-					<pre>qwen2.5-coder:3b</pre> in the AI Coder Eclipse preferences page
+					<pre>qwen2.5-coder:3b</pre> in the preferences page
 				</li>
 			</ul>
 			</p>
 			<p>Models that are used in AI Coder must support additionaly to the prompt a suffix input. Here is an example:
 				<img src="images/ollama-template.png" alt="Ollama Template Screenshot">
 			</p>
+			<h3>OpenAI compatible</h3>
+			<p>You can use every llm provider that provide an OpenAI compatible API</p>
+			<p>As example for <b>OpenRouter</b> you can use the
+			<pre>https://openrouter.ai/api</pre> base url</p>
+			<p>Be aware that many models from LLM provider like OpenAI does not work as Fill in the middle models.</p>
 		</section>
 		<section>
 			<h2>Settings</h2>
@@ -310,6 +364,10 @@
 					<td>Exclude JRE classes from context. These classes are typically already known by the LLMs.</td>
 				</tr>
 				<tr>
+					<td>Cleanup code on apply</td>
+					<td>When an code suggestion is applied then code cleanup actions (format...) are executed (for java)</td>
+				</tr>
+				<tr>
 					<td>Maximum Prefix Size (lines)</td>
 					<td>How many lines before the current cursor position should be included into the prompt</td>
 				</tr>
@@ -328,20 +386,98 @@
 			</table>
 		</section>
 		<section>
-			<h2>Java Context</h2>
-			<p>This section describes the context that is considered while editing a java file</p>
+			<h2>Contexts</h2>
+			<p>This section describes the context informations that can be included into the prompt</p>
 			<table>
+				<thead>
+					<tr>
+						<th>Context</th>
+						<th>Description</th>
+						<th>Filetype</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>Project informations</td>
+						<td>Name, location of the project. For java projects the java version is included.</td>
+						<td>All</td>
+					</tr>
+					<tr>
+						<td>File tree</td>
+						<td>Tree of the files in the current project</td>
+						<td>All</td>
+					</tr>
+					<tr>
+						<td>Dependencies</td>
+						<td>List of dependencies available in the current project (WIP)</td>
+						<td>All</td>
+					</tr>
+					<tr>
+						<td>Open editors</td>
+						<td>The content of the currently open editors</td>
+						<td>All</td>
+					</tr>
+					<tr>
+						<td>Super (Java)</td>
+						<td>The interface of the supertypes of the current java file</td>
+						<td>Java</td>
+					</tr>
+					<tr>
+						<td>Scope (Java)</td>
+						<td>The interface of the types in the current scope at the current cursor position</td>
+						<td>Java</td>
+					</tr>
+					<tr>
+						<td>Imports (Java)</td>
+						<td>The interface of the imported types in the current file</td>
+						<td>Java</td>
+					</tr>
+					<tr>
+						<td>Package (Java)</td>
+						<td>The interface of the types in the current package</td>
+						<td>Java</td>
+					</tr>
+					<tr>
+						<td>User</td>
+						<td>Custom contents provided by the user</td>
+						<td>All</td>
+					</tr>
+					<tr>
+						<td>Last edits</td>
+						<td>The sourcecode around the last edited locations</td>
+						<td>All</td>
+					</tr>
+					<tr>
+						<td>Clipboard</td>
+						<td>The content of the clipboard</td>
+						<td>All</td>
+					</tr>
+					<tr>
+						<td>Fill in middle</td>
+						<td>The current edit location and context lines around</td>
+						<td>All</td>
+					</tr>
+				</tbody>
 			</table>
 		</section>
 		<section>
 			<h2>Release Notes</h2>
-			<h3>2025-07-xx</h3>
+			<h3>2025-08-xx</h3>
 			<ul>
 				<li>Improved autocompletion trigger and debounce</li>
 				<li>Add only on content change autocompletion</li>
 				<li>Add token counts to history view</li>
-				<li>Codestral base url is no longer configurable</li>
 				<li>Add preferences to controll available context types and their position in the prompt</li>
+				<li>Add selection completion</li>
+				<li>Add insert generation</li>
+				<li>Add execute edit instructions</li>
+				<li>Add MCP (prompts) support</li>
+				<li>Add code cleanup on apply (Java)</li>
+				<li>Codestral base url is no longer configurable</li>
+				<li>Improved context performance (lazy calculations)</li>
+				<li>Restructured preferences pages</li>
+				<li>Open AI compatible apis support</li>
+				<li>Completion now also working in multipage editors (as example pom.xml)</li>
 			</ul>
 			<h3>2025-07-15</h3>
 			<ul>
@@ -356,12 +492,7 @@
 			<h2>Feedback</h2>
 			<p>Report any issues or feature requests on <a href="https://github.com/hetzge/eclipse-ai-coder/issues">Github Issues</a></p>
 			<p>If you like the software please star the project on <a href="https://github.com/hetzge/eclipse-ai-coder">Github</a></p>
-		</section>
-		<section>
-			<h2>Interessting links</h2>
-			<a href="https://www.genuitec.com/products/copilot4eclipse/docs/basics/completions/">Copilot4Eclipse -
-				Inline Code Completions</a>
-		</section>
+		</section>>
 	</main>
 	<footer>
 	</footer>
