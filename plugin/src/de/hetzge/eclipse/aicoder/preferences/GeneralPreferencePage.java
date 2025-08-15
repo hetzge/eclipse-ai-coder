@@ -54,6 +54,12 @@ public class GeneralPreferencePage extends FieldEditorPreferencePage implements 
 				generalGroup);
 		addField(ignoreJreClassesEditor);
 
+		// Cleanup code on apply
+		addField(new BooleanFieldEditor(
+				AiCoderPreferences.CLEANUP_CODE_ON_APPLY_KEY,
+				"Cleanup code on apply",
+				generalGroup));
+
 		// Context size settings
 		final IntegerFieldEditor maxPrefixSizeEditor = new IntegerFieldEditor(
 				AiCoderPreferences.MAX_PREFIX_SIZE_KEY,
@@ -82,11 +88,5 @@ public class GeneralPreferencePage extends FieldEditorPreferencePage implements 
 				generalGroup);
 		debounceInMsEditor.setValidRange(0, 10000);
 		addField(debounceInMsEditor);
-
-		// Cleanup code on apply
-		addField(new BooleanFieldEditor(
-				AiCoderPreferences.CLEANUP_CODE_ON_APPLY_KEY,
-				"Cleanup code on apply",
-				generalGroup));
 	}
 }
