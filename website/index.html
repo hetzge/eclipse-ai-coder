@@ -26,7 +26,6 @@
 			background-color: #f2f2f2;
 		}
 
-
 		img {
 			box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px, rgba(60, 64, 67, 0.15) 0px 2px 6px 2px;
 			padding: 1rem;
@@ -64,20 +63,26 @@
 		}
 
 		header {
-			display: flex;
-			align-items: center;
-			justify-content: center;
 			border-bottom-left-radius: 0px;
 			border-bottom-right-radius: 0px;
 			background-color: black;
 			margin-top: 2rem;
+			padding-bottom: 0rem;
+			border: 4px solid greenyellow;
+		}
+
+		.logo {
+			display: flex;
+			align-items: center;
+			justify-content: center;
 		}
 
 		main {
 			border-top-left-radius: 0px;
 			border-top-right-radius: 0px;
-			border-top: 4px solid greenyellow;
+			border: 4px solid darkgrey;
 			box-shadow: rgba(50, 50, 93, 0.25) 0px 30px 60px -12px inset, rgba(0, 0, 0, 0.3) 0px 18px 36px -18px inset;
+			margin-bottom: 2rem;
 		}
 
 		body {
@@ -92,410 +97,518 @@
 			background-color: #f9f9f9;
 			font-family: monospace;
 		}
+
+		/* Tab Styles */
+		.tabs {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+		}
+
+		.tab {
+			background-color: #f1f1f1;
+			border: none;
+			padding: 12px 16px;
+			cursor: pointer;
+			transition: background-color 0.3s;
+			border-top-left-radius: 8px;
+			border-top-right-radius: 8px;
+			margin-right: 2px;
+			font-size: 14px;
+		}
+
+		.tab:hover {
+			background-color: #ddd;
+		}
+
+		.tab.active {
+			background-color: greenyellow;
+			font-weight: bold;
+		}
+
+		.tab-content {
+			display: none;
+			animation: fadeIn 0.3s;
+		}
+
+		.tab-content.active {
+			display: block;
+		}
+
+		@keyframes fadeIn {
+			from {
+				opacity: 0;
+			}
+
+			to {
+				opacity: 1;
+			}
+		}
+
+		@media (max-width: 768px) {
+			.tab {
+				font-size: 12px;
+				padding: 8px 12px;
+			}
+		}
 	</style>
 </head>
 
 <body>
 	<header>
-		<img style="width: 400px;" src="images/title.webp" alt="Eclipse AI Coder Example">
+		<div class="logo">
+			<img style="width: 400px; height: 400px;" src="images/title.webp" alt="Eclipse AI Coder Example">
+		</div>
+		<div class="tabs">
+			<button class="tab active" onclick="openTab(event, 'overview')">Overview</button>
+			<button class="tab" onclick="openTab(event, 'screenshots')">Screenshots</button>
+			<button class="tab" onclick="openTab(event, 'comparison')">Comparison</button>
+			<button class="tab" onclick="openTab(event, 'documentation')">Documentation</button>
+			<button class="tab" onclick="openTab(event, 'providers')">LLM Providers</button>
+			<button class="tab" onclick="openTab(event, 'releases')">Release Notes</button>
+			<button class="tab" onclick="openTab(event, 'feedback')">Feedback</button>
+		</div>
 	</header>
 	<main>
-		<section>
-			<h2>About the project</h2>
-			<p>Eclipse AI Coder is an extension for the <a href="https://eclipseide.org">Eclipse IDE</a>. It brings AI driven inline completion to the editor.</p>
-		</section>
-		<section>
-			<h2>Features</h2>
-			<ul>
-				<li>Use local running <a href="https://ollama.com">Ollama</a> models</li>
-				<li>Support for <b>Codestral</b> (by <a href="https://mistral.ai">Mistral</a>) large language model (<b>bring your own key</b>)</li>
-				<li>Triggers completion <b>automatically</b> or <b>by shortcut</b> (<span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">Space</span>)</li>
-				<li><b>Controllable context</b>. See how the prompt is build and control its content</li>
-				<li><b>Insights</b> about each request: Word count, durations, status</li>
-				<li>Deep understanding of <b>Java</b> projects. Adds imports and variables in scope to the prompt</li>
-				<li>Toggle between <b>single</b> and <b>multiline</b> completion</li>
-				<li>Complete selected code</li>
-				<li>Apply instructions on selected code</li>
-				<li>Inline generate code by instructions</li>
-			</ul>
-		</section>
-		<section>
-			<h2>Screenshots</h2>
-			<div class="gallery">
-				<img src="images/example.png" alt="Example Screenshot">
-				<img src="images/context.png" alt="Context Screenshot">
-				<img src="images/history.png" alt="History Screenshot">
-			</div>
-		</section>
-		<section>
-			<h2>Comparison with other solutions</h2>
-			<table style="background-color: white;">
-				<tr>
-					<td style="border-top: 0px; border-left: 0px;"></td>
-					<th>Eclipse AI Coder</th>
-					<th><a href="https://www.tabnine.com">Tabnine</a></th>
-					<th><a href="https://github.com/features/copilot">GitHub Copilot</a></th>
-					<th><a href="https://www.genuitec.com/products/copilot4eclipse">Copilot4Eclipse</a></th>
-					<th><a href="https://www.tabbyml.com">Tabby</a></th>
-					<th><a href="https://marketplace.eclipse.org/content/gitlab-eclipse">GitLab Duo</a></th>
-					<th><a href="https://marketplace.eclipse.org/content/amazon-q">Amazon Q</a></th>
-				</tr>
-				<tr>
-					<th>Inline Completion</th>
-					<td>✅</td>
-					<td>✅</td>
-					<td>✅</td>
-					<td>✅</td>
-					<td>✅</td>
-					<td>✅</td>
-					<td>✅</td>
-				</tr>
-				<tr>
-					<th>Eclipse Support</th>
-					<td>✅</td>
-					<td>✅</td>
-					<td>✅</td>
-					<td>✅</td>
-					<td>✅</td>
-					<td>✅</td>
-					<td>✅</td>
-				</tr>
-				<tr>
-					<th>Non-commercial</th>
-					<td>✅</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-				</tr>
-				<tr>
-					<th>Open Source</th>
-					<td>✅</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>✅</td>
-					<td>❌</td>
-					<td>❌</td>
-				</tr>
-				<tr>
-					<th>Manual Trigger</th>
-					<td>✅</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>✅</td>
-					<td>✅</td>
-					<td>❌</td>
-					<td>❌</td>
-				</tr>
-				<tr>
-					<th>Bring your own key</th>
-					<td>✅</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>✅</td>
-					<td>❌</td>
-					<td>❌</td>
-				</tr>
-				<tr>
-					<th>Local LLMs</th>
-					<td>✅</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>✅</td>
-					<td>❌</td>
-					<td>❌</td>
-				</tr>
-				<tr>
-					<th>Toggle Multiline Completion</th>
-					<td>✅</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-				</tr>
-				<tr>
-					<th>Context Control</th>
-					<td>✅</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-				</tr>
-				<tr>
-					<th>Next Edit Suggestion</th>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-					<td>❌</td>
-				</tr>
-				<tr>
-					<th>LLM Providers</th>
-					<td>Local,<br />Mistral</td>
-					<td>Tabnine</td>
-					<td>Github Copilot</td>
-					<td>Github Copilot</td>
-					<td>Deepseek,<br />Local,<br />Mistral</td>
-					<td>Gitlab</td>
-					<td>Amazon</td>
-				</tr>
-			</table>
-		</section>
-		<section>
-			<h2>Installation</h2>
-			<ul>
-				<li>Option A: Install from <a href="https://marketplace.eclipse.org/content/ai-coder">Eclipse Marketplace</a></li>
-				<li>Option B: Install from updatesite: <input value="https://eclipse.hetzge.de/aicoder/repository" readonly onclick="this.select();" style="width: 320px" /></li>
-				<li>Option C: <a href="https://eclipse.hetzge.de/aicoder/repository/plugins/de.hetzge.eclipse.aicoder_1.0.0.202507142020.jar">Download</a> the JAR</li>
-			</ul>
-		</section>
-		<section>
-			<h2>Controls</h2>
-			<table>
-				<thead>
+
+		<div id="overview" class="tab-content active">
+			<section>
+				<h2>About the project</h2>
+				<p>Eclipse AI Coder is an extension for the <a href="https://eclipseide.org">Eclipse IDE</a>. It brings AI driven inline completion to the editor.</p>
+			</section>
+			<section>
+				<h2>Features</h2>
+				<ul>
+					<li>Use local running <a href="https://ollama.com">Ollama</a> models</li>
+					<li>Support for <b>Codestral</b> (by <a href="https://mistral.ai">Mistral</a>) large language model (<b>bring your own key</b>)</li>
+					<li>Triggers completion <b>automatically</b> or <b>by shortcut</b> (<span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">Space</span>)</li>
+					<li><b>Controllable context</b>. See how the prompt is build and control its content</li>
+					<li><b>Insights</b> about each request: Word count, durations, status</li>
+					<li>Deep understanding of <b>Java</b> projects. Adds imports and variables in scope to the prompt</li>
+					<li>Toggle between <b>single</b> and <b>multiline</b> completion</li>
+					<li>Complete selected code</li>
+					<li>Apply instructions on selected code</li>
+					<li>Inline generate code by instructions</li>
+				</ul>
+			</section>
+			<section>
+				<h2>Installation</h2>
+				<ul>
+					<li>Option A: Install from <a href="https://marketplace.eclipse.org/content/ai-coder">Eclipse Marketplace</a></li>
+					<li>Option B: Install from updatesite: <input value="https://eclipse.hetzge.de/aicoder/repository" readonly onclick="this.select();" style="width: 320px" /></li>
+					<li>Option C: <a href="https://eclipse.hetzge.de/aicoder/repository/plugins/de.hetzge.eclipse.aicoder_1.0.0.202507142020.jar">Download</a> the JAR</li>
+				</ul>
+			</section>
+		</div>
+
+		<div id="screenshots" class="tab-content">
+			<section>
+				<h2>Screenshots</h2>
+				<div class="gallery">
+					<img src="images/example.png" alt="Example Screenshot">
+					<img src="images/context.png" alt="Context Screenshot">
+					<img src="images/history.png" alt="History Screenshot">
+				</div>
+			</section>
+		</div>
+
+		<div id="comparison" class="tab-content">
+			<section>
+				<h2>Comparison with other solutions</h2>
+				<table style="background-color: white;">
 					<tr>
-						<th>Shortcut</th>
-						<th>Selection</th>
-						<th>Action</th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr>
-						<td><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">Space</span></td>
-						<td>❌</td>
-						<td>Trigger inline completion at the position of the cursor</td>
+						<td style="border-top: 0px; border-left: 0px;"></td>
+						<th>Eclipse AI Coder</th>
+						<th><a href="https://www.tabnine.com">Tabnine</a></th>
+						<th><a href="https://github.com/features/copilot">GitHub Copilot</a></th>
+						<th><a href="https://www.genuitec.com/products/copilot4eclipse">Copilot4Eclipse</a></th>
+						<th><a href="https://www.tabbyml.com">Tabby</a></th>
+						<th><a href="https://marketplace.eclipse.org/content/gitlab-eclipse">GitLab Duo</a></th>
+						<th><a href="https://marketplace.eclipse.org/content/amazon-q">Amazon Q</a></th>
 					</tr>
 					<tr>
-						<td><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">Space</span></td>
+						<th>Inline Completion</th>
 						<td>✅</td>
-						<td>Trigger completion/correction of the selected code</td>
-					</tr>
-					<tr>
-						<td><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">1</span></td>
-						<td>❌</td>
-						<td>Trigger dialog to enter instruction to generate code at the position of the cursor</td>
-					</tr>
-					<tr>
-						<td><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">1</span></td>
 						<td>✅</td>
-						<td>Trigger dialog to enter instruction to edit the selected code</td>
-					</tr>
-					<tr>
-						<td><span class="key">Ctrl</span> + <span class="key">3</span></td>
-						<td>❌</td>
-						<td>Open quick access (which provides access to available instructions to generate code at the position of the cursor)</td>
-					</tr>
-					<tr>
-						<td><span class="key">Ctrl</span> + <span class="key">3</span></td>
 						<td>✅</td>
-						<td>Open quick access (which provides access to available instructions to edit the selected code)</td>
+						<td>✅</td>
+						<td>✅</td>
+						<td>✅</td>
+						<td>✅</td>
 					</tr>
-				</tbody>
-			</table>
-		</section>
-		<section>
-			<h2>LLM Provider</h2>
-			<h3>Codestral</h3>
-			<p>
-				You require a (currently free) Codestral API key. You can get one <a href="https://console.mistral.ai/codestral">here</a>.
-				<img src="images/codestral.png" alt="Screenshot Mistral Console" />
-			</p>
-			<p>
-				The Codestral API key can then be configured in the Eclipse preferences like in the following screenshot:
-				<img src="images/settings.png" alt="Settings Screenshot">
-			</p>
-			<h3>Ollama</h3>
-			<p>You can also use <a href="https://ollama.com/">Ollama</a> to run a local LLM.</p>
-			<p>
-				Here is an example how to run the <a href="https://ollama.com/library/qwen2.5-coder">Qwen2.5-Coder</a>:
-			<ul>
-				<li>Follow the <a href="https://ollama.com/download">installation instructions</a> to install Ollama</li>
-				<li>Run
-					<pre>ollama pull qwen2.5-coder:3b</pre> to download the LLM
-				</li>
-				<li>In Eclipse go to Window > Preferences > AI Coder > Provider</li>
-				<li>Setup the Ollama base url
-					<pre>http://localhost:11434</pre> and model
-					<pre>qwen2.5-coder:3b</pre> in the preferences page
-				</li>
-			</ul>
-			</p>
-			<p>Models that are used in AI Coder must support additionaly to the prompt a suffix input. Here is an example:
-				<img src="images/ollama-template.png" alt="Ollama Template Screenshot">
-			</p>
-			<h3>OpenAI compatible</h3>
-			<p>You can use every llm provider that provide an OpenAI compatible API</p>
-			<p>As example for <b>OpenRouter</b> you can use the
-			<pre>https://openrouter.ai/api</pre> base url</p>
-			<p>Be aware that many models from LLM provider like OpenAI does not work as Fill in the middle models.</p>
-		</section>
-		<section>
-			<h2>Settings</h2>
-			<table>
-				<tr>
-					<th>Setting</th>
-					<th>Description</th>
-				</tr>
-				<tr>
-					<td>Enable Multiline Completion</td>
-					<td>If enabled inline completions that spans multiple lines will be recommended</td>
-				</tr>
-				<tr>
-					<td>Enable Autocomplete</td>
-					<td>If enabled inline completion will be triggered automatically (by typing or other changes). If disabled inline completion can only be triggered by configured shortcut.</td>
-				</tr>
-				<tr>
-					<td>Only on Change Autocomplete</td>
-					<td>If enabled autocomplete will only be triggered after a change in the file. As example after typing a letter. Other actions like moving the cursor will not trigger inline completion.</td>
-				</tr>
-				<tr>
-					<td>Ignore JRE Classes</td>
-					<td>Exclude JRE classes from context. These classes are typically already known by the LLMs.</td>
-				</tr>
-				<tr>
-					<td>Cleanup code on apply</td>
-					<td>When an code suggestion is applied then code cleanup actions (format...) are executed (for java)</td>
-				</tr>
-				<tr>
-					<td>Maximum Prefix Size (lines)</td>
-					<td>How many lines before the current cursor position should be included into the prompt</td>
-				</tr>
-				<tr>
-					<td>Maximum Suffix Size (lines)</td>
-					<td>How many lines after the current cursor position should be included into the prompt</td>
-				</tr>
-				<tr>
-					<td>Maximum Tokens</td>
-					<td>Limit the amount of tokens the used LLM should generate.</td>
-				</tr>
-				<tr>
-					<td>Debounce (in ms)</td>
-					<td>Autocompletion will wait this delay, and only if in this time no other trigger action is executed, execute the calculation of the inline completion. Only affects autocompletion.</td>
-				</tr>
-			</table>
-		</section>
-		<section>
-			<h2>Contexts</h2>
-			<p>This section describes the context informations that can be included into the prompt</p>
-			<table>
-				<thead>
 					<tr>
-						<th>Context</th>
+						<th>Eclipse Support</th>
+						<td>✅</td>
+						<td>✅</td>
+						<td>✅</td>
+						<td>✅</td>
+						<td>✅</td>
+						<td>✅</td>
+						<td>✅</td>
+					</tr>
+					<tr>
+						<th>Non-commercial</th>
+						<td>✅</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>❌</td>
+					</tr>
+					<tr>
+						<th>Open Source</th>
+						<td>✅</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>✅</td>
+						<td>❌</td>
+						<td>❌</td>
+					</tr>
+					<tr>
+						<th>Manual Trigger</th>
+						<td>✅</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>✅</td>
+						<td>✅</td>
+						<td>❌</td>
+						<td>❌</td>
+					</tr>
+					<tr>
+						<th>Bring your own key</th>
+						<td>✅</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>✅</td>
+						<td>❌</td>
+						<td>❌</td>
+					</tr>
+					<tr>
+						<th>Local LLMs</th>
+						<td>✅</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>✅</td>
+						<td>❌</td>
+						<td>❌</td>
+					</tr>
+					<tr>
+						<th>Toggle Multiline Completion</th>
+						<td>✅</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>❌</td>
+					</tr>
+					<tr>
+						<th>Context Control</th>
+						<td>✅</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>❌</td>
+					</tr>
+					<tr>
+						<th>Next Edit Suggestion</th>
+						<td>❌</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>❌</td>
+						<td>❌</td>
+					</tr>
+					<tr>
+						<th>LLM Providers</th>
+						<td>Local,<br />Mistral</td>
+						<td>Tabnine</td>
+						<td>Github Copilot</td>
+						<td>Github Copilot</td>
+						<td>Deepseek,<br />Local,<br />Mistral</td>
+						<td>Gitlab</td>
+						<td>Amazon</td>
+					</tr>
+				</table>
+			</section>
+		</div>
+
+		<div id="providers" class="tab-content">
+			<section>
+				<h2>LLM Provider</h2>
+				<h3>Codestral</h3>
+				<p>
+					You require a (currently free) Codestral API key. You can get one <a href="https://console.mistral.ai/codestral">here</a>.
+					<img src="images/codestral.png" alt="Screenshot Mistral Console" />
+				</p>
+				<p>
+					The Codestral API key can then be configured in the Eclipse preferences like in the following screenshot:
+					<img src="images/settings.png" alt="Settings Screenshot">
+				</p>
+				<h3>Ollama</h3>
+				<p>You can also use <a href="https://ollama.com/">Ollama</a> to run a local LLM.</p>
+				<p>
+					Here is an example how to run the <a href="https://ollama.com/library/qwen2.5-coder">Qwen2.5-Coder</a>:
+				<ul>
+					<li>Follow the <a href="https://ollama.com/download">installation instructions</a> to install Ollama</li>
+					<li>Run
+						<pre>ollama pull qwen2.5-coder:3b</pre> to download the LLM
+					</li>
+					<li>In Eclipse go to Window > Preferences > AI Coder > Provider</li>
+					<li>Setup the Ollama base url
+						<pre>http://localhost:11434</pre> and model
+						<pre>qwen2.5-coder:3b</pre> in the preferences page
+					</li>
+				</ul>
+				</p>
+				<p>Models that are used in AI Coder must support additionaly to the prompt a suffix input. Here is an example:
+					<img src="images/ollama-template.png" alt="Ollama Template Screenshot">
+				</p>
+				<h3>OpenAI compatible</h3>
+				<p>You can use every llm provider that provide an OpenAI compatible API</p>
+				<p>As example for <b>OpenRouter</b> you can use the
+				<pre>https://openrouter.ai/api</pre> base url</p>
+				<p>Be aware that many models from LLM provider like OpenAI does not work as Fill in the middle models.</p>
+			</section>
+		</div>
+
+		<div id="documentation" class="tab-content">
+			<section>
+				<h2>Controls</h2>
+				<table>
+					<thead>
+						<tr>
+							<th>Shortcut</th>
+							<th>Selection</th>
+							<th>Action</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">Space</span></td>
+							<td>❌</td>
+							<td>Trigger inline completion at the position of the cursor</td>
+						</tr>
+						<tr>
+							<td><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">Space</span></td>
+							<td>✅</td>
+							<td>Trigger completion/correction of the selected code</td>
+						</tr>
+						<tr>
+							<td><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">1</span></td>
+							<td>❌</td>
+							<td>Trigger dialog to enter instruction to generate code at the position of the cursor</td>
+						</tr>
+						<tr>
+							<td><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">1</span></td>
+							<td>✅</td>
+							<td>Trigger dialog to enter instruction to edit the selected code</td>
+						</tr>
+						<tr>
+							<td><span class="key">Ctrl</span> + <span class="key">3</span></td>
+							<td>❌</td>
+							<td>Open quick access (which provides access to available instructions to generate code at the position of the cursor)</td>
+						</tr>
+						<tr>
+							<td><span class="key">Ctrl</span> + <span class="key">3</span></td>
+							<td>✅</td>
+							<td>Open quick access (which provides access to available instructions to edit the selected code)</td>
+						</tr>
+					</tbody>
+				</table>
+			</section>
+			<section>
+				<h2>Settings</h2>
+				<table>
+					<tr>
+						<th>Setting</th>
 						<th>Description</th>
-						<th>Filetype</th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr>
-						<td>Project informations</td>
-						<td>Name, location of the project. For java projects the java version is included.</td>
-						<td>All</td>
 					</tr>
 					<tr>
-						<td>File tree</td>
-						<td>Tree of the files in the current project</td>
-						<td>All</td>
+						<td>Enable Multiline Completion</td>
+						<td>If enabled inline completions that spans multiple lines will be recommended</td>
 					</tr>
 					<tr>
-						<td>Dependencies</td>
-						<td>List of dependencies available in the current project (WIP)</td>
-						<td>All</td>
+						<td>Enable Autocomplete</td>
+						<td>If enabled inline completion will be triggered automatically (by typing or other changes). If disabled inline completion can only be triggered by configured shortcut.</td>
 					</tr>
 					<tr>
-						<td>Open editors</td>
-						<td>The content of the currently open editors</td>
-						<td>All</td>
+						<td>Only on Change Autocomplete</td>
+						<td>If enabled autocomplete will only be triggered after a change in the file. As example after typing a letter. Other actions like moving the cursor will not trigger inline completion.</td>
 					</tr>
 					<tr>
-						<td>Super (Java)</td>
-						<td>The interface of the supertypes of the current java file</td>
-						<td>Java</td>
+						<td>Ignore JRE Classes</td>
+						<td>Exclude JRE classes from context. These classes are typically already known by the LLMs.</td>
 					</tr>
 					<tr>
-						<td>Scope (Java)</td>
-						<td>The interface of the types in the current scope at the current cursor position</td>
-						<td>Java</td>
+						<td>Cleanup code on apply</td>
+						<td>When an code suggestion is applied then code cleanup actions (format...) are executed (for java)</td>
 					</tr>
 					<tr>
-						<td>Imports (Java)</td>
-						<td>The interface of the imported types in the current file</td>
-						<td>Java</td>
+						<td>Maximum Prefix Size (lines)</td>
+						<td>How many lines before the current cursor position should be included into the prompt</td>
 					</tr>
 					<tr>
-						<td>Package (Java)</td>
-						<td>The interface of the types in the current package</td>
-						<td>Java</td>
+						<td>Maximum Suffix Size (lines)</td>
+						<td>How many lines after the current cursor position should be included into the prompt</td>
 					</tr>
 					<tr>
-						<td>User</td>
-						<td>Custom contents provided by the user</td>
-						<td>All</td>
+						<td>Maximum Tokens</td>
+						<td>Limit the amount of tokens the used LLM should generate.</td>
 					</tr>
 					<tr>
-						<td>Last edits</td>
-						<td>The sourcecode around the last edited locations</td>
-						<td>All</td>
+						<td>Debounce (in ms)</td>
+						<td>Autocompletion will wait this delay, and only if in this time no other trigger action is executed, execute the calculation of the inline completion. Only affects autocompletion.</td>
 					</tr>
-					<tr>
-						<td>Clipboard</td>
-						<td>The content of the clipboard</td>
-						<td>All</td>
-					</tr>
-					<tr>
-						<td>Fill in middle</td>
-						<td>The current edit location and context lines around</td>
-						<td>All</td>
-					</tr>
-				</tbody>
-			</table>
-		</section>
-		<section>
-			<h2>Release Notes</h2>
-			<h3>2025-08-xx</h3>
-			<ul>
-				<li>Improved autocompletion trigger and debounce</li>
-				<li>Add only on content change autocompletion</li>
-				<li>Add token counts to history view</li>
-				<li>Add preferences to controll available context types and their position in the prompt</li>
-				<li>Add selection completion</li>
-				<li>Add insert generation</li>
-				<li>Add execute edit instructions</li>
-				<li>Add MCP (prompts) support</li>
-				<li>Add code cleanup on apply (Java)</li>
-				<li>Codestral base url is no longer configurable</li>
-				<li>Improved context performance (lazy calculations)</li>
-				<li>Restructured preferences pages</li>
-				<li>Open AI compatible apis support</li>
-				<li>Completion now also working in multipage editors (as example pom.xml)</li>
-			</ul>
-			<h3>2025-07-15</h3>
-			<ul>
-				<li>Add support for <a href="https://ollama.com/">Ollama</a></li>
-			</ul>
-			<h3>2025-07-12</h3>
-			<ul>
-				<li>Initial release</li>
-			</ul>
-		</section>
-		<section>
-			<h2>Feedback</h2>
-			<p>Report any issues or feature requests on <a href="https://github.com/hetzge/eclipse-ai-coder/issues">Github Issues</a></p>
-			<p>If you like the software please star the project on <a href="https://github.com/hetzge/eclipse-ai-coder">Github</a></p>
-		</section>>
+				</table>
+			</section>
+			<section>
+				<h2>Contexts</h2>
+				<p>This section describes the context informations that can be included into the prompt</p>
+				<table>
+					<thead>
+						<tr>
+							<th>Context</th>
+							<th>Description</th>
+							<th>Filetype</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td>Project informations</td>
+							<td>Name, location of the project. For java projects the java version is included.</td>
+							<td>All</td>
+						</tr>
+						<tr>
+							<td>File tree</td>
+							<td>Tree of the files in the current project</td>
+							<td>All</td>
+						</tr>
+						<tr>
+							<td>Dependencies</td>
+							<td>List of dependencies available in the current project (WIP)</td>
+							<td>All</td>
+						</tr>
+						<tr>
+							<td>Open editors</td>
+							<td>The content of the currently open editors</td>
+							<td>All</td>
+						</tr>
+						<tr>
+							<td>Super (Java)</td>
+							<td>The interface of the supertypes of the current java file</td>
+							<td>Java</td>
+						</tr>
+						<tr>
+							<td>Scope (Java)</td>
+							<td>The interface of the types in the current scope at the current cursor position</td>
+							<td>Java</td>
+						</tr>
+						<tr>
+							<td>Imports (Java)</td>
+							<td>The interface of the imported types in the current file</td>
+							<td>Java</td>
+						</tr>
+						<tr>
+							<td>Package (Java)</td>
+							<td>The interface of the types in the current package</td>
+							<td>Java</td>
+						</tr>
+						<tr>
+							<td>User</td>
+							<td>Custom contents provided by the user</td>
+							<td>All</td>
+						</tr>
+						<tr>
+							<td>Last edits</td>
+							<td>The sourcecode around the last edited locations</td>
+							<td>All</td>
+						</tr>
+						<tr>
+							<td>Clipboard</td>
+							<td>The content of the clipboard</td>
+							<td>All</td>
+						</tr>
+						<tr>
+							<td>Fill in middle</td>
+							<td>The current edit location and context lines around</td>
+							<td>All</td>
+						</tr>
+					</tbody>
+				</table>
+			</section>
+		</div>
+
+		<div id="releases" class="tab-content">
+			<section>
+				<h2>Release Notes</h2>
+				<h3>2025-08-xx</h3>
+				<ul>
+					<li>Improved autocompletion trigger and debounce</li>
+					<li>Add only on content change autocompletion</li>
+					<li>Add token counts to history view</li>
+					<li>Add preferences to controll available context types and their position in the prompt</li>
+					<li>Add selection completion</li>
+					<li>Add insert generation</li>
+					<li>Add execute edit instructions</li>
+					<li>Add MCP (prompts) support</li>
+					<li>Add code cleanup on apply (Java)</li>
+					<li>Codestral base url is no longer configurable</li>
+					<li>Improved context performance (lazy calculations)</li>
+					<li>Restructured preferences pages</li>
+					<li>Open AI compatible apis support</li>
+					<li>Completion now also working in multipage editors (as example pom.xml)</li>
+				</ul>
+				<h3>2025-07-15</h3>
+				<ul>
+					<li>Add support for <a href="https://ollama.com/">Ollama</a></li>
+				</ul>
+				<h3>2025-07-12</h3>
+				<ul>
+					<li>Initial release</li>
+				</ul>
+			</section>
+		</div>
+
+		<div id="feedback" class="tab-content">
+			<section>
+				<h2>Feedback</h2>
+				<p>Report any issues or feature requests on <a href="https://github.com/hetzge/eclipse-ai-coder/issues">Github Issues</a></p>
+				<p>If you like the software please star the project on <a href="https://github.com/hetzge/eclipse-ai-coder">Github</a></p>
+			</section>
+		</div>
 	</main>
 	<footer>
 	</footer>
+
+	<script>
+		function openTab(evt, tabName) {
+			var i, tabcontent, tabs;
+
+			// Hide all tab content
+			tabcontent = document.getElementsByClassName("tab-content");
+			for (i = 0; i < tabcontent.length; i++) {
+				tabcontent[i].classList.remove("active");
+			}
+
+			// Remove active class from all tabs
+			tabs = document.getElementsByClassName("tab");
+			for (i = 0; i < tabs.length; i++) {
+				tabs[i].classList.remove("active");
+			}
+
+			// Show the selected tab content and mark the button as active
+			document.getElementById(tabName).classList.add("active");
+			evt.currentTarget.classList.add("active");
+		}
+	</script>
 </body>
 
 </html>
