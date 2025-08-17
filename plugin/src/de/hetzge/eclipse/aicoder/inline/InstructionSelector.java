@@ -5,13 +5,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.jface.layout.TableColumnLayout;
 import org.eclipse.jface.viewers.ColumnWeightData;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.MouseListener;
-import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
@@ -114,16 +114,14 @@ public class InstructionSelector extends Composite {
 				event.doit = false;
 			}
 		}));
-		this.llmSelector = new LlmSelector(this, SWT.NONE);
-		this.llmSelector.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.TOP).grab(true, false).create());
-		this.llmSelector.init(LlmModelOption.createEditModelOptionFromPreferences());
-		this.llmSelector.addSelectionListener(SelectionListener.widgetSelectedAdapter(event -> {
+		this.llmSelector = new LlmSelector(this, SWT.NONE, LlmModelOption.createEditModelOptionFromPreferences(), () -> {
 			updateApplyButton();
-		}));
+		});
+		this.llmSelector.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.TOP).grab(true, false).create());
 	}
 
 	private void updateApplyButton() {
-		this.applyButton.setEnabled(!this.input.getText().isBlank() && this.llmSelector.getSelectedOption().isPresent());
+		this.applyButton.setEnabled(!this.input.getText().isBlank() && this.llmSelector.getOption().isPresent());
 	}
 
 	public Text getSearchInput() {
@@ -136,11 +134,17 @@ public class InstructionSelector extends Composite {
 	}
 
 	private void applyCustomPrompt() {
-		this.onSelect.accept(new EditInstruction("Custom", "Custom", this.input.getText()), this.llmSelector.getSelectedOption().orElseThrow());
+		final Optional<LlmModelOption> optionOptional = this.llmSelector.getOption();
+		if (optionOptional.isEmpty()) {
+			MessageDialog.openError(getShell(), "Error", "Please select a model first.");
+			return;
+		}
+		final LlmModelOption option = optionOptional.get();
+		this.onSelect.accept(new EditInstruction("Custom", "Custom", this.input.getText()), option);
 	}
 
 	private void handleTableSelection() {
-		final Optional<LlmModelOption> llmModelOptionOptional = this.llmSelector.getSelectedOption();
+		final Optional<LlmModelOption> llmModelOptionOptional = this.llmSelector.getOption();
 		if (this.table.getSelectionCount() == 1 && llmModelOptionOptional.isPresent()) {
 			final EditInstruction instruction = (EditInstruction) this.table.getSelection()[0].getData();
 			this.onSelect.accept(instruction, llmModelOptionOptional.orElseThrow());

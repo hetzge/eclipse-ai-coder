@@ -1,66 +1,40 @@
 package de.hetzge.eclipse.aicoder.llm;
 
-import java.util.List;
 import java.util.Optional;
 
-import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.Status;
-import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.jface.layout.GridLayoutFactory;
+import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionListener;
-import org.eclipse.swt.widgets.Combo;
+import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Display;
 
 public final class LlmSelector extends Composite {
-	private List<LlmModelOption> options;
-	private final Combo modelCombo;
+	private LlmModelOption llmModelOption;
 
-	public LlmSelector(Composite parent, int style) {
+	public LlmSelector(Composite parent, int style, LlmModelOption initialLlmModelOption, Runnable callback) {
 		super(parent, style);
+		this.llmModelOption = initialLlmModelOption;
 		setLayout(GridLayoutFactory.fillDefaults().margins(0, 0).numColumns(1).create());
-		this.modelCombo = new Combo(this, SWT.DROP_DOWN | SWT.READ_ONLY);
-		this.modelCombo.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.CENTER).grab(true, false).hint(SWT.DEFAULT, 35).create());
-		this.options = List.of();
-	}
-
-	public Optional<LlmModelOption> getSelectedOption() {
-		final int selectionIndex = this.modelCombo.getSelectionIndex();
-		if (selectionIndex < 0 || selectionIndex >= this.options.size()) {
-			return Optional.empty();
-		}
-		return Optional.of(this.options.get(selectionIndex));
-	}
-
-	public void init(LlmModelOption option) {
-		this.options = List.of(option);
-		this.modelCombo.setItems(new String[] { option.getLabel() });
-		this.modelCombo.select(0);
-		new Job("Load llm models") {
-			@Override
-			protected IStatus run(IProgressMonitor monitor) {
-				LlmSelector.this.options = LlmModels.INSTANCE.getOptions();
-				Display.getDefault().syncExec(() -> {
-					if (LlmSelector.this.isDisposed()) {
-						return;
-					}
-					LlmSelector.this.modelCombo.setItems(LlmSelector.this.options.stream().map(LlmModelOption::getLabel).toList().toArray(new String[0]));
-					if (option != null) {
-						final int index = LlmSelector.this.options.indexOf(option);
-						if (index >= 0) {
-							LlmSelector.this.modelCombo.select(index);
-						}
-					}
-				});
-				return Status.OK_STATUS;
+		final Button modelButton = new Button(this, SWT.PUSH);
+		modelButton.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.CENTER).grab(true, false).hint(SWT.DEFAULT, 35).create());
+		modelButton.setText(initialLlmModelOption != null ? initialLlmModelOption.getLabel() : "Select model");
+		modelButton.addSelectionListener(SelectionListener.widgetSelectedAdapter(event -> {
+			final LlmSelectorDialog dialog = new LlmSelectorDialog(getShell());
+			if (dialog.open() == Window.OK) {
+				final Object[] result = dialog.getResult();
+				if (result == null || result.length == 0) {
+					return;
+				}
+				this.llmModelOption = (LlmModelOption) result[0];
+				modelButton.setText(this.llmModelOption.getLabel());
+				callback.run();
 			}
-		}.schedule();
+		}));
 	}
 
-	public void addSelectionListener(SelectionListener listener) {
-		this.modelCombo.addSelectionListener(listener);
+	public Optional<LlmModelOption> getOption() {
+		return Optional.ofNullable(this.llmModelOption);
 	}
 }

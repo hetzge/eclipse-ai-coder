@@ -24,7 +24,7 @@ public enum LlmModels {
 		this.options.clear();
 	}
 
-	public synchronized List<LlmModelOption> getOptions() {
+	public synchronized List<LlmModelOption> getOrLoadOptions() {
 		if (this.options.isEmpty()) {
 			this.options.addAll(loadOllamaModels());
 			this.options.addAll(loadOpenAiModels());
