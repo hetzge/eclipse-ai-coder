@@ -25,21 +25,21 @@ import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
 import de.hetzge.eclipse.aicoder.Debouncer;
 import de.hetzge.eclipse.aicoder.content.EditInstruction;
-import de.hetzge.eclipse.aicoder.llm.LlmModelOption;
+import de.hetzge.eclipse.aicoder.llm.LlmOption;
 import de.hetzge.eclipse.aicoder.llm.LlmSelector;
 
 public class InstructionSelector extends Composite {
 	private final Composite inputComposite;
 	private final Text input;
 	private final Table table;
-	private final BiConsumer<EditInstruction, LlmModelOption> onSelect;
+	private final BiConsumer<EditInstruction, LlmOption> onSelect;
 	private List<EditInstruction> instructions;
 	private final Composite tableComposite;
 	private Button applyButton;
 	private LlmSelector llmSelector;
 	private final Debouncer debouncer;
 
-	public InstructionSelector(Composite parent, BiConsumer<EditInstruction, LlmModelOption> onSelect) {
+	public InstructionSelector(Composite parent, BiConsumer<EditInstruction, LlmOption> onSelect) {
 		super(parent, SWT.NONE);
 		this.onSelect = onSelect;
 		this.instructions = List.of();
@@ -114,7 +114,7 @@ public class InstructionSelector extends Composite {
 				event.doit = false;
 			}
 		}));
-		this.llmSelector = new LlmSelector(this, SWT.NONE, LlmModelOption.createEditModelOptionFromPreferences(), () -> {
+		this.llmSelector = new LlmSelector(this, SWT.NONE, LlmOption.createEditModelOptionFromPreferences(), () -> {
 			updateApplyButton();
 		});
 		this.llmSelector.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.TOP).grab(true, false).create());
@@ -134,17 +134,17 @@ public class InstructionSelector extends Composite {
 	}
 
 	private void applyCustomPrompt() {
-		final Optional<LlmModelOption> optionOptional = this.llmSelector.getOption();
+		final Optional<LlmOption> optionOptional = this.llmSelector.getOption();
 		if (optionOptional.isEmpty()) {
 			MessageDialog.openError(getShell(), "Error", "Please select a model first.");
 			return;
 		}
-		final LlmModelOption option = optionOptional.get();
+		final LlmOption option = optionOptional.get();
 		this.onSelect.accept(new EditInstruction("Custom", "Custom", this.input.getText()), option);
 	}
 
 	private void handleTableSelection() {
-		final Optional<LlmModelOption> llmModelOptionOptional = this.llmSelector.getOption();
+		final Optional<LlmOption> llmModelOptionOptional = this.llmSelector.getOption();
 		if (this.table.getSelectionCount() == 1 && llmModelOptionOptional.isPresent()) {
 			final EditInstruction instruction = (EditInstruction) this.table.getSelection()[0].getData();
 			this.onSelect.accept(instruction, llmModelOptionOptional.orElseThrow());

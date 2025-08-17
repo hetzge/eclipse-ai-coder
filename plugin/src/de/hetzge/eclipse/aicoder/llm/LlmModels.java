@@ -14,7 +14,7 @@ import mjson.Json;
 public enum LlmModels {
 	INSTANCE;
 
-	private final List<LlmModelOption> options;
+	private final List<LlmOption> options;
 
 	private LlmModels() {
 		this.options = new ArrayList<>();
@@ -24,7 +24,7 @@ public enum LlmModels {
 		this.options.clear();
 	}
 
-	public synchronized List<LlmModelOption> getOrLoadOptions() {
+	public synchronized List<LlmOption> getOrLoadOptions() {
 		if (this.options.isEmpty()) {
 			this.options.addAll(loadOllamaModels());
 			this.options.addAll(loadOpenAiModels());
@@ -33,7 +33,7 @@ public enum LlmModels {
 		return this.options;
 	}
 
-	private List<LlmModelOption> loadOllamaModels() {
+	private List<LlmOption> loadOllamaModels() {
 		try {
 			final String ollamaBaseUrl = AiCoderPreferences.getOllamaBaseUrl();
 			final URL url = URI.create(ollamaBaseUrl).resolve("/api/tags").toURL();
@@ -50,7 +50,7 @@ public enum LlmModels {
 			final Json modelsJson = responseJson.at("models");
 			return modelsJson.asJsonList().stream().map(modelJson -> {
 				final String modelName = modelJson.at("name").asString();
-				return new LlmModelOption(LlmProvider.OLLAMA, modelName);
+				return new LlmOption(LlmProvider.OLLAMA, modelName);
 			}).toList();
 		} catch (final Exception exception) {
 			AiCoderActivator.log().info(String.format("%s while querying ollama models: %s -> skip ollama models", exception.getClass().getName(), exception.getMessage()));
@@ -58,7 +58,7 @@ public enum LlmModels {
 		}
 	}
 
-	private List<LlmModelOption> loadOpenAiModels() {
+	private List<LlmOption> loadOpenAiModels() {
 		try {
 			final String openAiBaseUrl = AiCoderPreferences.getOpenAiBaseUrl();
 			final URL url = URI.create(openAiBaseUrl + "/").resolve("./v1/models").toURL();
@@ -75,7 +75,7 @@ public enum LlmModels {
 			final Json modelsJson = responseJson.at("data");
 			return modelsJson.asJsonList().stream().map(modelJson -> {
 				final String modelName = modelJson.at("id").asString();
-				return new LlmModelOption(LlmProvider.OPENAI, modelName);
+				return new LlmOption(LlmProvider.OPENAI, modelName);
 			}).toList();
 		} catch (final Exception exception) {
 			AiCoderActivator.log().info(String.format("%s while querying openai models: %s -> skip openai models", exception.getClass().getName(), exception.getMessage()));
@@ -83,13 +83,13 @@ public enum LlmModels {
 		}
 	}
 
-	private List<LlmModelOption> loadMistralModels() {
+	private List<LlmOption> loadMistralModels() {
 		try {
 			final String codestralApiKey = AiCoderPreferences.getCodestralApiKey();
 			if (codestralApiKey == null || codestralApiKey.isBlank()) {
 				return List.of();
 			}
-			return List.of(new LlmModelOption(LlmProvider.MISTRAL, "codestral-latest"));
+			return List.of(new LlmOption(LlmProvider.MISTRAL, "codestral-latest"));
 		} catch (final Exception exception) {
 			AiCoderActivator.log().info(String.format("%s while querying mistral models: %s -> skip mistral models", exception.getClass().getName(), exception.getMessage()));
 			return List.of();

@@ -11,9 +11,9 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 
 public final class LlmSelector extends Composite {
-	private LlmModelOption llmModelOption;
+	private LlmOption llmModelOption;
 
-	public LlmSelector(Composite parent, int style, LlmModelOption initialLlmModelOption, Runnable callback) {
+	public LlmSelector(Composite parent, int style, LlmOption initialLlmModelOption, Runnable callback) {
 		super(parent, style);
 		this.llmModelOption = initialLlmModelOption;
 		setLayout(GridLayoutFactory.fillDefaults().margins(0, 0).numColumns(1).create());
@@ -23,18 +23,18 @@ public final class LlmSelector extends Composite {
 		modelButton.addSelectionListener(SelectionListener.widgetSelectedAdapter(event -> {
 			final LlmSelectorDialog dialog = new LlmSelectorDialog(getShell());
 			if (dialog.open() == Window.OK) {
-				final Object[] result = dialog.getResult();
-				if (result == null || result.length == 0) {
+				final Optional<LlmOption> optionOptional = dialog.getResultOption();
+				if (optionOptional.isEmpty()) {
 					return;
 				}
-				this.llmModelOption = (LlmModelOption) result[0];
+				this.llmModelOption = optionOptional.get();
 				modelButton.setText(this.llmModelOption.getLabel());
 				callback.run();
 			}
 		}));
 	}
 
-	public Optional<LlmModelOption> getOption() {
+	public Optional<LlmOption> getOption() {
 		return Optional.ofNullable(this.llmModelOption);
 	}
 }

@@ -1,8 +1,5 @@
 package de.hetzge.eclipse.aicoder.preferences;
 
-import java.util.Arrays;
-
-import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.StringFieldEditor;
 import org.eclipse.swt.SWT;
@@ -13,7 +10,6 @@ import org.eclipse.ui.IWorkbenchPreferencePage;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.llm.LlmModels;
-import de.hetzge.eclipse.aicoder.llm.LlmProvider;
 
 public class ProviderPreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
 
@@ -63,33 +59,6 @@ public class ProviderPreferencePage extends FieldEditorPreferencePage implements
 				openAiGroup);
 		openAiApiKeyFieldEditor.getTextControl(openAiGroup).setEchoChar('*');
 		addField(openAiApiKeyFieldEditor);
-
-		// Model selection
-		final Group modelGroup = new Group(getFieldEditorParent(), SWT.NONE);
-		modelGroup.setText("Model selection");
-		modelGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
-		addField(new ComboFieldEditor(
-				AiCoderPreferences.FILL_IN_MIDDLE_PROVIDER_KEY,
-				"Fill in middle provider:",
-				Arrays.stream(LlmProvider.values())
-						.map(provider -> new String[] { provider.name(), provider.name() })
-						.toList().toArray(new String[0][]),
-				modelGroup));
-		addField(new StringFieldEditor(
-				AiCoderPreferences.FILL_IN_MIDDLE_MODEL_KEY,
-				"Fill in middle model:",
-				modelGroup));
-		addField(new ComboFieldEditor(
-				AiCoderPreferences.EDIT_PROVIDER_KEY,
-				"Edit provider:",
-				Arrays.stream(LlmProvider.values())
-						.map(provider -> new String[] { provider.name(), provider.name() })
-						.toList().toArray(new String[0][]),
-				modelGroup));
-		addField(new StringFieldEditor(
-				AiCoderPreferences.EDIT_MODEL_KEY,
-				"Edit model:",
-				modelGroup));
 	}
 
 	@Override

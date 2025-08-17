@@ -6,7 +6,7 @@ import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
 import org.eclipse.jface.preference.IPreferenceStore;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
-import de.hetzge.eclipse.aicoder.llm.LlmModelOption;
+import de.hetzge.eclipse.aicoder.llm.LlmOption;
 import de.hetzge.eclipse.aicoder.llm.LlmProvider;
 import mjson.Json;
 
@@ -86,7 +86,7 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		return getStore().getString(EDIT_MODEL_KEY);
 	}
 
-	public static void setEditLlmModelOption(LlmModelOption llmModelOption) {
+	public static void setEditLlmModelOption(LlmOption llmModelOption) {
 		getStore().setValue(EDIT_PROVIDER_KEY, llmModelOption.provider().name());
 		getStore().setValue(EDIT_MODEL_KEY, llmModelOption.modelKey());
 	}

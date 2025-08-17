@@ -20,14 +20,14 @@ public final class LlmUtils {
 	}
 
 	public static LlmResponse executeGenerate(String systemPrompt, String prompt) throws IOException {
-		return execute(LlmModelOption.createEditModelOptionFromPreferences(), systemPrompt, prompt, null);
+		return execute(LlmOption.createEditModelOptionFromPreferences(), systemPrompt, prompt, null);
 	}
 
 	public static LlmResponse executeFillInTheMiddle(String prefix, String suffix) throws IOException {
-		return execute(LlmModelOption.createFillInMiddleModelOptionFromPreferences(), null, prefix, suffix);
+		return execute(LlmOption.createFillInMiddleModelOptionFromPreferences(), null, prefix, suffix);
 	}
 
-	private static LlmResponse execute(LlmModelOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
+	private static LlmResponse execute(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
 		final LlmProvider provider = llmModelOption.provider();
 		switch (provider) {
 		case OLLAMA:
@@ -41,7 +41,7 @@ public final class LlmUtils {
 		}
 	}
 
-	private static LlmResponse executeOllama(LlmModelOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
+	private static LlmResponse executeOllama(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
 		final boolean isFillInTheMiddle = suffix != null;
 		final String urlString = AiCoderPreferences.getOllamaBaseUrl();
 		final boolean multilineEnabled = AiCoderPreferences.isMultilineEnabled();
@@ -83,7 +83,7 @@ public final class LlmUtils {
 		}
 	}
 
-	private static LlmResponse executeMistral(LlmModelOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
+	private static LlmResponse executeMistral(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
 		final boolean isFillInTheMiddle = suffix != null;
 		final String urlString = "https://codestral.mistral.ai";
 		final String codestralApiKey = AiCoderPreferences.getCodestralApiKey();
@@ -133,7 +133,7 @@ public final class LlmUtils {
 		}
 	}
 
-	private static LlmResponse executeOpenAi(LlmModelOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
+	private static LlmResponse executeOpenAi(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
 		if (suffix != null) {
 			throw new IllegalStateException("Fill-in-the-middle is not supported by OpenAI");
 		}

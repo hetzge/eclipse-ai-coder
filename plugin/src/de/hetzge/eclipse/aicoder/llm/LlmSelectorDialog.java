@@ -3,6 +3,7 @@ package de.hetzge.eclipse.aicoder.llm;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -39,6 +40,14 @@ public final class LlmSelectorDialog extends FilteredItemsSelectionDialog {
 		setDetailsLabelProvider(labelProvider);
 	}
 
+	public Optional<LlmOption> getResultOption() {
+		final Object[] result = getResult();
+		if (result == null || result.length == 0) {
+			return Optional.empty();
+		}
+		return Optional.of((LlmOption) result[0]);
+	}
+
 	@Override
 	public void applyFilter() {
 		super.applyFilter();
@@ -71,6 +80,7 @@ public final class LlmSelectorDialog extends FilteredItemsSelectionDialog {
 		this.filter = new ItemsFilter() {
 
 			{
+				// set initial filter
 				if (this.patternMatcher.getPattern().isEmpty()) {
 					this.patternMatcher.setPattern("**");
 				}
@@ -78,7 +88,7 @@ public final class LlmSelectorDialog extends FilteredItemsSelectionDialog {
 
 			@Override
 			public boolean matchItem(Object item) {
-				if (item instanceof final LlmModelOption option) {
+				if (item instanceof final LlmOption option) {
 					final String oldPattern = this.patternMatcher.getPattern();
 					final String newPattern = (!oldPattern.startsWith("*") ? "*" : "") + oldPattern + (!oldPattern.endsWith("*") ? "*" : "");
 					if (!Objects.equals(this.patternMatcher.getPattern(), newPattern)) {
@@ -99,9 +109,9 @@ public final class LlmSelectorDialog extends FilteredItemsSelectionDialog {
 
 	@Override
 	protected Comparator<?> getItemsComparator() {
-		return new Comparator<LlmModelOption>() {
+		return new Comparator<LlmOption>() {
 			@Override
-			public int compare(LlmModelOption o1, LlmModelOption o2) {
+			public int compare(LlmOption o1, LlmOption o2) {
 				return o1.getLabel().compareTo(o2.getLabel());
 			}
 		};
@@ -110,8 +120,8 @@ public final class LlmSelectorDialog extends FilteredItemsSelectionDialog {
 	@Override
 	protected void fillContentProvider(AbstractContentProvider contentProvider, ItemsFilter itemsFilter, IProgressMonitor progressMonitor) throws CoreException {
 		progressMonitor.beginTask("Load LLMs", IProgressMonitor.UNKNOWN);
-		final List<LlmModelOption> options = LlmModels.INSTANCE.getOrLoadOptions();
-		for (final LlmModelOption option : options) {
+		final List<LlmOption> options = LlmModels.INSTANCE.getOrLoadOptions();
+		for (final LlmOption option : options) {
 			contentProvider.add(option, itemsFilter);
 		}
 		progressMonitor.done();
@@ -119,10 +129,10 @@ public final class LlmSelectorDialog extends FilteredItemsSelectionDialog {
 
 	@Override
 	public String getElementName(Object item) {
-		if (!(item instanceof LlmModelOption)) {
+		if (!(item instanceof LlmOption)) {
 			return "???";
 		}
-		final LlmModelOption option = (LlmModelOption) item;
+		final LlmOption option = (LlmOption) item;
 		return option.getLabel();
 	}
 
@@ -158,7 +168,7 @@ public final class LlmSelectorDialog extends FilteredItemsSelectionDialog {
 
 		@Override
 		public String getText(Object element) {
-			if (element instanceof final LlmModelOption option) {
+			if (element instanceof final LlmOption option) {
 				return option.getLabel();
 			}
 			return "???";

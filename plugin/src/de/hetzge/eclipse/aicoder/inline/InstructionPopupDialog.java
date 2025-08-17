@@ -13,14 +13,14 @@ import org.eclipse.swt.widgets.Shell;
 
 import de.hetzge.eclipse.aicoder.content.EditInstruction;
 import de.hetzge.eclipse.aicoder.content.InstructionUtils;
-import de.hetzge.eclipse.aicoder.llm.LlmModelOption;
+import de.hetzge.eclipse.aicoder.llm.LlmOption;
 
 public class InstructionPopupDialog extends PopupDialog {
 
 	private InstructionSelector instructionSelector;
-	private final BiConsumer<EditInstruction, LlmModelOption> onSelect;
+	private final BiConsumer<EditInstruction, LlmOption> onSelect;
 
-	public InstructionPopupDialog(Shell parent, BiConsumer<EditInstruction, LlmModelOption> onSelect) {
+	public InstructionPopupDialog(Shell parent, BiConsumer<EditInstruction, LlmOption> onSelect) {
 		super(parent, SWT.NONE, true, false, false, false, false, null, null);
 		this.onSelect = onSelect;
 	}
