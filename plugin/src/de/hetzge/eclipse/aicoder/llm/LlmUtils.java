@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.time.Duration;
 
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -60,6 +61,7 @@ public final class LlmUtils {
 					.set("stop", Json.array().add(multilineEnabled ? "\n\n" : "\n"));
 		}
 		final URL url = URI.create(urlString).resolve("/api/generate").toURL();
+		final long beforeTimestamp = System.currentTimeMillis();
 		final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 		connection.setRequestMethod("POST");
 		connection.setRequestProperty("Content-Type", "application/json");
@@ -68,15 +70,16 @@ public final class LlmUtils {
 		HttpUtils.writeRequestBody(connection, json);
 		final int responseCode = connection.getResponseCode();
 		final String responseBody = HttpUtils.readResponseBody(connection);
+		final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
 		if (responseCode == HttpURLConnection.HTTP_OK) {
 			final Json responseJson = Json.read(responseBody);
 			final String content = responseJson.at("response").asString();
 			final int inputTokens = responseJson.at("prompt_eval_count").asInteger();
 			final int outputTokens = responseJson.at("eval_count").asInteger();
-			return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens);
+			return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration);
 		} else {
 			AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", connection.getResponseMessage(), responseCode)));
-			return new LlmResponse(llmModelOption, "", responseBody, 0, 0);
+			return new LlmResponse(llmModelOption, "", responseBody, 0, 0, duration);
 		}
 	}
 
@@ -107,6 +110,7 @@ public final class LlmUtils {
 		}
 		final String path = suffix != null ? "/v1/fim/completions" : "/v1/chat/completions";
 		final URL url = URI.create(urlString).resolve(path).toURL();
+		final long beforeTimestamp = System.currentTimeMillis();
 		final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 		connection.setRequestMethod("POST");
 		connection.setRequestProperty("Content-Type", "application/json");
@@ -116,15 +120,16 @@ public final class LlmUtils {
 		HttpUtils.writeRequestBody(connection, json);
 		final int responseCode = connection.getResponseCode();
 		final String responseBody = HttpUtils.readResponseBody(connection);
+		final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
 		if (responseCode == HttpURLConnection.HTTP_OK) {
 			final Json responseJson = Json.read(responseBody);
 			final String content = responseJson.at("choices").at(0).at("message").at("content").asString();
 			final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 			final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
-			return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens);
+			return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration);
 		} else {
 			AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", connection.getResponseMessage(), responseCode)));
-			return new LlmResponse(llmModelOption, "", responseBody, 0, 0);
+			return new LlmResponse(llmModelOption, "", responseBody, 0, 0, duration);
 		}
 	}
 
@@ -149,6 +154,7 @@ public final class LlmUtils {
 		json.set("messages", messagesJson);
 
 		final URL url = URI.create(urlString + "/").resolve("./v1/chat/completions").toURL();
+		final long beforeTimestamp = System.currentTimeMillis();
 		final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 		connection.setRequestMethod("POST");
 		connection.setRequestProperty("Content-Type", "application/json");
@@ -158,15 +164,16 @@ public final class LlmUtils {
 		HttpUtils.writeRequestBody(connection, json);
 		final int responseCode = connection.getResponseCode();
 		final String responseBody = HttpUtils.readResponseBody(connection);
+		final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
 		if (responseCode == HttpURLConnection.HTTP_OK) {
 			final Json responseJson = Json.read(responseBody);
 			final String content = responseJson.at("choices").at(0).at("message").at("content").asString();
 			final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 			final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
-			return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens);
+			return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration);
 		} else {
 			AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", connection.getResponseMessage(), responseCode)));
-			return new LlmResponse(llmModelOption, "", responseBody, 0, 0);
+			return new LlmResponse(llmModelOption, "", responseBody, 0, 0, duration);
 		}
 	}
 }

@@ -118,7 +118,7 @@
     </view>
     <view
           category="de.hetzge.eclipse.aicoder"
-          class="de.hetzge.eclipse.aicoder.AiCoderHistoryView"
+          class="de.hetzge.eclipse.aicoder.history.AiCoderHistoryView"
           icon="icons/icon16.png"
           id="de.hetzge.eclipse.aicoder.AiCoderHistoryView"
           inject="true"

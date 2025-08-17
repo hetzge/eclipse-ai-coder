@@ -22,7 +22,9 @@ Require-Bundle: org.eclipse.ui,
  io.modelcontextprotocol.sdk.mcp;bundle-version="0.11.1",
  com.fasterxml.jackson.core.jackson-databind,
  com.fasterxml.jackson.core.jackson-core,
- org.eclipse.ltk.core.refactoring
+ org.eclipse.ltk.core.refactoring,
+ org.eclipse.compare,
+ org.eclipse.compare.core
 Bundle-RequiredExecutionEnvironment: JavaSE-21
 Automatic-Module-Name: codestral.eclipse
 Bundle-ActivationPolicy: lazy

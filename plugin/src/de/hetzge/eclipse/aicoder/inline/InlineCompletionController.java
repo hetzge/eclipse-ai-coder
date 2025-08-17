@@ -2,7 +2,6 @@ package de.hetzge.eclipse.aicoder.inline;
 
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -47,8 +46,6 @@ import org.eclipse.ui.contexts.IContextActivation;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
-import de.hetzge.eclipse.aicoder.AiCoderHistoryEntry;
-import de.hetzge.eclipse.aicoder.AiCoderHistoryView;
 import de.hetzge.eclipse.aicoder.CompletionMode;
 import de.hetzge.eclipse.aicoder.ContextView;
 import de.hetzge.eclipse.aicoder.Debouncer;
@@ -56,7 +53,8 @@ import de.hetzge.eclipse.aicoder.context.ContextContext;
 import de.hetzge.eclipse.aicoder.context.ContextEntry;
 import de.hetzge.eclipse.aicoder.context.FillInMiddleContextEntry;
 import de.hetzge.eclipse.aicoder.context.RootContextEntry;
-import de.hetzge.eclipse.aicoder.llm.LlmModelOption;
+import de.hetzge.eclipse.aicoder.history.AiCoderHistoryEntry;
+import de.hetzge.eclipse.aicoder.history.AiCoderHistoryView;
 import de.hetzge.eclipse.aicoder.llm.LlmPromptTemplates;
 import de.hetzge.eclipse.aicoder.llm.LlmResponse;
 import de.hetzge.eclipse.aicoder.llm.LlmUtils;
@@ -106,6 +104,7 @@ public final class InlineCompletionController {
 	private boolean abortDisabled;
 	private SuggestionPopupDialog suggestionPopupDialog;
 	private Suggestion suggestion;
+	private AiCoderHistoryEntry historyEntry;
 
 	private InlineCompletionController(ITextViewer textViewer, ITextEditor textEditor) {
 		this.textViewer = textViewer;
@@ -126,6 +125,7 @@ public final class InlineCompletionController {
 		this.abortDisabled = false;
 		this.suggestionPopupDialog = null;
 		this.suggestion = null;
+		this.historyEntry = null;
 	}
 
 	private void triggerAutocomplete() {
@@ -151,14 +151,18 @@ public final class InlineCompletionController {
 		final StyledText widget = InlineCompletionController.this.textViewer.getTextWidget();
 		final int lineHeight = widget.getLineHeight();
 		final int defaultLineSpacing = widget.getLineSpacing();
+		final IEditorInput editorInput = this.textEditor.getEditorInput();
+		final String filePath = editorInput.getName();
+		final boolean hasSelection = EclipseUtils.hasSelection(this.textViewer);
+		final CompletionMode mode = hasSelection
+				? CompletionMode.EDIT
+				: instruction == null
+						? CompletionMode.INLINE
+						: CompletionMode.GENERATE;
+		this.historyEntry = new AiCoderHistoryEntry(mode, filePath, this.textViewer.getDocument().get());
+		updateHistoryEntry();
 		this.job = Job.create("AI completion", monitor -> {
 			String prompt = "";
-			final boolean hasSelection = EclipseUtils.hasSelection(this.textViewer);
-			final CompletionMode mode = hasSelection
-					? CompletionMode.EDIT
-					: instruction == null
-							? CompletionMode.INLINE
-							: CompletionMode.GENERATE;
 			LlmResponse llmResponse = null;
 			try {
 				final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
@@ -171,7 +175,6 @@ public final class InlineCompletionController {
 				final String prefix = contextParts[0];
 				final String suffix = contextParts.length > 1 ? contextParts[1] : "";
 				final String selectionText = EclipseUtils.getSelectionText(this.textViewer);
-				final long llmStartTime = System.currentTimeMillis();
 				if (mode == CompletionMode.EDIT || mode == CompletionMode.GENERATE) {
 					final String fileType = EclipseUtils.getFileExtension(this.textEditor.getEditorInput());
 					final String systemPrompt = hasSelection
@@ -187,7 +190,6 @@ public final class InlineCompletionController {
 					llmResponse = LlmUtils.executeFillInTheMiddle(prefix, suffix);
 				}
 				final String content = llmResponse.getContent();
-				final long llmDuration = System.currentTimeMillis() - llmStartTime;
 				final int currentModelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
 				final boolean isMultilineContent = content.contains("\n");
 				final boolean isBlank = content.isBlank();
@@ -196,7 +198,8 @@ public final class InlineCompletionController {
 						? false
 						: isMultilineContent && suffix.replaceAll("\\s", "").startsWith(content.replaceAll("\\s", ""));
 				if (monitor.isCanceled()) {
-					addHistoryEntry(mode, "Aborted");
+					this.historyEntry.setStatus("Aborted");
+					updateHistoryEntry();
 					return;
 				}
 				if (!isBlank && !isMoved && !isSame) {
@@ -229,12 +232,30 @@ public final class InlineCompletionController {
 					status = "Generated";
 				}
 				final long duration = System.currentTimeMillis() - startTime;
-				addHistoryEntry(llmResponse.getLlmModelOption(), mode, prompt, content, status, duration, llmDuration, llmResponse);
+				this.historyEntry.setStatus(status);
+				this.historyEntry.setDurationMs(duration);
+				this.historyEntry.setLlmDurationMs(llmResponse.getDuration().toMillis());
+				this.historyEntry.setPlainLlmResponse(llmResponse.getPlainResponse());
+				this.historyEntry.setModelLabel(llmResponse.getLlmModelOption().getLabel());
+				this.historyEntry.setInputTokenCount(llmResponse.getInputTokens());
+				this.historyEntry.setOutputTokenCount(llmResponse.getOutputTokens());
+				this.historyEntry.setInput(prompt);
+				this.historyEntry.setOutput(content);
+				updateHistoryEntry();
 			} catch (final IOException | BadLocationException | UnsupportedFlavorException exception) {
 				AiCoderActivator.log().error("AI Coder completion failed", exception);
 				final long duration = System.currentTimeMillis() - startTime;
 				final String stacktrace = Utils.getStacktraceString(exception);
-				addHistoryEntry(llmResponse != null ? llmResponse.getLlmModelOption() : null, mode, prompt, stacktrace, "Error: " + Optional.ofNullable(exception.getMessage()).orElse("-"), duration, 0, null);
+				this.historyEntry.setStatus("Error: " + Optional.ofNullable(exception.getMessage()).orElse("-"));
+				this.historyEntry.setDurationMs(duration);
+				this.historyEntry.setLlmDurationMs(llmResponse != null ? llmResponse.getDuration().toMillis() : 0);
+				this.historyEntry.setPlainLlmResponse(stacktrace);
+				this.historyEntry.setModelLabel(llmResponse != null ? llmResponse.getLlmModelOption().getLabel() : null);
+				this.historyEntry.setInputTokenCount(llmResponse != null ? llmResponse.getInputTokens() : 0);
+				this.historyEntry.setOutputTokenCount(llmResponse != null ? llmResponse.getOutputTokens() : 0);
+				this.historyEntry.setInput(prompt);
+				this.historyEntry.setOutput(stacktrace);
+				updateHistoryEntry();
 			}
 		});
 		this.job.schedule();
@@ -280,51 +301,6 @@ public final class InlineCompletionController {
 			} catch (final CoreException exception) {
 				throw new RuntimeException(exception);
 			}
-		});
-	}
-
-	private void addHistoryEntry(CompletionMode mode, String status) {
-		addHistoryEntry(null, mode, "", "", status, 0, 0, null);
-	}
-
-	private void addHistoryEntry(LlmModelOption llmModelOption, CompletionMode mode, String input, String output, String status, long duration, long llmDuration, LlmResponse llmResponse) {
-		Display.getDefault().asyncExec(() -> {
-			final IEditorInput editorInput = this.textEditor.getEditorInput();
-			final String filePath = editorInput.getName();
-
-			// Calculate input stats
-			final String[] inputWords = input.split("\\s+");
-			final int inputWordCount = inputWords.length;
-			final long inputLineCount = input.lines().count();
-
-			// Calculate output stats
-			final String[] outputWords = output.split("\\s+");
-			final int outputWordCount = outputWords.length;
-			final long outputLineCount = output.lines().count();
-
-			final AiCoderHistoryEntry entry = new AiCoderHistoryEntry(
-					LocalDateTime.now(),
-					llmModelOption != null ? llmModelOption.getLabel() : "-",
-					mode,
-					filePath,
-					status,
-					input,
-					input.length(),
-					inputWordCount,
-					(int) inputLineCount,
-					output,
-					output.length(),
-					outputWordCount,
-					(int) outputLineCount,
-					llmResponse != null ? llmResponse.getInputTokens() : 0,
-					llmResponse != null ? llmResponse.getOutputTokens() : 0,
-					duration,
-					llmDuration,
-					llmResponse != null ? llmResponse.getPlainResponse() : "");
-
-			AiCoderHistoryView.get().ifPresent(view -> {
-				view.addHistoryEntry(entry);
-			});
 		});
 	}
 
@@ -389,6 +365,10 @@ public final class InlineCompletionController {
 			this.paintListener.resetMetrics();
 			return true;
 		}
+		if (this.historyEntry != null) {
+			AiCoderActivator.log().info(String.format("Unset history entry (reason: '%s')", reason));
+			this.historyEntry = null;
+		}
 		return false;
 	}
 
@@ -403,6 +383,8 @@ public final class InlineCompletionController {
 	}
 
 	public void accept() {
+		// Store in variable because accept trigger abort
+		final AiCoderHistoryEntry historyEntry = this.historyEntry;
 		acceptInlineCompletion();
 		acceptSuggestion();
 		if (AiCoderPreferences.isCleanupCodeOnApplyEnabled()) {
@@ -416,6 +398,7 @@ public final class InlineCompletionController {
 				}
 			}
 		}
+		historyEntry.setContent(this.textViewer.getDocument().get());
 		this.textEditor.setFocus();
 	}
 
@@ -460,6 +443,17 @@ public final class InlineCompletionController {
 		} catch (final BadLocationException exception) {
 			throw new RuntimeException("Failed to accept suggestion", exception);
 		}
+	}
+
+	private void updateHistoryEntry() {
+		if (this.historyEntry == null) {
+			return;
+		}
+		AiCoderHistoryView.get().ifPresent(view -> {
+			Display.getDefault().asyncExec(() -> {
+				view.addHistoryEntry(this.historyEntry);
+			});
+		});
 	}
 
 	private class CaretListenerImplementation implements CaretListener {

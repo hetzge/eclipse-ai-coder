@@ -6,7 +6,7 @@ import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
-import de.hetzge.eclipse.aicoder.AiCoderHistoryView;
+import de.hetzge.eclipse.aicoder.history.AiCoderHistoryView;
 import de.hetzge.eclipse.aicoder.inline.InlineCompletionController;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 

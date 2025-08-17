@@ -1,18 +1,22 @@
 package de.hetzge.eclipse.aicoder.llm;
 
+import java.time.Duration;
+
 public class LlmResponse {
 	private final LlmModelOption llmModelOption;
 	private final String content;
 	private final String plainResponse;
 	private final int inputTokens;
 	private final int outputTokens;
+	private final Duration duration;
 
-	public LlmResponse(LlmModelOption llmModelOption, String content, String plainResponse, int inputTokens, int outputTokens) {
+	public LlmResponse(LlmModelOption llmModelOption, String content, String plainResponse, int inputTokens, int outputTokens, Duration duration) {
 		this.llmModelOption = llmModelOption;
 		this.content = content;
 		this.plainResponse = plainResponse;
 		this.inputTokens = inputTokens;
 		this.outputTokens = outputTokens;
+		this.duration = duration;
 	}
 
 	public LlmModelOption getLlmModelOption() {
@@ -33,5 +37,9 @@ public class LlmResponse {
 
 	public int getOutputTokens() {
 		return this.outputTokens;
+	}
+
+	public Duration getDuration() {
+		return this.duration;
 	}
 }

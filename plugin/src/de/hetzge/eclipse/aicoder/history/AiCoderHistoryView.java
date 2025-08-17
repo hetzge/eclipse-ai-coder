@@ -1,4 +1,4 @@
-package de.hetzge.eclipse.aicoder;
+package de.hetzge.eclipse.aicoder.history;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +23,8 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.part.ViewPart;
+
+import de.hetzge.eclipse.aicoder.ContentPreviewDialog;
 
 public class AiCoderHistoryView extends ViewPart {
 
@@ -83,22 +85,27 @@ public class AiCoderHistoryView extends ViewPart {
 					openInputDialog();
 				}
 			});
-		});
-		menuManager.addMenuListener(manager -> {
 			manager.add(new Action("Output") {
 				@Override
 				public void run() {
 					openOutputDialog();
 				}
 			});
-		});
-		menuManager.addMenuListener(manager -> {
 			manager.add(new Action("Response") {
 				@Override
 				public void run() {
 					openLlmResponseDialog();
 				}
 			});
+			final AiCoderHistoryEntry entry = (AiCoderHistoryEntry) AiCoderHistoryView.this.viewer.getStructuredSelection().getFirstElement();
+			final Action diffAction = new Action("Diff") {
+				@Override
+				public void run() {
+					LocalHistoryDiffOpener.openDiff(entry);
+				}
+			};
+			diffAction.setEnabled(entry.getContent() != null && entry.getPreviousContent() != null);
+			manager.add(diffAction);
 		});
 		final Menu menu = menuManager.createContextMenu(this.viewer.getControl());
 		this.viewer.getControl().setMenu(menu);
@@ -130,11 +137,15 @@ public class AiCoderHistoryView extends ViewPart {
 	}
 
 	public void addHistoryEntry(AiCoderHistoryEntry entry) {
-		this.historyEntries.add(0, entry); // Add to the beginning of the list
-		if (this.historyEntries.size() > 100) { // TODO max preference
-			this.historyEntries.removeLast();
+		if (!this.historyEntries.contains(entry)) {
+			this.historyEntries.add(0, entry); // Add to the beginning of the list
+			if (this.historyEntries.size() > 100) { // TODO max preference
+				this.historyEntries.removeLast();
+			}
+			this.viewer.refresh();
+		} else {
+			this.viewer.update(entry, null);
 		}
-		this.viewer.refresh();
 	}
 
 	public void setLatestAccepted() {
@@ -294,7 +305,17 @@ public class AiCoderHistoryView extends ViewPart {
 			}
 		});
 
-		// Accepted
+		// Tokens per second
+		column = createTableViewerColumn("Tokens/s", 60);
+		column.setLabelProvider(new ColumnLabelProvider() {
+			@Override
+			public String getText(Object element) {
+				final AiCoderHistoryEntry entry = (AiCoderHistoryEntry) element;
+				return String.valueOf(entry.getTokensPerSecond());
+			}
+		});
+
+		// Status
 		column = createTableViewerColumn("Status", 100);
 		column.setLabelProvider(new ColumnLabelProvider() {
 			@Override
