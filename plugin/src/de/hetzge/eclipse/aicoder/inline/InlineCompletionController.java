@@ -366,6 +366,7 @@ public final class InlineCompletionController {
 			AiCoderActivator.log().info(String.format("Close suggestion popup dialog (reason: '%s')", reason));
 			this.suggestionPopupDialog.close();
 			this.suggestionPopupDialog = null;
+			this.textEditor.setFocus();
 		}
 		if (this.suggestion != null) {
 			AiCoderActivator.log().info(String.format("Unset suggestion (reason: '%s')", reason));
@@ -404,7 +405,6 @@ public final class InlineCompletionController {
 	public void accept() {
 		acceptInlineCompletion();
 		acceptSuggestion();
-
 		if (AiCoderPreferences.isCleanupCodeOnApplyEnabled()) {
 			final Optional<ICompilationUnit> compilationUnitOptional = EclipseUtils.getCompilationUnit(this.textEditor.getEditorInput());
 			if (compilationUnitOptional.isPresent()) {
@@ -416,6 +416,7 @@ public final class InlineCompletionController {
 				}
 			}
 		}
+		this.textEditor.setFocus();
 	}
 
 	private void acceptInlineCompletion() {
