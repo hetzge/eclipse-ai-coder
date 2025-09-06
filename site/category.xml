@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <site>
-   <feature id="aicoder.feature">
+   <feature id="de.hetzge.eclipse.aicoder.feature">
       <category name="de.hetzge.eclipse.aicoder"/>
    </feature>
    <category-def name="de.hetzge.eclipse.aicoder" label="AI Coder"/>

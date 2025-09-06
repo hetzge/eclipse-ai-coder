@@ -159,8 +159,9 @@ public final class InlineCompletionController {
 				: instruction == null
 						? CompletionMode.INLINE
 						: CompletionMode.GENERATE;
-		this.historyEntry = new AiCoderHistoryEntry(mode, filePath, this.textViewer.getDocument().get());
-		updateHistoryEntry();
+		final AiCoderHistoryEntry historyEntry = new AiCoderHistoryEntry(mode, filePath, this.textViewer.getDocument().get());
+		this.historyEntry = historyEntry;
+		updateHistoryEntry(historyEntry);
 		this.job = Job.create("AI completion", monitor -> {
 			String prompt = "";
 			LlmResponse llmResponse = null;
@@ -198,8 +199,8 @@ public final class InlineCompletionController {
 						? false
 						: isMultilineContent && suffix.replaceAll("\\s", "").startsWith(content.replaceAll("\\s", ""));
 				if (monitor.isCanceled()) {
-					this.historyEntry.setStatus("Aborted");
-					updateHistoryEntry();
+					historyEntry.setStatus("Aborted");
+					updateHistoryEntry(historyEntry);
 					return;
 				}
 				if (!isBlank && !isMoved && !isSame) {
@@ -232,30 +233,30 @@ public final class InlineCompletionController {
 					status = "Generated";
 				}
 				final long duration = System.currentTimeMillis() - startTime;
-				this.historyEntry.setStatus(status);
-				this.historyEntry.setDurationMs(duration);
-				this.historyEntry.setLlmDurationMs(llmResponse.getDuration().toMillis());
-				this.historyEntry.setPlainLlmResponse(llmResponse.getPlainResponse());
-				this.historyEntry.setModelLabel(llmResponse.getLlmModelOption().getLabel());
-				this.historyEntry.setInputTokenCount(llmResponse.getInputTokens());
-				this.historyEntry.setOutputTokenCount(llmResponse.getOutputTokens());
-				this.historyEntry.setInput(prompt);
-				this.historyEntry.setOutput(content);
-				updateHistoryEntry();
+				historyEntry.setStatus(status);
+				historyEntry.setDurationMs(duration);
+				historyEntry.setLlmDurationMs(llmResponse.getDuration().toMillis());
+				historyEntry.setPlainLlmResponse(llmResponse.getPlainResponse());
+				historyEntry.setModelLabel(llmResponse.getLlmModelOption().getLabel());
+				historyEntry.setInputTokenCount(llmResponse.getInputTokens());
+				historyEntry.setOutputTokenCount(llmResponse.getOutputTokens());
+				historyEntry.setInput(prompt);
+				historyEntry.setOutput(content);
+				updateHistoryEntry(historyEntry);
 			} catch (final IOException | BadLocationException | UnsupportedFlavorException exception) {
 				AiCoderActivator.log().error("AI Coder completion failed", exception);
 				final long duration = System.currentTimeMillis() - startTime;
 				final String stacktrace = Utils.getStacktraceString(exception);
-				this.historyEntry.setStatus("Error: " + Optional.ofNullable(exception.getMessage()).orElse("-"));
-				this.historyEntry.setDurationMs(duration);
-				this.historyEntry.setLlmDurationMs(llmResponse != null ? llmResponse.getDuration().toMillis() : 0);
-				this.historyEntry.setPlainLlmResponse(stacktrace);
-				this.historyEntry.setModelLabel(llmResponse != null ? llmResponse.getLlmModelOption().getLabel() : null);
-				this.historyEntry.setInputTokenCount(llmResponse != null ? llmResponse.getInputTokens() : 0);
-				this.historyEntry.setOutputTokenCount(llmResponse != null ? llmResponse.getOutputTokens() : 0);
-				this.historyEntry.setInput(prompt);
-				this.historyEntry.setOutput(stacktrace);
-				updateHistoryEntry();
+				historyEntry.setStatus("Error: " + Optional.ofNullable(exception.getMessage()).orElse("-"));
+				historyEntry.setDurationMs(duration);
+				historyEntry.setLlmDurationMs(llmResponse != null ? llmResponse.getDuration().toMillis() : 0);
+				historyEntry.setPlainLlmResponse(stacktrace);
+				historyEntry.setModelLabel(llmResponse != null ? llmResponse.getLlmModelOption().getLabel() : null);
+				historyEntry.setInputTokenCount(llmResponse != null ? llmResponse.getInputTokens() : 0);
+				historyEntry.setOutputTokenCount(llmResponse != null ? llmResponse.getOutputTokens() : 0);
+				historyEntry.setInput(prompt);
+				historyEntry.setOutput(stacktrace);
+				updateHistoryEntry(historyEntry);
 			}
 		});
 		this.job.schedule();
@@ -445,13 +446,10 @@ public final class InlineCompletionController {
 		}
 	}
 
-	private void updateHistoryEntry() {
-		if (this.historyEntry == null) {
-			return;
-		}
+	private void updateHistoryEntry(AiCoderHistoryEntry historyEntry) {
 		AiCoderHistoryView.get().ifPresent(view -> {
 			Display.getDefault().asyncExec(() -> {
-				view.addHistoryEntry(this.historyEntry);
+				view.addHistoryEntry(historyEntry);
 			});
 		});
 	}

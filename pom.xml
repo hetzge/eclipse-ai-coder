@@ -6,6 +6,7 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<modules>
+		<module>maven-dependencies</module>
 		<module>plugin</module>
 		<module>feature</module>
 		<module>site</module>

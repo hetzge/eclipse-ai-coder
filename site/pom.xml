@@ -16,7 +16,6 @@
 				<version>${tycho.version}</version>
 				<configuration>
 					<skipArchive>true</skipArchive>
-<!--					<includeAllDependencies>true</includeAllDependencies>-->
 				</configuration>
 			</plugin>
 		</plugins>
