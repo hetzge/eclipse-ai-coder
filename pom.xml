@@ -7,10 +7,10 @@
 	<packaging>pom</packaging>
 	<modules>
 		<module>maven-dependencies</module>
+		<module>eclipse-target</module>
 		<module>plugin</module>
 		<module>feature</module>
 		<module>site</module>
-		<module>eclipse-target</module>
 	</modules>
 	<properties>
 		<tycho.version>4.0.10</tycho.version>

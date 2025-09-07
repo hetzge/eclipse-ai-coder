@@ -1,8 +1,12 @@
 package de.hetzge.eclipse.aicoder;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.ui.quickaccess.IQuickAccessComputer;
 import org.eclipse.ui.quickaccess.QuickAccessElement;
+import org.eclipse.ui.texteditor.AbstractTextEditor;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 import de.hetzge.eclipse.aicoder.content.EditInstruction;
@@ -14,10 +18,13 @@ public class AiCoderInstructionsQuickAccessComputer implements IQuickAccessCompu
 
 	@Override
 	public QuickAccessElement[] computeElements() {
-		if (EclipseUtils.getActiveTextEditor().isEmpty()) {
+		final Optional<AbstractTextEditor> activeTextEditorOptional = EclipseUtils.getActiveTextEditor();
+		if (activeTextEditorOptional.isEmpty()) {
 			return null;
 		}
-		return InstructionUtils.getAllEditInstructions().stream()
+		final ITextEditor editor = activeTextEditorOptional.get();
+		final List<EditInstruction> instructions = InstructionUtils.resolve(EclipseUtils.getPath(editor).orElse(null));
+		return instructions.stream()
 				.map(InstructionQuickAccessElement::new)
 				.toArray((length) -> new QuickAccessElement[length]);
 	}

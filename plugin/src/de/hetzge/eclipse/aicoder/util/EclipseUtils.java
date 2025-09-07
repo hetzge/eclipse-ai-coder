@@ -1,9 +1,11 @@
 package de.hetzge.eclipse.aicoder.util;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -263,5 +265,10 @@ public class EclipseUtils {
 
 	public static String getSelectionText(ITextViewer textViewer) {
 		return Display.getDefault().syncCall(() -> textViewer.getSelectionProvider().getSelection() instanceof final ITextSelection textSelection ? textSelection.getText() : "");
+	}
+
+	public static Optional<Path> getPath(final ITextEditor editor) {
+		final IFile file = editor.getEditorInput().getAdapter(IFile.class);
+		return Optional.ofNullable(file).map(IFile::getLocation).map(IPath::toFile).map(File::toPath);
 	}
 }
