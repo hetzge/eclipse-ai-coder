@@ -309,6 +309,9 @@ public final class InlineCompletionController {
 		AiCoderActivator.log().info("Activate context (completion)");
 		this.completions = new ArrayList<>(completions);
 		setupContext();
+		Display.getDefault().asyncExec(() -> {
+			this.textViewer.getTextWidget().redraw(); // windows needs this
+		});
 	}
 
 	private void setup(Suggestion suggestion) {
@@ -316,6 +319,7 @@ public final class InlineCompletionController {
 		this.suggestion = suggestion;
 		setupContext();
 		Display.getDefault().syncExec(() -> {
+			this.textViewer.getTextWidget().redraw(); // windows needs this
 			final Runnable acceptListener = () -> accept();
 			final Runnable rejectListener = () -> {
 				abort("Dismiss");
