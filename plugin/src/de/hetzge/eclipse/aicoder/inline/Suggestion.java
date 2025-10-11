@@ -5,5 +5,7 @@ public record Suggestion(
 		int modelOffset,
 		int originalLength,
 		int widgetLastLine,
+		int newLines,
+		int oldLines,
 		int additionalLines) {
 }

@@ -14,17 +14,16 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.widgets.Composite;
 
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
-import de.hetzge.eclipse.aicoder.util.Utils;
 
 public final class SuggestionStyledText {
 
 	private SuggestionStyledText() {
 	}
 
-	public static StyledText create(Composite parent, ITextViewer parentTextViewer, String content) {
+	public static StyledText create(Composite parent, ITextViewer parentTextViewer, String newContent) {
 		final StyledText parentStyledText = parentTextViewer.getTextWidget();
-		final DiffMatchPatch diffMatchPatch = new DiffMatchPatch();
-		final List<Diff> diffs = diffMatchPatch.diffMain(EclipseUtils.getSelectionText(parentTextViewer), Utils.stripCodeMarkdownTags(content));
+		final String originalContent = EclipseUtils.getSelectionText(parentTextViewer);
+		final List<Diff> diffs = new DiffMatchPatch().diffMain(originalContent, newContent);
 		final StyledText suggestionStyledText = new StyledText(parent, SWT.BORDER);
 		suggestionStyledText.setEditable(false);
 		suggestionStyledText.setTabs(parentStyledText.getTabs());
@@ -33,7 +32,7 @@ public final class SuggestionStyledText {
 		suggestionStyledText.setForeground(parentStyledText.getForeground());
 		suggestionStyledText.setBackground(parentStyledText.getBackground());
 		suggestionStyledText.setLineSpacing(parentStyledText.getLineSpacing());
-		suggestionStyledText.setText(diffs.stream().map(it -> it.text).collect(Collectors.joining("")));
+		suggestionStyledText.setText(diffs.stream().map(it -> it.text).collect(Collectors.joining()));
 		int originalOffset = parentStyledText.getSelectionRange().x; // TODO handle collapsed
 		int suggestionOffset = 0;
 		for (final Diff diff : diffs) {

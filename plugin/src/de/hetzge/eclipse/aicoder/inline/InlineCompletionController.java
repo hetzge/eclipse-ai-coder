@@ -6,9 +6,11 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.OperationCanceledException;
@@ -186,11 +188,13 @@ public final class InlineCompletionController {
 							? LlmPromptTemplates.changeCodePrompt(fileType, selectionText, effectiveInstruction, prefix, suffix)
 							: LlmPromptTemplates.generateCodePrompt(effectiveInstruction, prefix, suffix);
 					llmResponse = LlmUtils.executeGenerate(systemPrompt, prompt);
-				} else {
+				} else if (mode == CompletionMode.INLINE) {
 					prompt = prefix + "<!!!>" + suffix;
 					llmResponse = LlmUtils.executeFillInTheMiddle(prefix, suffix);
+				} else {
+					throw new IllegalStateException("Unknown completion mode: " + mode);
 				}
-				final String content = llmResponse.getContent();
+				String content = Utils.stripCodeMarkdownTags(llmResponse.getContent());
 				final int currentModelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
 				final boolean isMultilineContent = content.contains("\n");
 				final boolean isBlank = content.isBlank();
@@ -205,35 +209,49 @@ public final class InlineCompletionController {
 				}
 				if (!isBlank && !isMoved && !isSame) {
 					if (mode == CompletionMode.EDIT) {
+						final int newLineCount = (int) content.lines().count();
+						final int oldLineCount = (int) selectionText.lines().count();
 						setup(new Suggestion(
-								Utils.stripCodeMarkdownTags(content),
+								content,
 								modelOffset,
 								selectionText.length(),
-								EclipseUtils.getWidgetLine(this.textViewer, modelOffset) + (int) selectionText.lines().count() - 1,
-								Math.max((int) Utils.stripCodeMarkdownTags(content).lines().count() - (int) selectionText.lines().count(), 0) + 2)); // + 2 for popup toolbar
-					} else {
-						setup(List.of(InlineCompletion.create(
+								EclipseUtils.getWidgetLine(this.textViewer, modelOffset) + oldLineCount - 1,
+								newLineCount,
+								oldLineCount,
+								Math.max(newLineCount - oldLineCount, 0)));
+					} else if (mode == CompletionMode.INLINE || mode == CompletionMode.GENERATE) {
+						// TODO validate if this is working
+						if (isMultilineContent) {
+							final long lineCount = content.lines().count();
+							final List<String> contentLines = content.lines().limit(lineCount).toList();
+							final List<String> suffixLines = suffix.lines().limit(lineCount).toList();
+							if (contentLines.size() == suffixLines.size()) {
+								for (int i = 0; i < lineCount; i++) {
+									final String contentLine = contentLines.get((int) (lineCount - 1 - i)).replaceAll("\\s", " ");
+									final String suffixLine = suffixLines.get((int) (lineCount - 1 - i)).replaceAll("\\s", " ");
+									if (!Objects.equals(contentLine, suffixLine)) {
+										AiCoderActivator.log().info(String.format("Remove %d equal suffix lines", i));
+										content = content.lines().limit(lineCount - i).collect(Collectors.joining("\n"));
+										break;
+									}
+								}
+							}
+						}
+
+						setup(InlineCompletion.create(
 								document,
 								modelOffset,
 								EclipseUtils.getWidgetOffset(this.textViewer, modelOffset),
 								EclipseUtils.getWidgetLine(this.textViewer, modelOffset),
-								Utils.stripCodeMarkdownTags(content), // TODO?
+								content,
 								lineHeight,
-								defaultLineSpacing)));
+								defaultLineSpacing));
+					} else {
+						throw new IllegalStateException("Unknown completion mode: " + mode);
 					}
 				}
-				String status;
-				if (isMoved) {
-					status = "Moved";
-				} else if (isBlank) {
-					status = "Blank";
-				} else if (isSame) {
-					status = "Same";
-				} else {
-					status = "Generated";
-				}
 				final long duration = System.currentTimeMillis() - startTime;
-				historyEntry.setStatus(status);
+				historyEntry.setStatus(calculateStatus(isBlank, isMoved, isSame));
 				historyEntry.setDurationMs(duration);
 				historyEntry.setLlmDurationMs(llmResponse.getDuration().toMillis());
 				historyEntry.setPlainLlmResponse(llmResponse.getPlainResponse());
@@ -260,6 +278,18 @@ public final class InlineCompletionController {
 			}
 		});
 		this.job.schedule();
+	}
+
+	private String calculateStatus(boolean isBlank, boolean isMoved, boolean isSame) {
+		if (isMoved) {
+			return "Moved";
+		} else if (isBlank) {
+			return "Blank";
+		} else if (isSame) {
+			return "Same";
+		} else {
+			return "Generated";
+		}
 	}
 
 	private void unsetSelection() {
@@ -293,7 +323,7 @@ public final class InlineCompletionController {
 		}
 	}
 
-	private void updateContextView(final RootContextEntry rootContextEntry) {
+	private void updateContextView(RootContextEntry rootContextEntry) {
 		Display.getDefault().syncExec(() -> {
 			try {
 				ContextView.get().ifPresent(view -> {
@@ -305,13 +335,11 @@ public final class InlineCompletionController {
 		});
 	}
 
-	private void setup(List<InlineCompletion> completions) {
+	private void setup(InlineCompletion completion) {
 		AiCoderActivator.log().info("Activate context (completion)");
-		this.completions = new ArrayList<>(completions);
+		this.completions = new ArrayList<>(List.of(completion));
 		setupContext();
-		Display.getDefault().asyncExec(() -> {
-			this.textViewer.getTextWidget().redraw(); // windows needs this
-		});
+		redraw();
 	}
 
 	private void setup(Suggestion suggestion) {
@@ -320,7 +348,9 @@ public final class InlineCompletionController {
 		setupContext();
 		Display.getDefault().syncExec(() -> {
 			this.textViewer.getTextWidget().redraw(); // windows needs this
-			final Runnable acceptListener = () -> accept();
+			final Runnable acceptListener = () -> {
+				accept();
+			};
 			final Runnable rejectListener = () -> {
 				abort("Dismiss");
 				AiCoderHistoryView.get().ifPresent(view -> {
@@ -353,6 +383,7 @@ public final class InlineCompletionController {
 			AiCoderActivator.log().info(String.format("Unset suggestion (reason: '%s')", reason));
 			this.suggestion = null;
 			this.paintListener.resetMetrics();
+			redraw();
 		}
 		if (this.job != null) {
 			AiCoderActivator.log().info(String.format("Abort job (reason: '%s')", reason));
@@ -368,6 +399,7 @@ public final class InlineCompletionController {
 			AiCoderActivator.log().info(String.format("Unset completions (reason: '%s')", reason));
 			this.completions.clear();
 			this.paintListener.resetMetrics();
+			redraw();
 			return true;
 		}
 		if (this.historyEntry != null) {
@@ -375,6 +407,12 @@ public final class InlineCompletionController {
 			this.historyEntry = null;
 		}
 		return false;
+	}
+
+	private void redraw() {
+		Display.getDefault().syncExec(() -> {
+			this.textViewer.getTextWidget().redraw(); // windows needs this
+		});
 	}
 
 	private synchronized <T extends Exception> void executeThenAbort(Runnable_WithExceptions<T> runnable, String reason) throws T {
@@ -504,7 +542,7 @@ public final class InlineCompletionController {
 			}
 			final Suggestion suggestion = InlineCompletionController.this.suggestion;
 			if (suggestion != null && suggestion.widgetLastLine() == lineIndex) {
-				return suggestion.additionalLines() * InlineCompletionController.this.widget.getLineHeight();
+				return (suggestion.additionalLines() + 2) * InlineCompletionController.this.widget.getLineHeight(); // +2 for the buttons
 			}
 			return null;
 		}

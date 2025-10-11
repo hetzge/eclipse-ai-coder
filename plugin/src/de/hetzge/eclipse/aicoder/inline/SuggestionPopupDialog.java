@@ -132,7 +132,7 @@ public final class SuggestionPopupDialog extends PopupDialog {
 
 	@Override
 	public Point getDefaultSize() {
-		return calculateSize(this.parentTextViewer, this.suggestion.content(), this.suggestion.modelOffset());
+		return calculateSize(this.parentTextViewer, this.suggestion);
 	}
 
 	@Override
@@ -147,18 +147,18 @@ public final class SuggestionPopupDialog extends PopupDialog {
 			shell.setLocation(newLocation);
 			shell.layout();
 		}
-		final Point newSize = calculateSize(this.parentTextViewer, this.suggestion.content(), this.suggestion.modelOffset());
+		final Point newSize = calculateSize(this.parentTextViewer, this.suggestion);
 		if (!Objects.equals(shell.getSize(), newSize)) {
 			shell.setSize(newSize);
 			shell.layout();
 		}
 	}
 
-	private static Point calculateSize(ITextViewer parentTextViewer, String content, int modelOffset) {
-		final int widgetOffset = EclipseUtils.getWidgetOffset(parentTextViewer, modelOffset);
+	private static Point calculateSize(ITextViewer parentTextViewer, Suggestion suggestion) {
+		final int widgetOffset = EclipseUtils.getWidgetOffset(parentTextViewer, suggestion.modelOffset());
 		final Point location = parentTextViewer.getTextWidget().getLocationAtOffset(widgetOffset);
 		final int width = parentTextViewer.getTextWidget().getSize().x - location.x - 24; // space for scrollbar
-		final int height = (int) (content.lines().count() * parentTextViewer.getTextWidget().getLineHeight() + TOOLBAR_HEIGHT + 10);
+		final int height = (Math.max(suggestion.oldLines(), suggestion.newLines()) + 2) * parentTextViewer.getTextWidget().getLineHeight(); // +2 for toolbar
 		return new Point(width, height);
 	}
 

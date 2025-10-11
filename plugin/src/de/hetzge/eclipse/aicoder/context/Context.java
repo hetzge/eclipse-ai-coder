@@ -32,6 +32,7 @@ import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
  * TODO trigger ai refactor (ctrl + shift + space when code is selected)
  * TODO mark context entries with error that occured while creation
  * TODO mark sticky / disabled in resource tree
+ * TODO multiple suggestions (count configurable, or as long as user does not select one)
  */
 
 public final class Context {

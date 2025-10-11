@@ -30,6 +30,8 @@ public final class LlmUtils {
 	private static LlmResponse execute(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
 		final LlmProvider provider = llmModelOption.provider();
 		switch (provider) {
+		case NONE:
+			throw new IllegalStateException("No LLM provider selected.");
 		case OLLAMA:
 			return executeOllama(llmModelOption, systemPrompt, prompt, suffix);
 		case MISTRAL:
