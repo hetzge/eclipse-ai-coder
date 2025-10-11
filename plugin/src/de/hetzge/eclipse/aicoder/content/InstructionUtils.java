@@ -3,6 +3,7 @@ package de.hetzge.eclipse.aicoder.content;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,18 +54,22 @@ public final class InstructionUtils {
 				// MCP server
 				McpClients.INSTANCE.getEditInstructions().stream(),
 				// Defaults
-				getDefaultEditInstructions().stream())
+				getDefaultEditInstructions().stream(),
+				// History
+				AiCoderActivator.getDefault().getInstructionStorage().getEditInstructions().stream())
 				.flatMap(Function.identity())
 				.toList();
-		return distinctByKey(allInstructions);
+		return distinctByKeyAndSorted(allInstructions);
 	}
 
-	private static List<EditInstruction> distinctByKey(final List<EditInstruction> instructions) {
+	private static List<EditInstruction> distinctByKeyAndSorted(final List<EditInstruction> instructions) {
 		final Map<String, EditInstruction> instructionMap = new HashMap<>();
 		for (final EditInstruction instruction : instructions) {
 			instructionMap.putIfAbsent(instruction.key(), instruction);
 		}
-		return instructionMap.values().stream().toList();
+		return instructionMap.values().stream()
+				.sorted(Comparator.comparing(EditInstruction::key))
+				.toList();
 	}
 
 	private static List<EditInstruction> loadFromFolder(Path folder) {

@@ -7,6 +7,7 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
+import de.hetzge.eclipse.aicoder.content.InstructionStorage;
 import de.hetzge.eclipse.aicoder.mcp.McpClients;
 
 public class AiCoderActivator extends AbstractUIPlugin {
@@ -14,6 +15,7 @@ public class AiCoderActivator extends AbstractUIPlugin {
 	public static final String PLUGIN_ID = "de.hetzge.eclipse.aicoder";
 
 	private static AiCoderActivator plugin;
+	private InstructionStorage instructionStorage;
 
 	public AiCoderActivator() {
 	}
@@ -22,6 +24,7 @@ public class AiCoderActivator extends AbstractUIPlugin {
 	public void start(BundleContext context) throws Exception {
 		super.start(context);
 		plugin = this;
+		this.instructionStorage = InstructionStorage.load(getStateLocation());
 		McpClients.INSTANCE.reload(() -> {
 			log().info("MCP clients loaded: " + McpClients.INSTANCE.getMcpStatusCountsString());
 		});
@@ -31,6 +34,10 @@ public class AiCoderActivator extends AbstractUIPlugin {
 	public void stop(BundleContext context) throws Exception {
 		plugin = null;
 		super.stop(context);
+	}
+
+	public InstructionStorage getInstructionStorage() {
+		return this.instructionStorage;
 	}
 
 	public static AiCoderActivator getDefault() {

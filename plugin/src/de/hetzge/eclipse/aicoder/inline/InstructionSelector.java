@@ -15,6 +15,7 @@ import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
@@ -33,16 +34,16 @@ public class InstructionSelector extends Composite {
 	private final Text input;
 	private final Table table;
 	private final BiConsumer<EditInstruction, LlmOption> onSelect;
-	private List<EditInstruction> instructions;
+	private final List<EditInstruction> instructions;
 	private final Composite tableComposite;
+	private final Debouncer debouncer;
 	private Button applyButton;
 	private LlmSelector llmSelector;
-	private final Debouncer debouncer;
 
-	public InstructionSelector(Composite parent, BiConsumer<EditInstruction, LlmOption> onSelect) {
+	public InstructionSelector(Composite parent, List<EditInstruction> instructions, String initial, BiConsumer<EditInstruction, LlmOption> onSelect) {
 		super(parent, SWT.NONE);
 		this.onSelect = onSelect;
-		this.instructions = List.of();
+		this.instructions = instructions;
 		this.debouncer = new Debouncer(getDisplay(), () -> Duration.ofMillis(250L));
 		setLayout(new GridLayout(1, false));
 		this.inputComposite = new Composite(this, SWT.NONE);
@@ -51,6 +52,8 @@ public class InstructionSelector extends Composite {
 		layout.marginHeight = 0;
 		this.inputComposite.setLayout(layout);
 		this.input = new Text(this.inputComposite, SWT.BORDER | SWT.MULTI | SWT.WRAP | SWT.V_SCROLL);
+		this.input.setText(initial);
+		this.input.setSelection(0, this.input.getText().length());
 		this.applyButton = new Button(this.inputComposite, SWT.NONE);
 		this.applyButton.addListener(SWT.Selection, event -> applyCustomPrompt());
 		this.input.addKeyListener(KeyListener.keyPressedAdapter(event -> {
@@ -118,19 +121,20 @@ public class InstructionSelector extends Composite {
 			updateApplyButton();
 		});
 		this.llmSelector.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.TOP).grab(true, false).create());
+		refreshTable();
+		updateLayout();
 	}
 
 	private void updateApplyButton() {
 		this.applyButton.setEnabled(!this.input.getText().isBlank() && this.llmSelector.getOption().isPresent());
 	}
 
-	public Text getSearchInput() {
+	public Control getFocusControl() {
 		return this.input;
 	}
 
-	public void setInstructions(List<EditInstruction> instructions) {
-		this.instructions = instructions;
-		refreshTable();
+	public String getInstructionText() {
+		return this.input.getText();
 	}
 
 	private void applyCustomPrompt() {
