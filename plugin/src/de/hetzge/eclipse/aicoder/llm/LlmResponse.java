@@ -9,14 +9,16 @@ public class LlmResponse {
 	private final int inputTokens;
 	private final int outputTokens;
 	private final Duration duration;
+	private final boolean error;
 
-	public LlmResponse(LlmOption llmModelOption, String content, String plainResponse, int inputTokens, int outputTokens, Duration duration) {
+	public LlmResponse(LlmOption llmModelOption, String content, String plainResponse, int inputTokens, int outputTokens, Duration duration, boolean error) {
 		this.llmModelOption = llmModelOption;
 		this.content = content;
 		this.plainResponse = plainResponse;
 		this.inputTokens = inputTokens;
 		this.outputTokens = outputTokens;
 		this.duration = duration;
+		this.error = error;
 	}
 
 	public LlmOption getLlmModelOption() {
@@ -41,5 +43,9 @@ public class LlmResponse {
 
 	public Duration getDuration() {
 		return this.duration;
+	}
+
+	public boolean isError() {
+		return this.error;
 	}
 }

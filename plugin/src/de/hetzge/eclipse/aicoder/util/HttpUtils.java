@@ -23,4 +23,10 @@ public final class HttpUtils {
 			return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
 		}
 	}
+
+	public static String readErrorResponseBody(final HttpURLConnection connection) throws IOException {
+		try (InputStream inputStream = connection.getErrorStream()) {
+			return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+		}
+	}
 }

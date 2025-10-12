@@ -71,17 +71,19 @@ public final class LlmUtils {
 		connection.setDoOutput(true);
 		HttpUtils.writeRequestBody(connection, json);
 		final int responseCode = connection.getResponseCode();
-		final String responseBody = HttpUtils.readResponseBody(connection);
-		final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
 		if (responseCode == HttpURLConnection.HTTP_OK) {
+			final String responseBody = HttpUtils.readResponseBody(connection);
+			final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
 			final Json responseJson = Json.read(responseBody);
 			final String content = responseJson.at("response").asString();
 			final int inputTokens = responseJson.at("prompt_eval_count").asInteger();
 			final int outputTokens = responseJson.at("eval_count").asInteger();
-			return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration);
+			return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration, false);
 		} else {
 			AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", connection.getResponseMessage(), responseCode)));
-			return new LlmResponse(llmModelOption, "", responseBody, 0, 0, duration);
+			final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
+			final String responseBody = HttpUtils.readErrorResponseBody(connection);
+			return new LlmResponse(llmModelOption, "", responseBody, 0, 0, duration, true);
 		}
 	}
 
@@ -121,17 +123,19 @@ public final class LlmUtils {
 		connection.setDoOutput(true);
 		HttpUtils.writeRequestBody(connection, json);
 		final int responseCode = connection.getResponseCode();
-		final String responseBody = HttpUtils.readResponseBody(connection);
-		final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
 		if (responseCode == HttpURLConnection.HTTP_OK) {
+			final String responseBody = HttpUtils.readResponseBody(connection);
+			final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
 			final Json responseJson = Json.read(responseBody);
 			final String content = responseJson.at("choices").at(0).at("message").at("content").asString();
 			final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 			final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
-			return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration);
+			return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration, false);
 		} else {
 			AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", connection.getResponseMessage(), responseCode)));
-			return new LlmResponse(llmModelOption, "", responseBody, 0, 0, duration);
+			final String responseBody = HttpUtils.readErrorResponseBody(connection);
+			final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
+			return new LlmResponse(llmModelOption, "", responseBody, 0, 0, duration, true);
 		}
 	}
 
@@ -165,17 +169,19 @@ public final class LlmUtils {
 		connection.setDoOutput(true);
 		HttpUtils.writeRequestBody(connection, json);
 		final int responseCode = connection.getResponseCode();
-		final String responseBody = HttpUtils.readResponseBody(connection);
-		final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
 		if (responseCode == HttpURLConnection.HTTP_OK) {
+			final String responseBody = HttpUtils.readResponseBody(connection);
+			final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
 			final Json responseJson = Json.read(responseBody);
 			final String content = responseJson.at("choices").at(0).at("message").at("content").asString();
 			final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 			final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
-			return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration);
+			return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration, false);
 		} else {
 			AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", connection.getResponseMessage(), responseCode)));
-			return new LlmResponse(llmModelOption, "", responseBody, 0, 0, duration);
+			final String responseBody = HttpUtils.readErrorResponseBody(connection);
+			final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
+			return new LlmResponse(llmModelOption, "", responseBody, 0, 0, duration, true);
 		}
 	}
 }

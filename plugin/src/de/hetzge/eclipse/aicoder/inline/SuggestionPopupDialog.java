@@ -28,20 +28,19 @@ public final class SuggestionPopupDialog extends PopupDialog {
 
 	private static final int TOOLBAR_HEIGHT = 24;
 
+	public static final int ACCEPT_RETURN_CODE = 10;
+	public static final int REJECT_RETURN_CODE = 20;
+
 	private final ITextViewer parentTextViewer;
 	private final StyledText parentStyledText;
 	private final Suggestion suggestion;
-	private Runnable acceptListener;
-	private Runnable rejectListener;
 	private StyledText styledText;
 
-	public SuggestionPopupDialog(ITextViewer parentTextViewer, Suggestion suggestion, Runnable acceptListener, Runnable rejectListener) {
+	public SuggestionPopupDialog(ITextViewer parentTextViewer, Suggestion suggestion) {
 		super(parentTextViewer.getTextWidget().getShell(), SWT.ON_TOP, true, false, false, false, false, null, null);
 		this.parentTextViewer = parentTextViewer;
 		this.parentStyledText = parentTextViewer.getTextWidget();
 		this.suggestion = suggestion;
-		this.acceptListener = acceptListener;
-		this.rejectListener = rejectListener;
 	}
 
 	@Override
@@ -101,28 +100,13 @@ public final class SuggestionPopupDialog extends PopupDialog {
 	}
 
 	private void accept() {
-		if (this.acceptListener == null) {
-			return;
-		}
-		final Runnable acceptListener = this.acceptListener;
-		this.acceptListener = null; // unset to prevent double execution
-		acceptListener.run();
+		setReturnCode(ACCEPT_RETURN_CODE);
+		close();
 	}
 
 	private void reject() {
-		if (this.rejectListener == null) {
-			return;
-		}
-		final Runnable rejectListener = this.rejectListener;
-		this.rejectListener = null; // unset to prevent double execution
-		rejectListener.run();
-	}
-
-	@Override
-	public boolean close() {
-		final boolean close = super.close();
-		reject();
-		return close;
+		setReturnCode(REJECT_RETURN_CODE);
+		close();
 	}
 
 	@Override
@@ -158,7 +142,7 @@ public final class SuggestionPopupDialog extends PopupDialog {
 		final int widgetOffset = EclipseUtils.getWidgetOffset(parentTextViewer, suggestion.modelOffset());
 		final Point location = parentTextViewer.getTextWidget().getLocationAtOffset(widgetOffset);
 		final int width = parentTextViewer.getTextWidget().getSize().x - location.x - 24; // space for scrollbar
-		final int height = (Math.max(suggestion.oldLines(), suggestion.newLines()) + 2) * parentTextViewer.getTextWidget().getLineHeight(); // +2 for toolbar
+		final int height = (Math.max(suggestion.oldLines(), suggestion.newLines()) + 20) * parentTextViewer.getTextWidget().getLineHeight(); // +2 for toolbar
 		return new Point(width, height);
 	}
 

@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.OperationCanceledException;
+import org.eclipse.core.runtime.jobs.ISchedulingRule;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jface.text.BadLocationException;
@@ -65,8 +66,21 @@ import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils.Runnable_WithExceptio
 import de.hetzge.eclipse.aicoder.util.Utils;
 
 // TODO spacing bug while completion is open
+// TODO overlay moves while scrolling bug
 
 public final class InlineCompletionController {
+
+	private static final ISchedulingRule COMPLETION_JOB_RULE = new ISchedulingRule() {
+		@Override
+		public boolean contains(ISchedulingRule other) {
+			return this == other;
+		}
+
+		@Override
+		public boolean isConflicting(ISchedulingRule other) {
+			return this == other;
+		}
+	};
 
 	private static final Map<ITextViewer, InlineCompletionController> CONTROLLER_BY_VIEWER;
 	static {
@@ -167,7 +181,6 @@ public final class InlineCompletionController {
 		updateHistoryEntry(historyEntry);
 		this.job = Job.create("AI completion", monitor -> {
 			String prompt = "";
-			LlmResponse llmResponse = null;
 			try {
 				final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
 				final IDocument document = this.textViewer.getDocument();
@@ -179,6 +192,7 @@ public final class InlineCompletionController {
 				final String prefix = contextParts[0];
 				final String suffix = contextParts.length > 1 ? contextParts[1] : "";
 				final String selectionText = EclipseUtils.getSelectionText(this.textViewer);
+				LlmResponse llmResponse = null;
 				if (mode == CompletionMode.EDIT || mode == CompletionMode.GENERATE) {
 					final String fileType = EclipseUtils.getFileExtension(this.textEditor.getEditorInput());
 					final String systemPrompt = hasSelection
@@ -194,6 +208,15 @@ public final class InlineCompletionController {
 					llmResponse = LlmUtils.executeFillInTheMiddle(prefix, suffix);
 				} else {
 					throw new IllegalStateException("Unknown completion mode: " + mode);
+				}
+				if (llmResponse.isError()) {
+					historyEntry.setStatus("Error");
+					historyEntry.setPlainLlmResponse(llmResponse.getPlainResponse());
+					historyEntry.setModelLabel(llmResponse.getLlmModelOption().getLabel());
+					historyEntry.setInput(prompt);
+					historyEntry.setOutput(llmResponse.getContent());
+					updateHistoryEntry(historyEntry);
+					return;
 				}
 				String content = Utils.stripCodeMarkdownTags(llmResponse.getContent());
 				final int currentModelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
@@ -268,16 +291,17 @@ public final class InlineCompletionController {
 				final String stacktrace = Utils.getStacktraceString(exception);
 				historyEntry.setStatus("Error: " + Optional.ofNullable(exception.getMessage()).orElse("-"));
 				historyEntry.setDurationMs(duration);
-				historyEntry.setLlmDurationMs(llmResponse != null ? llmResponse.getDuration().toMillis() : 0);
+				historyEntry.setLlmDurationMs(0);
 				historyEntry.setPlainLlmResponse(stacktrace);
-				historyEntry.setModelLabel(llmResponse != null ? llmResponse.getLlmModelOption().getLabel() : null);
-				historyEntry.setInputTokenCount(llmResponse != null ? llmResponse.getInputTokens() : 0);
-				historyEntry.setOutputTokenCount(llmResponse != null ? llmResponse.getOutputTokens() : 0);
+				historyEntry.setModelLabel(null);
+				historyEntry.setInputTokenCount(0);
+				historyEntry.setOutputTokenCount(0);
 				historyEntry.setInput(prompt);
 				historyEntry.setOutput(stacktrace);
 				updateHistoryEntry(historyEntry);
 			}
 		});
+		this.job.setRule(COMPLETION_JOB_RULE);
 		this.job.schedule();
 	}
 
@@ -349,11 +373,18 @@ public final class InlineCompletionController {
 		setupContext();
 		redraw();
 		Display.getDefault().syncExec(() -> {
-			final Runnable acceptListener = () -> accept();
-			final Runnable rejectListener = () -> abort("Dismiss");
-			this.suggestionPopupDialog = new SuggestionPopupDialog(this.textViewer, suggestion, acceptListener, rejectListener);
+			this.suggestionPopupDialog = new SuggestionPopupDialog(this.textViewer, suggestion);
 			this.suggestionPopupDialog.open();
-			unsetSelection();
+			this.suggestionPopupDialog.getShell().addDisposeListener(event -> {
+				final int returnCode = InlineCompletionController.this.suggestionPopupDialog.getReturnCode();
+				AiCoderActivator.log().info(String.format("Suggestion popup dialog returned with code: %d", returnCode));
+				if (returnCode == SuggestionPopupDialog.ACCEPT_RETURN_CODE) {
+					accept();
+				} else {
+					abort("Dismiss");
+				}
+				unsetSelection();
+			});
 		});
 	}
 
@@ -399,9 +430,9 @@ public final class InlineCompletionController {
 			this.historyEntry = null;
 		}
 		if (aborted) {
+			AiCoderActivator.log().info("Redraw");
 			this.paintListener.resetMetrics();
-			this.textEditor.setFocus();
-//			redraw();
+			// redraw();
 			AiCoderHistoryView.get().ifPresent(view -> {
 				view.setLatestRejected();
 			});
@@ -443,7 +474,6 @@ public final class InlineCompletionController {
 			}
 		}
 		historyEntry.setContent(this.textViewer.getDocument().get());
-		this.textEditor.setFocus();
 	}
 
 	private void acceptInlineCompletion() {
@@ -471,14 +501,16 @@ public final class InlineCompletionController {
 			return;
 		}
 		try {
-			final IDocument document = this.textViewer.getDocument();
-			final int offset = this.suggestion.modelOffset();
-			final int length = this.suggestion.originalLength();
-			document.replace(offset, length, this.suggestion.content());
-			this.textViewer.setSelectedRange(offset + length, 0);
-			AiCoderHistoryView.get().ifPresent(view -> {
-				view.setLatestAccepted();
-			});
+			executeThenAbort(() -> { // prevent early abort by document change
+				final IDocument document = this.textViewer.getDocument();
+				final int offset = this.suggestion.modelOffset();
+				final int length = this.suggestion.originalLength();
+				document.replace(offset, length, this.suggestion.content());
+				this.textViewer.setSelectedRange(offset + length, 0);
+				AiCoderHistoryView.get().ifPresent(view -> {
+					view.setLatestAccepted();
+				});
+			}, "Accepted");
 		} catch (final BadLocationException exception) {
 			throw new RuntimeException("Failed to accept suggestion", exception);
 		}
