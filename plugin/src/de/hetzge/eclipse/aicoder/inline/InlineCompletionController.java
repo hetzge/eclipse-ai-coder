@@ -2,7 +2,6 @@ package de.hetzge.eclipse.aicoder.inline;
 
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -65,6 +64,8 @@ import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils.Runnable_WithExceptions;
 import de.hetzge.eclipse.aicoder.util.Utils;
 
+// TODO spacing bug while completion is open
+
 public final class InlineCompletionController {
 
 	private static final Map<ITextViewer, InlineCompletionController> CONTROLLER_BY_VIEWER;
@@ -97,7 +98,7 @@ public final class InlineCompletionController {
 	private final PainterImplementation painter;
 	private final ISelectionChangedListener selectionListener;
 	private final CaretListener caretListener;
-	private List<InlineCompletion> completions;
+	private InlineCompletion completion;
 	private IContextActivation context;
 	private Job job;
 	private long changeCounter;
@@ -118,7 +119,7 @@ public final class InlineCompletionController {
 		this.painter = new PainterImplementation();
 		this.selectionListener = new SelectionListenerImplementation();
 		this.caretListener = new CaretListenerImplementation();
-		this.completions = new ArrayList<>();
+		this.completion = null;
 		this.context = null;
 		this.job = null;
 		this.changeCounter = 0;
@@ -337,7 +338,7 @@ public final class InlineCompletionController {
 
 	private void setup(InlineCompletion completion) {
 		AiCoderActivator.log().info("Activate context (completion)");
-		this.completions = new ArrayList<>(List.of(completion));
+		this.completion = completion;
 		setupContext();
 		redraw();
 	}
@@ -346,17 +347,10 @@ public final class InlineCompletionController {
 		AiCoderActivator.log().info("Activate context (content)");
 		this.suggestion = suggestion;
 		setupContext();
+		redraw();
 		Display.getDefault().syncExec(() -> {
-			this.textViewer.getTextWidget().redraw(); // windows needs this
-			final Runnable acceptListener = () -> {
-				accept();
-			};
-			final Runnable rejectListener = () -> {
-				abort("Dismiss");
-				AiCoderHistoryView.get().ifPresent(view -> {
-					view.setLatestRejected();
-				});
-			};
+			final Runnable acceptListener = () -> accept();
+			final Runnable rejectListener = () -> abort("Dismiss");
 			this.suggestionPopupDialog = new SuggestionPopupDialog(this.textViewer, suggestion, acceptListener, rejectListener);
 			this.suggestionPopupDialog.open();
 			unsetSelection();
@@ -369,10 +363,11 @@ public final class InlineCompletionController {
 		});
 	}
 
-	public boolean abort(String reason) {
+	public void abort(String reason) {
 		if (this.abortDisabled) {
-			return false;
+			return;
 		}
+		boolean aborted = false;
 		if (this.suggestionPopupDialog != null) {
 			AiCoderActivator.log().info(String.format("Close suggestion popup dialog (reason: '%s')", reason));
 			this.suggestionPopupDialog.close();
@@ -382,8 +377,7 @@ public final class InlineCompletionController {
 		if (this.suggestion != null) {
 			AiCoderActivator.log().info(String.format("Unset suggestion (reason: '%s')", reason));
 			this.suggestion = null;
-			this.paintListener.resetMetrics();
-			redraw();
+			aborted = true;
 		}
 		if (this.job != null) {
 			AiCoderActivator.log().info(String.format("Abort job (reason: '%s')", reason));
@@ -395,23 +389,29 @@ public final class InlineCompletionController {
 			EclipseUtils.getContextService(this.textEditor).deactivateContext(this.context);
 			this.context = null;
 		}
-		if (!this.completions.isEmpty()) {
+		if (this.completion != null) {
 			AiCoderActivator.log().info(String.format("Unset completions (reason: '%s')", reason));
-			this.completions.clear();
-			this.paintListener.resetMetrics();
-			redraw();
-			return true;
+			this.completion = null;
+			aborted = true;
 		}
 		if (this.historyEntry != null) {
 			AiCoderActivator.log().info(String.format("Unset history entry (reason: '%s')", reason));
 			this.historyEntry = null;
 		}
-		return false;
+		if (aborted) {
+			this.paintListener.resetMetrics();
+			this.textEditor.setFocus();
+//			redraw();
+			AiCoderHistoryView.get().ifPresent(view -> {
+				view.setLatestRejected();
+			});
+		}
 	}
 
 	private void redraw() {
 		Display.getDefault().syncExec(() -> {
-			this.textViewer.getTextWidget().redraw(); // windows needs this
+			// windows needs this ?! (TODO investigate if this is still needed, or if possible to only redraw affected lines)
+			this.textViewer.getTextWidget().redraw();
 		});
 	}
 
@@ -447,21 +447,16 @@ public final class InlineCompletionController {
 	}
 
 	private void acceptInlineCompletion() {
-		if (this.completions.isEmpty()) {
+		if (this.completion == null) {
 			return;
 		}
 		try {
 			executeThenAbort(() -> { // prevent early abort by document change
 				final IDocument document = this.textViewer.getDocument();
-				int offset = 0;
-				// TODO do as one replace/change?! is this possible?
-				for (final InlineCompletion completion : this.completions) {
-					final int replaceOffset = completion.modelRegion().getOffset() + offset;
-					final int replaceLength = completion.modelRegion().getLength();
-					document.replace(replaceOffset, replaceLength, completion.content());
-					offset += (completion.content().length() - completion.modelRegion().getLength());
-					this.textViewer.setSelectedRange(completion.modelRegion().getOffset() + completion.content().length(), 0);
-				}
+				final int replaceOffset = this.completion.modelRegion().getOffset();
+				final int replaceLength = this.completion.modelRegion().getLength();
+				document.replace(replaceOffset, replaceLength, this.completion.content());
+				this.textViewer.setSelectedRange(this.completion.modelRegion().getOffset() + this.completion.content().length(), 0);
 				AiCoderHistoryView.get().ifPresent(view -> {
 					view.setLatestAccepted();
 				});
@@ -534,11 +529,9 @@ public final class InlineCompletionController {
 	private class StyledTextLineSpacingProviderImplementation implements StyledTextLineSpacingProvider {
 		@Override
 		public Integer getLineSpacing(int lineIndex) {
-			final List<InlineCompletion> completions = InlineCompletionController.this.completions;
-			for (final InlineCompletion completion : completions) {
-				if (completion.widgetLineIndex() == lineIndex) {
-					return completion.lineSpacing();
-				}
+			final InlineCompletion completion = InlineCompletionController.this.completion;
+			if (completion != null && completion.widgetLineIndex() == lineIndex) {
+				return completion.lineSpacing();
 			}
 			final Suggestion suggestion = InlineCompletionController.this.suggestion;
 			if (suggestion != null && suggestion.widgetLastLine() == lineIndex) {
@@ -559,7 +552,8 @@ public final class InlineCompletionController {
 		public void paintControl(PaintEvent event) {
 			final StyledText widget = InlineCompletionController.this.textViewer.getTextWidget();
 			final Font font = widget.getFont();
-			for (final InlineCompletion completion : InlineCompletionController.this.completions) {
+			final InlineCompletion completion = InlineCompletionController.this.completion;
+			if (completion != null) {
 				final Point location = widget.getLocationAtOffset(completion.widgetOffset());
 				final List<String> lines = completion.content().lines().toList();
 				event.gc.setBackground(new Color(200, 255, 200));

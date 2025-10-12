@@ -121,6 +121,7 @@ public class InstructionSelector extends Composite {
 			updateApplyButton();
 		});
 		this.llmSelector.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.TOP).grab(true, false).create());
+		updateApplyButton();
 		refreshTable();
 		updateLayout();
 	}

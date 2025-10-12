@@ -165,10 +165,7 @@ public final class SuggestionPopupDialog extends PopupDialog {
 	private static Point calculateLocation(ITextViewer parentTextViewer, int modelOffset) {
 		final int widgetOffset = EclipseUtils.getWidgetOffset(parentTextViewer, modelOffset);
 		final Point location = parentTextViewer.getTextWidget().getLocationAtOffset(widgetOffset);
-		// border offset
-		location.x -= 2;
-		location.y -= 2;
-		return parentTextViewer.getTextWidget().toDisplay(location);
+		return parentTextViewer.getTextWidget().toDisplay(new Point(location.x - 2, location.y - 2)); // -2 border offset
 	}
 
 	private final class PaintListenerImplementation implements PaintListener {
