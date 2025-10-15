@@ -185,19 +185,23 @@ public class EclipseUtils {
 		return JavadocContentAccess2.getHTMLContent(element, true);
 	}
 
-	public static IDocument getDocumentForEditor(Object input) {
-		return syncCall(() -> {
-			if (input instanceof IEditorInput) {
-				final IEditorPart editor = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().findEditor((IEditorInput) input);
-				if (editor instanceof ITextEditor) {
-					final ITextViewer viewer = getTextViewer((ITextEditor) editor);
-					if (viewer != null) {
-						return viewer.getDocument();
-					}
-				}
-			}
-			return null;
-		});
+	public static Optional<IDocument> getDocumentForEditor(Object input) {
+		if (!(input instanceof IEditorInput)) {
+			return Optional.empty();
+		}
+		return syncCall(() -> getActiveWorkbenchPage()
+				.map(page -> page.findEditor((IEditorInput) input))
+				.filter(ITextEditor.class::isInstance)
+				.map(ITextEditor.class::cast)
+				.map(EclipseUtils::getTextViewer)
+				.map(ITextViewer::getDocument));
+	}
+
+	public static Optional<IFile> getFileForEditor(Object input) {
+		return Optional.ofNullable(input)
+				.filter(IFileEditorInput.class::isInstance)
+				.map(IFileEditorInput.class::cast)
+				.map(IFileEditorInput::getFile);
 	}
 
 	public static IProject getProject(IEditorInput input) {

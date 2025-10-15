@@ -5,7 +5,10 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.Region;
 
+import de.hetzge.eclipse.aicoder.history.AiCoderHistoryEntry;
+
 public record InlineCompletion(
+		AiCoderHistoryEntry historyEntry,
 		int widgetLineIndex,
 		IRegion modelRegion,
 		int widgetOffset,
@@ -36,7 +39,7 @@ public record InlineCompletion(
 				""".formatted(this.widgetLineIndex, this.modelRegion, this.widgetOffset, this.firstLineContent, this.content, this.firstLineSuffixCharacter, this.lineSpacing, this.lineHeight);
 	}
 
-	public static InlineCompletion create(IDocument document, int modelOffset, int widgetOffset, int widgetLine, String content, int lineHeight, int defaultLineSpacing) throws BadLocationException {
+	public static InlineCompletion create(AiCoderHistoryEntry historyEntry, IDocument document, int modelOffset, int widgetOffset, int widgetLine, String content, int lineHeight, int defaultLineSpacing) throws BadLocationException {
 		final int line = document.getLineOfOffset(modelOffset);
 		final int nextLine = line + 1;
 		final int lineSuffixLength;
@@ -55,6 +58,6 @@ public record InlineCompletion(
 		}
 		final int lineSpacing = (int) (defaultLineSpacing + (content.lines().count() - 1) * lineHeight);
 		final Region modelRegion = new Region(modelOffset, contentContainsLineSuffix ? lineSuffix.length() : 0);
-		return new InlineCompletion(widgetLine, modelRegion, widgetOffset, firstLineContent, content, firstLineSuffixCharacter, lineSpacing, lineHeight);
+		return new InlineCompletion(historyEntry, widgetLine, modelRegion, widgetOffset, firstLineContent, content, firstLineSuffixCharacter, lineSpacing, lineHeight);
 	}
 }

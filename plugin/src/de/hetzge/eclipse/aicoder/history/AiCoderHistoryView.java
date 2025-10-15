@@ -25,6 +25,7 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.part.ViewPart;
 
 import de.hetzge.eclipse.aicoder.ContentPreviewDialog;
+import de.hetzge.eclipse.aicoder.util.DiffUtils;
 
 public class AiCoderHistoryView extends ViewPart {
 
@@ -101,7 +102,7 @@ public class AiCoderHistoryView extends ViewPart {
 			final Action diffAction = new Action("Diff") {
 				@Override
 				public void run() {
-					LocalHistoryDiffOpener.openDiff(entry);
+					DiffUtils.openDiff(entry.getContent(), entry.getPreviousContent());
 				}
 			};
 			diffAction.setEnabled(entry.getContent() != null && entry.getPreviousContent() != null);
@@ -142,25 +143,13 @@ public class AiCoderHistoryView extends ViewPart {
 			if (this.historyEntries.size() > 100) { // TODO max preference
 				this.historyEntries.removeLast();
 			}
-			this.viewer.refresh();
+			refresh();
 		} else {
 			this.viewer.update(entry, null);
 		}
 	}
 
-	public void setLatestAccepted() {
-		if (this.historyEntries.isEmpty()) {
-			return;
-		}
-		this.historyEntries.get(0).setStatus("Accepted");
-		this.viewer.refresh();
-	}
-
-	public void setLatestRejected() {
-		if (this.historyEntries.isEmpty()) {
-			return;
-		}
-		this.historyEntries.get(0).setStatus("Rejected");
+	public void refresh() {
 		this.viewer.refresh();
 	}
 
@@ -321,7 +310,7 @@ public class AiCoderHistoryView extends ViewPart {
 			@Override
 			public String getText(Object element) {
 				final AiCoderHistoryEntry entry = (AiCoderHistoryEntry) element;
-				return entry.getStatus();
+				return entry.getStatus().name();
 			}
 		});
 	}

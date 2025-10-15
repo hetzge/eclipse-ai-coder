@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.CoreException;
@@ -79,7 +78,7 @@ public class LastEditsContextEntry extends ContextEntry {
 				if (offset < 0) {
 					continue;
 				}
-				final IDocument document = Display.getDefault().syncCall(() -> EclipseUtils.getDocumentForEditor(input));
+				final IDocument document = Display.getDefault().syncCall(() -> EclipseUtils.getDocumentForEditor(input)).orElse(null);
 				if (document == null) {
 					continue;
 				}
@@ -103,8 +102,8 @@ public class LastEditsContextEntry extends ContextEntry {
 	private static boolean isNearCurrentEditLocation(IEditorInput input) throws BadLocationException {
 		return EclipseUtils.getActiveEditor().stream().anyMatch(editor -> Objects.equals(editor.getEditorInput(), input)) && EclipseUtils.getActiveTextEditor().map(LambdaExceptionUtils.rethrowFunction(editor -> {
 			final int currentOffset = EclipseUtils.getCurrentOffsetInDocument(editor);
-			final int currentLine = Optional.ofNullable(EclipseUtils.getDocumentForEditor(editor.getEditorInput())).map(LambdaExceptionUtils.rethrowFunction(document -> document.getLineOfOffset(currentOffset))).orElse(0);
-			final int line = Optional.ofNullable(EclipseUtils.getDocumentForEditor(input)).map(LambdaExceptionUtils.rethrowFunction(document -> document.getLineOfOffset(currentOffset))).orElse(0);
+			final int currentLine = EclipseUtils.getDocumentForEditor(editor.getEditorInput()).map(LambdaExceptionUtils.rethrowFunction(document -> document.getLineOfOffset(currentOffset))).orElse(0);
+			final int line = EclipseUtils.getDocumentForEditor(input).map(LambdaExceptionUtils.rethrowFunction(document -> document.getLineOfOffset(currentOffset))).orElse(0);
 			return Math.abs(line - currentLine) < CONTEXT_PADDING_LINE_COUNT + 2;
 		})).orElse(false);
 	}

@@ -57,6 +57,7 @@ import de.hetzge.eclipse.aicoder.context.FillInMiddleContextEntry;
 import de.hetzge.eclipse.aicoder.context.RootContextEntry;
 import de.hetzge.eclipse.aicoder.history.AiCoderHistoryEntry;
 import de.hetzge.eclipse.aicoder.history.AiCoderHistoryView;
+import de.hetzge.eclipse.aicoder.history.HistoryStatus;
 import de.hetzge.eclipse.aicoder.llm.LlmPromptTemplates;
 import de.hetzge.eclipse.aicoder.llm.LlmResponse;
 import de.hetzge.eclipse.aicoder.llm.LlmUtils;
@@ -121,7 +122,6 @@ public final class InlineCompletionController {
 	private boolean abortDisabled;
 	private SuggestionPopupDialog suggestionPopupDialog;
 	private Suggestion suggestion;
-	private AiCoderHistoryEntry historyEntry;
 
 	private InlineCompletionController(ITextViewer textViewer, ITextEditor textEditor) {
 		this.textViewer = textViewer;
@@ -142,7 +142,6 @@ public final class InlineCompletionController {
 		this.abortDisabled = false;
 		this.suggestionPopupDialog = null;
 		this.suggestion = null;
-		this.historyEntry = null;
 	}
 
 	private void triggerAutocomplete() {
@@ -177,11 +176,10 @@ public final class InlineCompletionController {
 						? CompletionMode.INLINE
 						: CompletionMode.GENERATE;
 		final AiCoderHistoryEntry historyEntry = new AiCoderHistoryEntry(mode, filePath, this.textViewer.getDocument().get());
-		this.historyEntry = historyEntry;
-		updateHistoryEntry(historyEntry);
 		this.job = Job.create("AI completion", monitor -> {
 			String prompt = "";
 			try {
+				updateHistoryEntry(historyEntry);
 				final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
 				final IDocument document = this.textViewer.getDocument();
 				final RootContextEntry rootContextEntry = RootContextEntry.create(document, this.textEditor.getEditorInput(), modelOffset);
@@ -210,7 +208,7 @@ public final class InlineCompletionController {
 					throw new IllegalStateException("Unknown completion mode: " + mode);
 				}
 				if (llmResponse.isError()) {
-					historyEntry.setStatus("Error");
+					historyEntry.setStatus(HistoryStatus.ERROR);
 					historyEntry.setPlainLlmResponse(llmResponse.getPlainResponse());
 					historyEntry.setModelLabel(llmResponse.getLlmModelOption().getLabel());
 					historyEntry.setInput(prompt);
@@ -227,7 +225,7 @@ public final class InlineCompletionController {
 						? false
 						: isMultilineContent && suffix.replaceAll("\\s", "").startsWith(content.replaceAll("\\s", ""));
 				if (monitor.isCanceled()) {
-					historyEntry.setStatus("Aborted");
+					historyEntry.setStatus(HistoryStatus.CANCELED);
 					updateHistoryEntry(historyEntry);
 					return;
 				}
@@ -236,6 +234,7 @@ public final class InlineCompletionController {
 						final int newLineCount = (int) content.lines().count();
 						final int oldLineCount = (int) selectionText.lines().count();
 						setup(new Suggestion(
+								historyEntry,
 								content,
 								modelOffset,
 								selectionText.length(),
@@ -263,6 +262,7 @@ public final class InlineCompletionController {
 						}
 
 						setup(InlineCompletion.create(
+								historyEntry,
 								document,
 								modelOffset,
 								EclipseUtils.getWidgetOffset(this.textViewer, modelOffset),
@@ -289,7 +289,7 @@ public final class InlineCompletionController {
 				AiCoderActivator.log().error("AI Coder completion failed", exception);
 				final long duration = System.currentTimeMillis() - startTime;
 				final String stacktrace = Utils.getStacktraceString(exception);
-				historyEntry.setStatus("Error: " + Optional.ofNullable(exception.getMessage()).orElse("-"));
+				historyEntry.setStatus(HistoryStatus.ERROR);
 				historyEntry.setDurationMs(duration);
 				historyEntry.setLlmDurationMs(0);
 				historyEntry.setPlainLlmResponse(stacktrace);
@@ -305,15 +305,15 @@ public final class InlineCompletionController {
 		this.job.schedule();
 	}
 
-	private String calculateStatus(boolean isBlank, boolean isMoved, boolean isSame) {
+	private HistoryStatus calculateStatus(boolean isBlank, boolean isMoved, boolean isSame) {
 		if (isMoved) {
-			return "Moved";
+			return HistoryStatus.MOVED;
 		} else if (isBlank) {
-			return "Blank";
+			return HistoryStatus.BLANK;
 		} else if (isSame) {
-			return "Same";
+			return HistoryStatus.EQUAL;
 		} else {
-			return "Generated";
+			return HistoryStatus.GENERATED;
 		}
 	}
 
@@ -373,7 +373,7 @@ public final class InlineCompletionController {
 		setupContext();
 		redraw();
 		Display.getDefault().syncExec(() -> {
-			this.suggestionPopupDialog = new SuggestionPopupDialog(this.textViewer, suggestion);
+			this.suggestionPopupDialog = new SuggestionPopupDialog(this.textViewer, suggestion, EclipseUtils.getFileForEditor(this.textEditor.getEditorInput()).orElse(null));
 			this.suggestionPopupDialog.open();
 			this.suggestionPopupDialog.getShell().addDisposeListener(event -> {
 				final int returnCode = InlineCompletionController.this.suggestionPopupDialog.getReturnCode();
@@ -398,17 +398,11 @@ public final class InlineCompletionController {
 		if (this.abortDisabled) {
 			return;
 		}
-		boolean aborted = false;
 		if (this.suggestionPopupDialog != null) {
 			AiCoderActivator.log().info(String.format("Close suggestion popup dialog (reason: '%s')", reason));
 			this.suggestionPopupDialog.close();
 			this.suggestionPopupDialog = null;
 			this.textEditor.setFocus();
-		}
-		if (this.suggestion != null) {
-			AiCoderActivator.log().info(String.format("Unset suggestion (reason: '%s')", reason));
-			this.suggestion = null;
-			aborted = true;
 		}
 		if (this.job != null) {
 			AiCoderActivator.log().info(String.format("Abort job (reason: '%s')", reason));
@@ -420,22 +414,19 @@ public final class InlineCompletionController {
 			EclipseUtils.getContextService(this.textEditor).deactivateContext(this.context);
 			this.context = null;
 		}
+		if (this.suggestion != null) {
+			AiCoderActivator.log().info(String.format("Unset suggestion (reason: '%s')", reason));
+			this.suggestion.historyEntry().setStatus(HistoryStatus.REJECTED);
+			this.suggestion = null;
+			AiCoderHistoryView.get().ifPresent(AiCoderHistoryView::refresh);
+			this.paintListener.resetMetrics();
+		}
 		if (this.completion != null) {
 			AiCoderActivator.log().info(String.format("Unset completions (reason: '%s')", reason));
+			this.completion.historyEntry().setStatus(HistoryStatus.REJECTED);
 			this.completion = null;
-			aborted = true;
-		}
-		if (this.historyEntry != null) {
-			AiCoderActivator.log().info(String.format("Unset history entry (reason: '%s')", reason));
-			this.historyEntry = null;
-		}
-		if (aborted) {
-			AiCoderActivator.log().info("Redraw");
+			AiCoderHistoryView.get().ifPresent(AiCoderHistoryView::refresh);
 			this.paintListener.resetMetrics();
-			// redraw();
-			AiCoderHistoryView.get().ifPresent(view -> {
-				view.setLatestRejected();
-			});
 		}
 	}
 
@@ -458,7 +449,6 @@ public final class InlineCompletionController {
 
 	public void accept() {
 		// Store in variable because accept trigger abort
-		final AiCoderHistoryEntry historyEntry = this.historyEntry;
 		acceptInlineCompletion();
 		acceptSuggestion();
 		if (AiCoderPreferences.isCleanupCodeOnApplyEnabled()) {
@@ -473,7 +463,6 @@ public final class InlineCompletionController {
 				}
 			}
 		}
-		historyEntry.setContent(this.textViewer.getDocument().get());
 	}
 
 	private void acceptInlineCompletion() {
@@ -487,9 +476,9 @@ public final class InlineCompletionController {
 				final int replaceLength = this.completion.modelRegion().getLength();
 				document.replace(replaceOffset, replaceLength, this.completion.content());
 				this.textViewer.setSelectedRange(this.completion.modelRegion().getOffset() + this.completion.content().length(), 0);
-				AiCoderHistoryView.get().ifPresent(view -> {
-					view.setLatestAccepted();
-				});
+				this.completion.historyEntry().setStatus(HistoryStatus.ACCEPTED);
+				this.completion.historyEntry().setContent(this.textViewer.getDocument().get());
+				AiCoderHistoryView.get().ifPresent(AiCoderHistoryView::refresh);
 			}, "Accepted");
 		} catch (final BadLocationException exception) {
 			throw new RuntimeException("Failed to accept inline completion", exception);
@@ -507,9 +496,9 @@ public final class InlineCompletionController {
 				final int length = this.suggestion.originalLength();
 				document.replace(offset, length, this.suggestion.content());
 				this.textViewer.setSelectedRange(offset + length, 0);
-				AiCoderHistoryView.get().ifPresent(view -> {
-					view.setLatestAccepted();
-				});
+				this.suggestion.historyEntry().setStatus(HistoryStatus.ACCEPTED);
+				this.suggestion.historyEntry().setContent(this.textViewer.getDocument().get());
+				AiCoderHistoryView.get().ifPresent(AiCoderHistoryView::refresh);
 			}, "Accepted");
 		} catch (final BadLocationException exception) {
 			throw new RuntimeException("Failed to accept suggestion", exception);
@@ -566,8 +555,9 @@ public final class InlineCompletionController {
 				return completion.lineSpacing();
 			}
 			final Suggestion suggestion = InlineCompletionController.this.suggestion;
-			if (suggestion != null && suggestion.widgetLastLine() == lineIndex) {
-				return (suggestion.additionalLines() + 2) * InlineCompletionController.this.widget.getLineHeight(); // +2 for the buttons
+			final SuggestionPopupDialog suggestionPopupDialog = InlineCompletionController.this.suggestionPopupDialog;
+			if (suggestionPopupDialog != null && suggestion != null && suggestion.widgetLastLine() == lineIndex) {
+				return (suggestionPopupDialog.getLineCount() - suggestion.oldLines() + 2) * InlineCompletionController.this.widget.getLineHeight(); // +2 for the buttons
 			}
 			return null;
 		}

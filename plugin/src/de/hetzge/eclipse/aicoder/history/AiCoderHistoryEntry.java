@@ -9,7 +9,7 @@ public class AiCoderHistoryEntry {
 	private final String file;
 	private final CompletionMode mode;
 	private String modelLabel;
-	private String status;
+	private HistoryStatus status;
 	// Input stats
 	private String input;
 	private int inputCharacterCount;
@@ -35,6 +35,7 @@ public class AiCoderHistoryEntry {
 		this.timestamp = LocalDateTime.now();
 		this.file = file;
 		this.previousContent = previousContent;
+		this.status = HistoryStatus.STARTED;
 	}
 
 	public CompletionMode getMode() {
@@ -49,11 +50,11 @@ public class AiCoderHistoryEntry {
 		this.modelLabel = modelLabel;
 	}
 
-	public String getStatus() {
+	public HistoryStatus getStatus() {
 		return this.status;
 	}
 
-	public void setStatus(String status) {
+	public void setStatus(HistoryStatus status) {
 		this.status = status;
 	}
 

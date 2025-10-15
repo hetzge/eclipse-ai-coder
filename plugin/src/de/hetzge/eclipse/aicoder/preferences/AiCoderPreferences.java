@@ -6,6 +6,7 @@ import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
 import org.eclipse.jface.preference.IPreferenceStore;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.inline.DiffMode;
 import de.hetzge.eclipse.aicoder.llm.LlmOption;
 import de.hetzge.eclipse.aicoder.llm.LlmProvider;
 import mjson.Json;
@@ -30,6 +31,7 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String DEBOUNCE_IN_MS_KEY = "de.hetzge.eclipse.aicoder.debounce_in_ms";
 	public static final String MCP_SERVER_CONFIGURATIONS_KEY = "de.hetzge.eclipse.aicoder.mcp.server_configurations";
 	public static final String CLEANUP_CODE_ON_APPLY_KEY = "de.hetzge.eclipse.aicoder.cleanup_code_on_apply";
+	public static final String DIFF_MODE_KEY = "de.hetzge.eclipse.aicoder.diff_mode";
 
 	@Override
 	public void initializeDefaultPreferences() {
@@ -52,6 +54,7 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(DEBOUNCE_IN_MS_KEY, 400);
 		store.setDefault(MCP_SERVER_CONFIGURATIONS_KEY, "{}");
 		store.setDefault(CLEANUP_CODE_ON_APPLY_KEY, true);
+		store.setDefault(DIFF_MODE_KEY, DiffMode.LINE.name());
 	}
 
 	public static String getCodestralApiKey() {
@@ -145,5 +148,13 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 
 	public static boolean isCleanupCodeOnApplyEnabled() {
 		return getStore().getBoolean(CLEANUP_CODE_ON_APPLY_KEY);
+	}
+
+	public static DiffMode getDiffMode() {
+		return DiffMode.valueOf(getStore().getString(DIFF_MODE_KEY));
+	}
+
+	public static void setDiffMode(DiffMode diffMode) {
+		getStore().setValue(DIFF_MODE_KEY, diffMode.name());
 	}
 }
