@@ -72,6 +72,70 @@ public class LlmPreferencePage extends FieldEditorPreferencePage implements IWor
 			}
 		}));
 
+		final Group quickFixModelGroup = new Group(getFieldEditorParent(), SWT.NONE);
+		quickFixModelGroup.setText("Quick fix LLM");
+		quickFixModelGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
+		final ComboFieldEditor quickFixProviderEditor = new ComboFieldEditor(
+				AiCoderPreferences.QUICK_FIX_PROVIDER_KEY,
+				"Provider:",
+				getProviderEntryNamesAndValues(),
+				quickFixModelGroup);
+		quickFixProviderEditor.getLabelControl(quickFixModelGroup).setLayoutData(GridDataFactory.fillDefaults().hint(LABEL_WIDTH, SWT.DEFAULT).create());
+		addField(quickFixProviderEditor);
+		final StringFieldEditor quickFixModelEditor = new StringFieldEditor(
+				AiCoderPreferences.QUICK_FIX_MODEL_KEY,
+				"Model:",
+				quickFixModelGroup);
+		quickFixModelEditor.getLabelControl(quickFixModelGroup).setLayoutData(GridDataFactory.fillDefaults().hint(LABEL_WIDTH, SWT.DEFAULT).create());
+		addField(quickFixModelEditor);
+		final Button quickFixModelButton = new Button(quickFixModelGroup, SWT.PUSH);
+		quickFixModelButton.setText("Select LLM...");
+		quickFixModelButton.setLayoutData(new GridData(SWT.END, SWT.CENTER, true, false, 2, 1));
+		quickFixModelButton.addSelectionListener(SelectionListener.widgetSelectedAdapter(event -> {
+			final LlmSelectorDialog dialog = new LlmSelectorDialog(getShell());
+			if (dialog.open() == Dialog.OK) {
+				final Optional<LlmOption> optionOptional = dialog.getResultOption();
+				if (optionOptional.isEmpty()) {
+					return;
+				}
+				final LlmOption llmOption = optionOptional.get();
+				setComboProvider(quickFixModelGroup, quickFixProviderEditor, llmOption);
+				quickFixModelEditor.setStringValue(llmOption.modelKey());
+			}
+		}));
+
+		final Group generateModelGroup = new Group(getFieldEditorParent(), SWT.NONE);
+		generateModelGroup.setText("Generate LLM");
+		generateModelGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
+		final ComboFieldEditor generateProviderEditor = new ComboFieldEditor(
+				AiCoderPreferences.GENERATE_PROVIDER_KEY,
+				"Provider:",
+				getProviderEntryNamesAndValues(),
+				generateModelGroup);
+		generateProviderEditor.getLabelControl(generateModelGroup).setLayoutData(GridDataFactory.fillDefaults().hint(LABEL_WIDTH, SWT.DEFAULT).create());
+		addField(generateProviderEditor);
+		final StringFieldEditor generateModelEditor = new StringFieldEditor(
+				AiCoderPreferences.GENERATE_MODEL_KEY,
+				"Model:",
+				generateModelGroup);
+		generateModelEditor.getLabelControl(generateModelGroup).setLayoutData(GridDataFactory.fillDefaults().hint(LABEL_WIDTH, SWT.DEFAULT).create());
+		addField(generateModelEditor);
+		final Button generateModelButton = new Button(generateModelGroup, SWT.PUSH);
+		generateModelButton.setText("Select LLM...");
+		generateModelButton.setLayoutData(new GridData(SWT.END, SWT.CENTER, true, false, 2, 1));
+		generateModelButton.addSelectionListener(SelectionListener.widgetSelectedAdapter(event -> {
+			final LlmSelectorDialog dialog = new LlmSelectorDialog(getShell());
+			if (dialog.open() == Dialog.OK) {
+				final Optional<LlmOption> optionOptional = dialog.getResultOption();
+				if (optionOptional.isEmpty()) {
+					return;
+				}
+				final LlmOption llmOption = optionOptional.get();
+				setComboProvider(generateModelGroup, generateProviderEditor, llmOption);
+				generateModelEditor.setStringValue(llmOption.modelKey());
+			}
+		}));
+
 		final Group editModelGroup = new Group(getFieldEditorParent(), SWT.NONE);
 		editModelGroup.setText("Edit LLM");
 		editModelGroup.setLayout(new GridLayout(1, false));

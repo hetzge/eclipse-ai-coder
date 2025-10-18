@@ -8,6 +8,7 @@ import org.eclipse.jface.preference.IPreferenceStore;
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.inline.DiffMode;
 import de.hetzge.eclipse.aicoder.llm.LlmOption;
+import de.hetzge.eclipse.aicoder.llm.LlmPromptTemplates;
 import de.hetzge.eclipse.aicoder.llm.LlmProvider;
 import mjson.Json;
 
@@ -19,6 +20,11 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String OPENAI_API_KEY_KEY = "de.hetzge.eclipse.aicoder.openai_api_key";
 	public static final String FILL_IN_MIDDLE_PROVIDER_KEY = "de.hetzge.eclipse.aicoder.fill_in_middle_provider";
 	public static final String FILL_IN_MIDDLE_MODEL_KEY = "de.hetzge.eclipse.aicoder.fill_in_middle_model";
+	public static final String QUICK_FIX_PROVIDER_KEY = "de.hetzge.eclipse.aicoder.quick_fix_provider";
+	public static final String QUICK_FIX_MODEL_KEY = "de.hetzge.eclipse.aicoder.quick_fix_model";
+	public static final String QUICK_FIX_PROMPT_KEY = "de.hetzge.eclipse.aicoder.quick_fix_prompt";
+	public static final String GENERATE_PROVIDER_KEY = "de.hetzge.eclipse.aicoder.generate_provider";
+	public static final String GENERATE_MODEL_KEY = "de.hetzge.eclipse.aicoder.generate_model";
 	public static final String EDIT_PROVIDER_KEY = "de.hetzge.eclipse.aicoder.edit_provider";
 	public static final String EDIT_MODEL_KEY = "de.hetzge.eclipse.aicoder.edit_model";
 	public static final String ENABLE_MULTILINE_KEY = "de.hetzge.eclipse.aicoder.enable_multiline";
@@ -32,6 +38,8 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String MCP_SERVER_CONFIGURATIONS_KEY = "de.hetzge.eclipse.aicoder.mcp.server_configurations";
 	public static final String CLEANUP_CODE_ON_APPLY_KEY = "de.hetzge.eclipse.aicoder.cleanup_code_on_apply";
 	public static final String DIFF_MODE_KEY = "de.hetzge.eclipse.aicoder.diff_mode";
+	public static final String CHANGE_CODE_SYSTEM_PROMPT_KEY = "de.hetzge.eclipse.aicoder.change_code_system_prompt";
+	public static final String GENERATE_CODE_SYSTEM_PROMPT_KEY = "de.hetzge.eclipse.aicoder.generate_code_system_prompt";
 
 	@Override
 	public void initializeDefaultPreferences() {
@@ -42,6 +50,11 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(OPENAI_API_KEY_KEY, "");
 		store.setDefault(FILL_IN_MIDDLE_PROVIDER_KEY, LlmProvider.NONE.name());
 		store.setDefault(FILL_IN_MIDDLE_MODEL_KEY, "");
+		store.setDefault(QUICK_FIX_PROVIDER_KEY, LlmProvider.NONE.name());
+		store.setDefault(QUICK_FIX_MODEL_KEY, "");
+		store.setDefault(QUICK_FIX_PROMPT_KEY, "Fix/complete the code");
+		store.setDefault(GENERATE_PROVIDER_KEY, LlmProvider.NONE.name());
+		store.setDefault(GENERATE_MODEL_KEY, "");
 		store.setDefault(EDIT_PROVIDER_KEY, LlmProvider.NONE.name());
 		store.setDefault(EDIT_MODEL_KEY, "");
 		store.setDefault(ENABLE_MULTILINE_KEY, true);
@@ -55,6 +68,8 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(MCP_SERVER_CONFIGURATIONS_KEY, "{}");
 		store.setDefault(CLEANUP_CODE_ON_APPLY_KEY, true);
 		store.setDefault(DIFF_MODE_KEY, DiffMode.LINE.name());
+		store.setDefault(CHANGE_CODE_SYSTEM_PROMPT_KEY, LlmPromptTemplates.changeCodeSystemPrompt());
+		store.setDefault(GENERATE_CODE_SYSTEM_PROMPT_KEY, LlmPromptTemplates.generateCodeSystemPrompt());
 	}
 
 	public static String getCodestralApiKey() {
@@ -79,6 +94,22 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 
 	public static String getFillInMiddleModel() {
 		return getStore().getString(FILL_IN_MIDDLE_MODEL_KEY);
+	}
+
+	public static LlmProvider getQuickFixProvider() {
+		return LlmProvider.valueOf(getStore().getString(QUICK_FIX_PROVIDER_KEY));
+	}
+
+	public static String getQuickFixModel() {
+		return getStore().getString(QUICK_FIX_MODEL_KEY);
+	}
+
+	public static LlmProvider getGenerateProvider() {
+		return LlmProvider.valueOf(getStore().getString(GENERATE_PROVIDER_KEY));
+	}
+
+	public static String getGenerateModel() {
+		return getStore().getString(GENERATE_MODEL_KEY);
 	}
 
 	public static LlmProvider getEditProvider() {
@@ -157,4 +188,17 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static void setDiffMode(DiffMode diffMode) {
 		getStore().setValue(DIFF_MODE_KEY, diffMode.name());
 	}
+
+	public static String getQuickFixPrompt() {
+		return getStore().getString(QUICK_FIX_PROMPT_KEY);
+	}
+
+	public static String getChangeCodeSystemPrompt() {
+		return getStore().getString(CHANGE_CODE_SYSTEM_PROMPT_KEY);
+	}
+
+	public static String getGenerateCodeSystemPrompt() {
+		return getStore().getString(GENERATE_CODE_SYSTEM_PROMPT_KEY);
+	}
+
 }

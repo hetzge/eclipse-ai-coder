@@ -1,6 +1,9 @@
 package de.hetzge.eclipse.aicoder;
 
 import org.eclipse.core.runtime.ILog;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.swt.graphics.Image;
@@ -60,6 +63,10 @@ public class AiCoderActivator extends AbstractUIPlugin {
 
 	public static ILog log() {
 		return getDefault().getLog();
+	}
+
+	public static void openErrorDialog(String title, String message, Throwable throwable) {
+		ErrorDialog.openError(null, title, null, new Status(IStatus.ERROR, AiCoderActivator.PLUGIN_ID, message, throwable));
 	}
 
 }

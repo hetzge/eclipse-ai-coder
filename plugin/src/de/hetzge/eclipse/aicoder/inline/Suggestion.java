@@ -1,5 +1,8 @@
 package de.hetzge.eclipse.aicoder.inline;
 
+import org.eclipse.jface.text.BadLocationException;
+import org.eclipse.jface.text.IDocument;
+
 import de.hetzge.eclipse.aicoder.history.AiCoderHistoryEntry;
 
 public record Suggestion(
@@ -12,9 +15,9 @@ public record Suggestion(
 		int oldLines,
 		int additionalLines) {
 
-	public String applyTo(final String content) {
-		final String prefix = content.substring(0, this.modelOffset);
-		final String suffix = content.substring(this.modelOffset + this.originalLength);
-		return prefix + this.content + suffix;
+	public void applyTo(final IDocument document) throws BadLocationException {
+		final int offset = this.modelOffset();
+		final int length = this.originalLength();
+		document.replace(offset, length, this.content());
 	}
 }

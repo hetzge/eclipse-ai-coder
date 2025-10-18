@@ -21,7 +21,9 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.ltk.core.refactoring,
  org.eclipse.compare,
  org.eclipse.compare.core,
- wrapped.de.hetzge.eclipse.aicoder.dependencies
+ wrapped.de.hetzge.eclipse.aicoder.dependencies,
+ org.junit,
+ junit-jupiter-api;resolution:=optional
 Bundle-RequiredExecutionEnvironment: JavaSE-21
 Automatic-Module-Name: codestral.eclipse
 Bundle-ActivationPolicy: lazy

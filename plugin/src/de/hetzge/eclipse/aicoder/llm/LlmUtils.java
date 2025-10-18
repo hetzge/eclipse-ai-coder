@@ -23,6 +23,14 @@ public final class LlmUtils {
 		return execute(LlmOption.createEditModelOptionFromPreferences(), systemPrompt, prompt, null);
 	}
 
+	public static LlmResponse executeEdit(String systemPrompt, String prompt) throws IOException {
+		return execute(LlmOption.createEditModelOptionFromPreferences(), systemPrompt, prompt, null);
+	}
+
+	public static LlmResponse executeQuickFix(String systemPrompt, String prompt) throws IOException {
+		return execute(LlmOption.createQuickFixModelOptionFromPreferences(), systemPrompt, prompt, null);
+	}
+
 	public static LlmResponse executeFillInTheMiddle(String prefix, String suffix) throws IOException {
 		return execute(LlmOption.createFillInMiddleModelOptionFromPreferences(), null, prefix, suffix);
 	}
@@ -60,7 +68,7 @@ public final class LlmUtils {
 			json.set("suffix", suffix);
 			json.at("options")
 					.set("num_predict", AiCoderPreferences.getMaxTokens())
-					.set("stop", Json.array().add(multilineEnabled ? "\n\n" : "\n"));
+					.set("stop", createStop(multilineEnabled));
 		}
 		final URL url = URI.create(urlString).resolve("/api/generate").toURL();
 		final long beforeTimestamp = System.currentTimeMillis();
@@ -99,7 +107,7 @@ public final class LlmUtils {
 			json.set("prompt", prompt)
 					.set("suffix", suffix)
 					.set("max_tokens", AiCoderPreferences.getMaxTokens())
-					.set("stop", Json.array().add(multilineEnabled ? "\n\n" : "\n"));
+					.set("stop", createStop(multilineEnabled));
 		} else {
 			final Json messagesJson = Json.array();
 			if (systemPrompt != null) {
@@ -112,7 +120,7 @@ public final class LlmUtils {
 					.set("content", prompt));
 			json.set("messages", messagesJson);
 		}
-		final String path = suffix != null ? "/v1/fim/completions" : "/v1/chat/completions";
+		final String path = isFillInTheMiddle ? "/v1/fim/completions" : "/v1/chat/completions";
 		final URL url = URI.create(urlString).resolve(path).toURL();
 		final long beforeTimestamp = System.currentTimeMillis();
 		final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -183,5 +191,11 @@ public final class LlmUtils {
 			final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
 			return new LlmResponse(llmModelOption, "", responseBody, 0, 0, duration, true);
 		}
+	}
+
+	private static Json createStop(final boolean multilineEnabled) {
+		return Json.array()
+				.add(multilineEnabled ? "\n\n" : "\n")
+				.add(multilineEnabled ? "\r\n\r\n" : "\r\n");
 	}
 }

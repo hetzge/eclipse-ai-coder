@@ -17,4 +17,12 @@ public record LlmOption(
 	public static LlmOption createEditModelOptionFromPreferences() {
 		return new LlmOption(AiCoderPreferences.getEditProvider(), AiCoderPreferences.getEditModel());
 	}
+
+	public static LlmOption createGenerateModelOptionFromPreferences() {
+		return new LlmOption(AiCoderPreferences.getGenerateProvider(), AiCoderPreferences.getGenerateModel());
+	}
+
+	public static LlmOption createQuickFixModelOptionFromPreferences() {
+		return new LlmOption(AiCoderPreferences.getQuickFixProvider(), AiCoderPreferences.getQuickFixModel());
+	}
 }

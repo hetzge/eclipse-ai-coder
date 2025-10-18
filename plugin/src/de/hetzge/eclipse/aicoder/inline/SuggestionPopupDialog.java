@@ -2,9 +2,10 @@ package de.hetzge.eclipse.aicoder.inline;
 
 import java.util.Objects;
 
-import org.eclipse.core.resources.IFile;
 import org.eclipse.jface.dialogs.PopupDialog;
 import org.eclipse.jface.layout.GridDataFactory;
+import org.eclipse.jface.text.BadLocationException;
+import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
@@ -37,15 +38,13 @@ public final class SuggestionPopupDialog extends PopupDialog {
 
 	private final ITextViewer parentTextViewer;
 	private final Suggestion suggestion;
-	private final IFile file;
 	private SuggestionStyledTextViewer styledTextViewer;
 	private ToolItem acceptItem;
 
-	public SuggestionPopupDialog(ITextViewer parentTextViewer, Suggestion suggestion, IFile file) {
+	public SuggestionPopupDialog(ITextViewer parentTextViewer, Suggestion suggestion) {
 		super(parentTextViewer.getTextWidget().getShell(), SWT.ON_TOP, true, false, false, false, false, null, null);
 		this.parentTextViewer = parentTextViewer;
 		this.suggestion = suggestion;
-		this.file = file;
 	}
 
 	@Override
@@ -96,8 +95,15 @@ public final class SuggestionPopupDialog extends PopupDialog {
 		mergeItem.setText("Merge");
 		mergeItem.setImage(AiCoderActivator.getImage(AiCoderImageKey.RUN_ICON));
 		mergeItem.addSelectionListener(SelectionListener.widgetSelectedAdapter(event -> {
-			final String content = this.parentTextViewer.getDocument().get();
-			DiffUtils.openDiff(this.file, this.suggestion.applyTo(content));
+			try {
+				final String content = this.parentTextViewer.getDocument().get();
+				final Document document = new Document(content);
+				this.suggestion.applyTo(document);
+				DiffUtils.openDiff(this.parentTextViewer, document.get()); // TODO refresh editor after apply?!
+			} catch (final BadLocationException exception) {
+				AiCoderActivator.log().error("Failed to open diff", exception);
+				AiCoderActivator.openErrorDialog("Failed to open diff", "Failed to open diff", exception);
+			}
 		}));
 		leftToolBar.pack();
 

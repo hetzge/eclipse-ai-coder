@@ -180,6 +180,12 @@
            id="de.hetzge.eclipse.aicoder.preferences.llm"
            name="LLM">
      </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences"
+           class="de.hetzge.eclipse.aicoder.preferences.PromptsPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.prompts"
+           name="Prompts">
+     </page>
   </extension> 
  <extension
        point="org.eclipse.core.runtime.preferences">

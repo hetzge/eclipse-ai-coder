@@ -5,11 +5,9 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.OperationCanceledException;
@@ -22,7 +20,6 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IDocumentListener;
 import org.eclipse.jface.text.IPaintPositionManager;
 import org.eclipse.jface.text.IPainter;
-import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.ITextViewerExtension2;
@@ -154,7 +151,7 @@ public final class InlineCompletionController {
 			return;
 		}
 		this.debouncer.debounce(() -> {
-			if (!EclipseUtils.hasSelection(this.textViewer) && isAutocompleteAllowed()) {
+			if (!EclipseUtils.hasSelection(this.textViewer)) {
 				trigger(null);
 			}
 		});
@@ -170,11 +167,20 @@ public final class InlineCompletionController {
 		final IEditorInput editorInput = this.textEditor.getEditorInput();
 		final String filePath = editorInput.getName();
 		final boolean hasSelection = EclipseUtils.hasSelection(this.textViewer);
-		final CompletionMode mode = hasSelection
-				? CompletionMode.EDIT
-				: instruction == null
-						? CompletionMode.INLINE
-						: CompletionMode.GENERATE;
+		CompletionMode mode;
+		if (hasSelection) {
+			if (instruction == null) {
+				mode = CompletionMode.QUICK_FIX;
+			} else {
+				mode = CompletionMode.EDIT;
+			}
+		} else {
+			if (instruction == null) {
+				mode = CompletionMode.INLINE;
+			} else {
+				mode = CompletionMode.GENERATE;
+			}
+		}
 		final AiCoderHistoryEntry historyEntry = new AiCoderHistoryEntry(mode, filePath, this.textViewer.getDocument().get());
 		this.job = Job.create("AI completion", monitor -> {
 			String prompt = "";
@@ -191,16 +197,22 @@ public final class InlineCompletionController {
 				final String suffix = contextParts.length > 1 ? contextParts[1] : "";
 				final String selectionText = EclipseUtils.getSelectionText(this.textViewer);
 				LlmResponse llmResponse = null;
-				if (mode == CompletionMode.EDIT || mode == CompletionMode.GENERATE) {
+				if (mode == CompletionMode.EDIT || mode == CompletionMode.GENERATE || mode == CompletionMode.QUICK_FIX) {
 					final String fileType = EclipseUtils.getFileExtension(this.textEditor.getEditorInput());
 					final String systemPrompt = hasSelection
-							? LlmPromptTemplates.changeCodeSystemPrompt()
-							: LlmPromptTemplates.generateCodeSystemPrompt();
-					final String effectiveInstruction = instruction != null ? instruction : "Fix/complete the code";
+							? AiCoderPreferences.getChangeCodeSystemPrompt()
+							: AiCoderPreferences.getGenerateCodeSystemPrompt();
+					final String effectiveInstruction = instruction != null ? instruction : AiCoderPreferences.getQuickFixModel();
 					prompt = hasSelection
 							? LlmPromptTemplates.changeCodePrompt(fileType, selectionText, effectiveInstruction, prefix, suffix)
 							: LlmPromptTemplates.generateCodePrompt(effectiveInstruction, prefix, suffix);
-					llmResponse = LlmUtils.executeGenerate(systemPrompt, prompt);
+					if (mode == CompletionMode.EDIT) {
+						llmResponse = LlmUtils.executeEdit(systemPrompt, prompt);
+					} else if (mode == CompletionMode.QUICK_FIX) {
+						llmResponse = LlmUtils.executeGenerate(systemPrompt, prompt);
+					} else {
+						llmResponse = LlmUtils.executeGenerate(systemPrompt, prompt);
+					}
 				} else if (mode == CompletionMode.INLINE) {
 					prompt = prefix + "<!!!>" + suffix;
 					llmResponse = LlmUtils.executeFillInTheMiddle(prefix, suffix);
@@ -216,7 +228,7 @@ public final class InlineCompletionController {
 					updateHistoryEntry(historyEntry);
 					return;
 				}
-				String content = Utils.stripCodeMarkdownTags(llmResponse.getContent());
+				final String content = Utils.stripCodeMarkdownTags(llmResponse.getContent());
 				final int currentModelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
 				final boolean isMultilineContent = content.contains("\n");
 				final boolean isBlank = content.isBlank();
@@ -230,7 +242,7 @@ public final class InlineCompletionController {
 					return;
 				}
 				if (!isBlank && !isMoved && !isSame) {
-					if (mode == CompletionMode.EDIT) {
+					if (mode == CompletionMode.EDIT || mode == CompletionMode.QUICK_FIX) {
 						final int newLineCount = (int) content.lines().count();
 						final int oldLineCount = (int) selectionText.lines().count();
 						setup(new Suggestion(
@@ -243,24 +255,6 @@ public final class InlineCompletionController {
 								oldLineCount,
 								Math.max(newLineCount - oldLineCount, 0)));
 					} else if (mode == CompletionMode.INLINE || mode == CompletionMode.GENERATE) {
-						// TODO validate if this is working
-						if (isMultilineContent) {
-							final long lineCount = content.lines().count();
-							final List<String> contentLines = content.lines().limit(lineCount).toList();
-							final List<String> suffixLines = suffix.lines().limit(lineCount).toList();
-							if (contentLines.size() == suffixLines.size()) {
-								for (int i = 0; i < lineCount; i++) {
-									final String contentLine = contentLines.get((int) (lineCount - 1 - i)).replaceAll("\\s", " ");
-									final String suffixLine = suffixLines.get((int) (lineCount - 1 - i)).replaceAll("\\s", " ");
-									if (!Objects.equals(contentLine, suffixLine)) {
-										AiCoderActivator.log().info(String.format("Remove %d equal suffix lines", i));
-										content = content.lines().limit(lineCount - i).collect(Collectors.joining("\n"));
-										break;
-									}
-								}
-							}
-						}
-
 						setup(InlineCompletion.create(
 								historyEntry,
 								document,
@@ -322,32 +316,6 @@ public final class InlineCompletionController {
 		Display.getDefault().syncExec(() -> InlineCompletionController.this.textViewer.setSelectedRange(selectionOffset, 0));
 	}
 
-	private boolean isAutocompleteAllowed() {
-		try {
-			final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
-			final IDocument document = InlineCompletionController.this.textViewer.getDocument();
-			if (modelOffset > 0 && modelOffset < document.getLength()) {
-				if (document.getChar(modelOffset - 1) == '"' && document.getChar(modelOffset) == '"') {
-					return true;
-				}
-				if (document.getChar(modelOffset - 1) == '(' && document.getChar(modelOffset) == ')') {
-					return true;
-				}
-				if (document.getChar(modelOffset - 1) == '[' && document.getChar(modelOffset) == ']') {
-					return true;
-				}
-				if (document.getChar(modelOffset - 1) == '{' && document.getChar(modelOffset) == '}') {
-					return true;
-				}
-			}
-			final IRegion lineRegion = document.getLineInformationOfOffset(modelOffset);
-			final String lineString = document.get(lineRegion.getOffset(), lineRegion.getLength());
-			return lineString.substring(modelOffset - lineRegion.getOffset()).replace(";", "").replace(")", "").replace("{", "").replace("{", "").isBlank();
-		} catch (final BadLocationException exception) {
-			throw new RuntimeException("Failed to check if line suffix is blank", exception);
-		}
-	}
-
 	private void updateContextView(RootContextEntry rootContextEntry) {
 		Display.getDefault().syncExec(() -> {
 			try {
@@ -373,7 +341,7 @@ public final class InlineCompletionController {
 		setupContext();
 		redraw();
 		Display.getDefault().syncExec(() -> {
-			this.suggestionPopupDialog = new SuggestionPopupDialog(this.textViewer, suggestion, EclipseUtils.getFileForEditor(this.textEditor.getEditorInput()).orElse(null));
+			this.suggestionPopupDialog = new SuggestionPopupDialog(this.textViewer, suggestion);
 			this.suggestionPopupDialog.open();
 			this.suggestionPopupDialog.getShell().addDisposeListener(event -> {
 				final int returnCode = InlineCompletionController.this.suggestionPopupDialog.getReturnCode();
@@ -448,9 +416,12 @@ public final class InlineCompletionController {
 	}
 
 	public void accept() {
-		// Store in variable because accept trigger abort
-		acceptInlineCompletion();
-		acceptSuggestion();
+		if (this.completion != null) {
+			acceptInlineCompletion();
+		}
+		if (this.suggestion != null) {
+			acceptSuggestion();
+		}
 		if (AiCoderPreferences.isCleanupCodeOnApplyEnabled()) {
 			AiCoderActivator.log().info("Trigger code cleanup on apply");
 			final Optional<ICompilationUnit> compilationUnitOptional = EclipseUtils.getCompilationUnit(this.textEditor.getEditorInput());
@@ -466,15 +437,9 @@ public final class InlineCompletionController {
 	}
 
 	private void acceptInlineCompletion() {
-		if (this.completion == null) {
-			return;
-		}
 		try {
 			executeThenAbort(() -> { // prevent early abort by document change
-				final IDocument document = this.textViewer.getDocument();
-				final int replaceOffset = this.completion.modelRegion().getOffset();
-				final int replaceLength = this.completion.modelRegion().getLength();
-				document.replace(replaceOffset, replaceLength, this.completion.content());
+				this.completion.applyTo(this.textViewer.getDocument());
 				this.textViewer.setSelectedRange(this.completion.modelRegion().getOffset() + this.completion.content().length(), 0);
 				this.completion.historyEntry().setStatus(HistoryStatus.ACCEPTED);
 				this.completion.historyEntry().setContent(this.textViewer.getDocument().get());
@@ -486,16 +451,10 @@ public final class InlineCompletionController {
 	}
 
 	private void acceptSuggestion() {
-		if (this.suggestion == null) {
-			return;
-		}
 		try {
 			executeThenAbort(() -> { // prevent early abort by document change
-				final IDocument document = this.textViewer.getDocument();
-				final int offset = this.suggestion.modelOffset();
-				final int length = this.suggestion.originalLength();
-				document.replace(offset, length, this.suggestion.content());
-				this.textViewer.setSelectedRange(offset + length, 0);
+				this.suggestion.applyTo(this.textViewer.getDocument());
+				this.textViewer.setSelectedRange(this.suggestion.modelOffset() + this.suggestion.content().length(), 0);
 				this.suggestion.historyEntry().setStatus(HistoryStatus.ACCEPTED);
 				this.suggestion.historyEntry().setContent(this.textViewer.getDocument().get());
 				AiCoderHistoryView.get().ifPresent(AiCoderHistoryView::refresh);
