@@ -209,7 +209,7 @@ public final class InlineCompletionController {
 					if (mode == CompletionMode.EDIT) {
 						llmResponse = LlmUtils.executeEdit(systemPrompt, prompt);
 					} else if (mode == CompletionMode.QUICK_FIX) {
-						llmResponse = LlmUtils.executeGenerate(systemPrompt, prompt);
+						llmResponse = LlmUtils.executeQuickFix(systemPrompt, prompt);
 					} else {
 						llmResponse = LlmUtils.executeGenerate(systemPrompt, prompt);
 					}
