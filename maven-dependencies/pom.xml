@@ -5,6 +5,7 @@
 	<groupId>de.hetzge.eclipse.aicoder</groupId>
 	<artifactId>dependencies</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
+	<packaging>bundle</packaging>
 	<dependencies>
 		<dependency>
 			<groupId>com.networknt</groupId>
@@ -58,18 +59,18 @@
 					<groupId>com.fasterxml.jackson.core</groupId>
 					<artifactId>jackson-core</artifactId>
 				</exclusion>
-				<exclusion>
-					<groupId>com.fasterxml.jackson.datatype</groupId>
-					<artifactId>jackson-datatype-jdk8</artifactId>
-				</exclusion>
+<!--				<exclusion>-->
+<!--					<groupId>com.fasterxml.jackson.datatype</groupId>-->
+<!--					<artifactId>jackson-datatype-jdk8</artifactId>-->
+<!--				</exclusion>-->
 				<exclusion>
 					<groupId>com.fasterxml.jackson.core</groupId>
 					<artifactId>jackson-databind</artifactId>
 				</exclusion>
-				<exclusion>
-					<groupId>com.fasterxml.jackson.dataformat</groupId>
-					<artifactId>jackson-dataformat-yaml</artifactId>
-				</exclusion>
+<!--				<exclusion>-->
+<!--					<groupId>com.fasterxml.jackson.dataformat</groupId>-->
+<!--					<artifactId>jackson-dataformat-yaml</artifactId>-->
+<!--				</exclusion>-->
 				<exclusion>
 					<groupId>com.fasterxml.jackson.core</groupId>
 					<artifactId>jackson-annotations</artifactId>
@@ -78,24 +79,45 @@
 		</dependency>
 	</dependencies>
 	<build>
+		<finalName>${project.artifactId}</finalName>
 		<plugins>
 			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-assembly-plugin</artifactId>
-				<version>3.7.1</version>
+				<groupId>org.apache.felix</groupId>
+				<artifactId>maven-bundle-plugin</artifactId>
+				<version>6.0.0</version>
+				<extensions>true</extensions>
 				<configuration>
-					<descriptorRefs>
-						<descriptorRef>jar-with-dependencies</descriptorRef>
-					</descriptorRefs>
-					<appendAssemblyId>false</appendAssemblyId>
+					<instructions>
+						<Export-Package>*</Export-Package>
+						<Embed-Dependency>*;scope=compile|runtime;inline=true</Embed-Dependency>
+						<Embed-StripGroup>true</Embed-StripGroup>
+						<Embed-Transitive>true</Embed-Transitive>
+						<Import-Package></Import-Package>
+					</instructions>
 				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>3.3.0</version>
 				<executions>
 					<execution>
-						<id>assemble-all</id>
+						<id>copy-jar-to-sibling</id>
 						<phase>package</phase>
 						<goals>
-							<goal>single</goal>
+							<goal>copy-resources</goal>
 						</goals>
+						<configuration>
+							<outputDirectory>../plugin/lib</outputDirectory>
+							<resources>
+								<resource>
+									<directory>${project.build.directory}</directory>
+									<includes>
+										<include>${project.artifactId}.jar</include>
+									</includes>
+								</resource>
+							</resources>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>

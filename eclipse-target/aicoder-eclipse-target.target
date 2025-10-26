@@ -6,15 +6,5 @@
 			<repository location="https://download.eclipse.org/releases/2024-12/202412041000/"/>
 			<unit id="org.eclipse.sdk.feature.group" version="4.34.0.v20241120-1800"/>
 		</location>
-		<location includeDependencyDepth="none" includeSource="true" missingManifest="generate" type="Maven">
-			<dependencies>
-				<dependency>
-					<groupId>de.hetzge.eclipse.aicoder</groupId>
-					<artifactId>dependencies</artifactId>
-					<version>0.0.1-SNAPSHOT</version>
-					<type>jar</type>
-				</dependency>
-			</dependencies>
-		</location>
 	</locations>
 </target>
