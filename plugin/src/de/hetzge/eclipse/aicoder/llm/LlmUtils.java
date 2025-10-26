@@ -5,6 +5,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.time.Duration;
+import java.util.Map;
 
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -12,6 +13,7 @@ import org.eclipse.core.runtime.Status;
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.util.HttpUtils;
+import de.hetzge.eclipse.aicoder.util.JinjaUtils;
 import mjson.Json;
 
 public final class LlmUtils {
@@ -148,26 +150,32 @@ public final class LlmUtils {
 	}
 
 	private static LlmResponse executeOpenAi(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
-		if (suffix != null) {
-			throw new IllegalStateException("Fill-in-the-middle is not supported by OpenAI");
-		}
+		final boolean isFillInTheMiddle = suffix != null;
 		final String urlString = AiCoderPreferences.getOpenAiBaseUrl();
 		final String openAiApiKey = AiCoderPreferences.getOpenAiApiKey();
 		final Json json = Json.object()
 				.set("model", llmModelOption.modelKey())
 				.set("temperature", 0);
-		final Json messagesJson = Json.array();
-		if (systemPrompt != null) {
+		if (!isFillInTheMiddle) {
+			final Json messagesJson = Json.array();
+			if (systemPrompt != null) {
+				messagesJson.add(Json.object()
+						.set("role", "system")
+						.set("content", systemPrompt));
+			}
 			messagesJson.add(Json.object()
-					.set("role", "system")
-					.set("content", systemPrompt));
+					.set("role", "user")
+					.set("content", prompt));
+			json.set("messages", messagesJson);
+		} else {
+			final String fimPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getOpenAiFimTemplate(), Map.ofEntries(
+					Map.entry("prefix", prompt),
+					Map.entry("suffix", suffix)));
+			json.set("prompt", fimPrompt)
+					.set("max_tokens", AiCoderPreferences.getMaxTokens());
 		}
-		messagesJson.add(Json.object()
-				.set("role", "user")
-				.set("content", prompt));
-		json.set("messages", messagesJson);
 
-		final URL url = URI.create(urlString + "/").resolve("./v1/chat/completions").toURL();
+		final URL url = URI.create(urlString + "/").resolve(isFillInTheMiddle ? "./v1/completions" : "./v1/chat/completions").toURL();
 		final long beforeTimestamp = System.currentTimeMillis();
 		final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 		connection.setRequestMethod("POST");
@@ -181,7 +189,9 @@ public final class LlmUtils {
 			final String responseBody = HttpUtils.readResponseBody(connection);
 			final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
 			final Json responseJson = Json.read(responseBody);
-			final String content = responseJson.at("choices").at(0).at("message").at("content").asString();
+			final String content = isFillInTheMiddle
+					? responseJson.at("choices").at(0).at("text").asString()
+					: responseJson.at("choices").at(0).at("message").at("content").asString();
 			final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 			final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
 			return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration, false);

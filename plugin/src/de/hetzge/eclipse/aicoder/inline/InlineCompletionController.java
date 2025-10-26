@@ -65,6 +65,7 @@ import de.hetzge.eclipse.aicoder.util.Utils;
 
 // TODO spacing bug while completion is open
 // TODO overlay moves while scrolling bug
+// TODO regenerate button in inline suggestion
 
 public final class InlineCompletionController {
 

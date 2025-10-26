@@ -40,6 +40,7 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String DIFF_MODE_KEY = "de.hetzge.eclipse.aicoder.diff_mode";
 	public static final String CHANGE_CODE_SYSTEM_PROMPT_KEY = "de.hetzge.eclipse.aicoder.change_code_system_prompt";
 	public static final String GENERATE_CODE_SYSTEM_PROMPT_KEY = "de.hetzge.eclipse.aicoder.generate_code_system_prompt";
+	public static final String OPENAI_FIM_TEMPLATE_KEY = "de.hetzge.eclipse.aicoder.openai_fim_template";
 
 	@Override
 	public void initializeDefaultPreferences() {
@@ -70,6 +71,7 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(DIFF_MODE_KEY, DiffMode.LINE.name());
 		store.setDefault(CHANGE_CODE_SYSTEM_PROMPT_KEY, LlmPromptTemplates.changeCodeSystemPrompt());
 		store.setDefault(GENERATE_CODE_SYSTEM_PROMPT_KEY, LlmPromptTemplates.generateCodeSystemPrompt());
+		store.setDefault(OPENAI_FIM_TEMPLATE_KEY, "<|fim_prefix|>{{prefix}}<|fim_suffix|>{{suffix}}<|fim_middle|>");
 	}
 
 	public static String getCodestralApiKey() {
@@ -199,6 +201,10 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 
 	public static String getGenerateCodeSystemPrompt() {
 		return getStore().getString(GENERATE_CODE_SYSTEM_PROMPT_KEY);
+	}
+
+	public static String getOpenAiFimTemplate() {
+		return getStore().getString(OPENAI_FIM_TEMPLATE_KEY);
 	}
 
 }
