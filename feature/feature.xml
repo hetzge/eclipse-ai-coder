@@ -20,8 +20,4 @@
          id="de.hetzge.eclipse.aicoder"
          version="0.0.0"/>
 
-   <plugin
-         id="wrapped.de.hetzge.eclipse.aicoder.dependencies"
-         version="0.0.0"/>
-
 </feature>
