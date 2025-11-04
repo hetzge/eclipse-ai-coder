@@ -203,7 +203,7 @@ public final class InlineCompletionController {
 					final String systemPrompt = hasSelection
 							? AiCoderPreferences.getChangeCodeSystemPrompt()
 							: AiCoderPreferences.getGenerateCodeSystemPrompt();
-					final String effectiveInstruction = instruction != null ? instruction : AiCoderPreferences.getQuickFixModel();
+					final String effectiveInstruction = instruction != null ? instruction : AiCoderPreferences.getQuickFixPrompt();
 					prompt = hasSelection
 							? LlmPromptTemplates.changeCodePrompt(fileType, selectionText, effectiveInstruction, prefix, suffix)
 							: LlmPromptTemplates.generateCodePrompt(effectiveInstruction, prefix, suffix);
