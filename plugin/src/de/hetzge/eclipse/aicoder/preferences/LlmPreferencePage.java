@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.layout.GridDataFactory;
+import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.StringFieldEditor;
@@ -71,6 +72,11 @@ public class LlmPreferencePage extends FieldEditorPreferencePage implements IWor
 				fillInMiddleModelEditor.setStringValue(llmOption.modelKey());
 			}
 		}));
+		// Pseudo FIM
+		addField(new BooleanFieldEditor(
+				AiCoderPreferences.ENABLE_PSEUDO_FIM_KEY,
+				"Enable Pseudo FIM",
+				fillInMiddleModelGroup));
 
 		final Group quickFixModelGroup = new Group(getFieldEditorParent(), SWT.NONE);
 		quickFixModelGroup.setText("Quick fix LLM");

@@ -24,5 +24,6 @@ public class PromptsPreferencePage extends FieldEditorPreferencePage implements 
 		addField(new StringFieldEditor(AiCoderPreferences.QUICK_FIX_PROMPT_KEY, "Quick fix prompt", StringFieldEditor.UNLIMITED, 7, StringFieldEditor.VALIDATE_ON_KEY_STROKE, getFieldEditorParent()));
 		addField(new StringFieldEditor(AiCoderPreferences.CHANGE_CODE_SYSTEM_PROMPT_KEY, "Change code system prompt", StringFieldEditor.UNLIMITED, 7, StringFieldEditor.VALIDATE_ON_KEY_STROKE, getFieldEditorParent()));
 		addField(new StringFieldEditor(AiCoderPreferences.GENERATE_CODE_SYSTEM_PROMPT_KEY, "Generate code system prompt", StringFieldEditor.UNLIMITED, 7, StringFieldEditor.VALIDATE_ON_KEY_STROKE, getFieldEditorParent()));
+		addField(new StringFieldEditor(AiCoderPreferences.PSEUDO_FIM_SYSTEM_PROMPT_KEY, "Pseduo FIM system prompt", StringFieldEditor.UNLIMITED, 7, StringFieldEditor.VALIDATE_ON_KEY_STROKE, getFieldEditorParent()));
 	}
 }
