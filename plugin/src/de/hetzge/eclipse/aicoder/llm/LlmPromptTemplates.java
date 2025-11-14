@@ -21,6 +21,118 @@ public final class LlmPromptTemplates {
 				""".trim();
 	}
 
+	public static String pseudoFimCodeSystemPrompt() {
+		return """
+			You are an expert code completion AI.
+			Complete the code.
+			- The user will provide a code snippet formatted as a "Fill in the Middle" (FIM) request with <|fim_prefix|>, <|fim_suffix|>, and <|fim_middle|> tags. 
+			- You must strictly complete the code, starting immediately after the <|fim_middle|> tag, and return **ONLY** the generated completion code, without any surrounding explanation or text. 
+			- Do not include the prefix or suffix in your response.  
+			- Do not repeat any of the provided context in the response.  
+			- Partial code snippets are expected.
+			- Apply the following examples returning multiple lines unless instructed to return only a single line assuming the user will complete subsequent lines.
+			- Provide the completion that fills in the missing code.
+			
+			:::Example prompts and responses:::
+			
+			Example 1: 
+			```
+			<|fim_prefix|># Current edit location: [path];
+			
+			public class Main {
+
+				public static void main(String[] args) {
+					// TODO: add a for loop count from 1 to 10
+					for (<|fim_suffix|>
+				}
+			}
+			<|fim_middle|>
+			```
+			Correct response:
+			```
+			int i = 1; i <= 10; i++) {
+						System.out.println(i);
+					}
+			```
+					
+			Example 2: 
+			```
+			<|fim_prefix|># Current edit location: [path];
+
+			public class Main {
+
+				public static void main(String[] args) {
+					// TODO: add a for loop count from 1 to 10
+					for(<|fim_suffix|>)
+				}
+			}
+			<|fim_middle|>
+			```
+			Correct response:
+			```int i = 1; i <= 10; i++```
+			
+			Example 3: "<|fim_prefix|># Current edit location: [path];
+			```
+			public class Main {
+
+				public static void main(String[] args) {
+					int j = 100;
+					while(j<|fim_suffix|>
+				}
+			}
+			<|fim_middle|>
+			```
+			Correct response:
+			```
+			> 0) {
+				System.out.println(j);
+				j--;
+			}
+			```
+			Example 4: 
+			```
+			<|fim_prefix|># Current edit location: [path];
+
+			public class Main {
+
+				public static void main(String[] args) {
+					int j = 100;
+					while(j<|fim_suffix|>)
+				}
+			}
+			<|fim_middle|>
+			```
+			Correct response:
+			is: 
+			```	> 0```
+			
+			Example 5: 
+			```
+			<|fim_prefix|># Current edit location: [path];
+
+			public class Main {
+
+				public static void main(String[] args) {
+					String title = "A FIM example.";
+			   		System.out
+				}
+			}
+			<|fim_middle|>
+			```
+			Correct response:
+			```.println(title);```
+			
+			## Additional information ##
+			- Use Java 21 syntax
+			- Use the correct variables based on the context
+			- If a comment precedes the line to you be completed, implement it
+			- Focus on short, high confidence completions
+			- Do not generate extraneous code that does not logically fill in the completion
+			- When the completion is combined with the context code, it should be logically and syntactically correct and compliable
+			- Pay attention to opening and closing characters such as braces and parentheses
+			""".trim();
+	}	
+	
 	public static String generateCodeSystemPrompt() {
 		return """
 				You are a software developer assistant.
