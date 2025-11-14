@@ -17,32 +17,14 @@ public record InlineCompletion(
 		int widgetLineIndex,
 		IRegion modelRegion,
 		int widgetOffset,
-		String firstLineContent,
-		String content,
-		/*
-		 * if the completion is not the end of the line, this contains the next letter (otherwise null)
-		 */
-		String firstLineSuffixCharacter,
+		String content, // the whole completion content
+		List<String> lines, // the completion content line by line
+		String firstLineFillPrefix,
+		String firstLineFillSuffix,
+		String firstLineSuffix, // the existing suffix of the line that is being completed
+		String firstLineSuffixCharacter, // if the completion is not the end of the line, this contains the next letter (otherwise null)
 		int lineSpacing,
 		int lineHeight) {
-
-	public String toDebugString() {
-		return """
-				=========================
-				lineIndex: %d
-				modelRegion: %s
-				widgetOffset: %d
-				firstLineContent: "%s"
-				content:
-				---
-				%s
-				---
-				firstLineSuffixCharacter: "%s"
-				lineSpacing: %d
-				lineHeight: %d
-				=========================
-				""".formatted(this.widgetLineIndex, this.modelRegion, this.widgetOffset, this.firstLineContent, this.content, this.firstLineSuffixCharacter, this.lineSpacing, this.lineHeight);
-	}
 
 	public void applyTo(final IDocument document) throws BadLocationException {
 		final int replaceOffset = this.modelRegion().getOffset();
@@ -78,19 +60,21 @@ public record InlineCompletion(
 		} else {
 			lineSuffixLength = document.getLength() - modelOffset;
 		}
-		final String lineSuffix = document.get(modelOffset, lineSuffixLength);
-		final String firstLineSuffixCharacter = !lineSuffix.isBlank() && !isMultiline ? lineSuffix.substring(0, 1) : null;
-		String firstLineContent = content.lines().findFirst().orElse("");
-		final boolean contentContainsLineSuffix = content.startsWith(lineSuffix);
-		if (contentContainsLineSuffix) {
-			content = content.substring(lineSuffixLength);
-			firstLineContent = firstLineContent.substring(Math.min(lineSuffixLength, firstLineContent.length()));
-		}
+		final String firstLineSuffix = document.get(modelOffset, lineSuffixLength);
+		final String firstLineSuffixCharacter = !firstLineSuffix.isBlank() ? firstLineSuffix.substring(0, 1) : null;
+		final String firstLineContent = content.lines().findFirst().orElse("");
+		final boolean contentContainsLineSuffix = content.startsWith(firstLineSuffix);
 		final int lineSpacing = (int) (defaultLineSpacing + (content.lines().count() - 1) * lineHeight);
-		final Region modelRegion = new Region(modelOffset, contentContainsLineSuffix || isMultiline ? lineSuffix.length() : 0);
-		if (isMultiline && !lineSuffix.isBlank()) {
-			content += lineSuffix;
+		final Region modelRegion = new Region(modelOffset, contentContainsLineSuffix || isMultiline ? firstLineSuffix.length() : 0);
+		final String firstLineFillPrefix;
+		final String firstLineFillSuffix;
+		if (!firstLineContent.isBlank() && !firstLineSuffix.isBlank() && firstLineContent.contains(firstLineSuffix)) {
+			firstLineFillPrefix = firstLineContent.substring(0, firstLineContent.indexOf(firstLineSuffix));
+			firstLineFillSuffix = firstLineContent.substring(firstLineContent.indexOf(firstLineSuffix) + firstLineSuffix.length());
+		} else {
+			firstLineFillPrefix = firstLineContent;
+			firstLineFillSuffix = "";
 		}
-		return new InlineCompletion(historyEntry, widgetLine, modelRegion, widgetOffset, firstLineContent, content, firstLineSuffixCharacter, lineSpacing, lineHeight);
+		return new InlineCompletion(historyEntry, widgetLine, modelRegion, widgetOffset, content, content.lines().toList(), firstLineFillPrefix, firstLineFillSuffix, firstLineSuffix, firstLineSuffixCharacter, lineSpacing, lineHeight);
 	}
 }

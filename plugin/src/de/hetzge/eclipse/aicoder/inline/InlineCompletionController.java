@@ -385,14 +385,18 @@ public final class InlineCompletionController {
 		}
 		if (this.suggestion != null) {
 			AiCoderActivator.log().info(String.format("Unset suggestion (reason: '%s')", reason));
-			this.suggestion.historyEntry().setStatus(HistoryStatus.REJECTED);
+			if (this.suggestion.historyEntry().getStatus() == HistoryStatus.GENERATED) {
+				this.suggestion.historyEntry().setStatus(HistoryStatus.REJECTED);
+			}
 			this.suggestion = null;
 			AiCoderHistoryView.get().ifPresent(AiCoderHistoryView::refresh);
 			this.paintListener.resetMetrics();
 		}
 		if (this.completion != null) {
 			AiCoderActivator.log().info(String.format("Unset completions (reason: '%s')", reason));
-			this.completion.historyEntry().setStatus(HistoryStatus.REJECTED);
+			if (this.completion.historyEntry().getStatus() == HistoryStatus.GENERATED) {
+				this.completion.historyEntry().setStatus(HistoryStatus.REJECTED);
+			}
 			this.completion = null;
 			AiCoderHistoryView.get().ifPresent(AiCoderHistoryView::refresh);
 			this.paintListener.resetMetrics();
@@ -537,7 +541,7 @@ public final class InlineCompletionController {
 			final InlineCompletion completion = InlineCompletionController.this.completion;
 			if (completion != null) {
 				final Point location = widget.getLocationAtOffset(completion.widgetOffset());
-				final List<String> lines = completion.content().lines().toList();
+				final List<String> lines = completion.lines();
 				event.gc.setBackground(new Color(200, 255, 200));
 				event.gc.setForeground(widget.getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
 				event.gc.setFont(font);
@@ -545,16 +549,18 @@ public final class InlineCompletionController {
 					final String line = lines.get(i);
 					if (i == 0) {
 						// first line
-						event.gc.drawText(completion.firstLineContent(), location.x, location.y, true);
+						event.gc.drawText(completion.firstLineFillPrefix(), location.x, location.y, true);
 						if (completion.firstLineSuffixCharacter() != null) {
 							final int suffixCharacterWidth = event.gc.textExtent(completion.firstLineSuffixCharacter()).x;
-							final int contentWidth = event.gc.textExtent(completion.firstLineContent()).x;
+							final int suffixWidth = event.gc.textExtent(completion.firstLineSuffix()).x;
+							final int fillPrefixWidth = event.gc.textExtent(completion.firstLineFillPrefix()).x;
 							final StyleRange styleRange = widget.getStyleRangeAtOffset(completion.widgetOffset());
-							final int metricWidth = contentWidth + suffixCharacterWidth;
+							final int metricWidth = fillPrefixWidth + suffixCharacterWidth;
 							if (needMetricUpdate(styleRange, metricWidth)) {
 								updateMetrics(event, completion, widget, metricWidth);
 							}
-							event.gc.drawText(completion.firstLineSuffixCharacter(), location.x + contentWidth, location.y, false);
+							event.gc.drawText(completion.firstLineSuffixCharacter(), location.x + fillPrefixWidth, location.y, false);
+							event.gc.drawText(completion.firstLineFillSuffix(), location.x + fillPrefixWidth + suffixWidth, location.y, true);
 						}
 					} else {
 						event.gc.drawText(line.replace("\t", " ".repeat(InlineCompletionController.this.widget.getTabs())), -widget.getHorizontalPixel(), location.y + i * completion.lineHeight(), true);
