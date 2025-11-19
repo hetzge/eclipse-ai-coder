@@ -61,10 +61,13 @@ public enum LlmModels {
 	private List<LlmOption> loadOpenAiModels() {
 		try {
 			final String openAiBaseUrl = AiCoderPreferences.getOpenAiBaseUrl();
+			String openAiApiKey = AiCoderPreferences.getOpenAiApiKey();
 			final URL url = URI.create(openAiBaseUrl + "/").resolve("./v1/models").toURL();
 			final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 			connection.setRequestMethod("GET");
+			connection.setRequestProperty("Content-Type", "application/json");
 			connection.setRequestProperty("Accept", "application/json");
+			connection.setRequestProperty("Authorization", "Bearer " + openAiApiKey);
 			final int responseCode = connection.getResponseCode();
 			if (responseCode != HttpURLConnection.HTTP_OK) {
 				AiCoderActivator.log().info("Received openai response code: " + responseCode + " -> skip openai models");
