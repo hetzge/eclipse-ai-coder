@@ -41,6 +41,12 @@ public class GeneralPreferencePage extends FieldEditorPreferencePage implements 
 				AiCoderPreferences.ENABLE_AUTOCOMPLETE_KEY,
 				"Enable autocomplete",
 				generalGroup));
+		
+		// Pseudo FIM setting
+		addField(new BooleanFieldEditor(
+				AiCoderPreferences.ENABLE_PSEUDO_FIM_KEY,
+				"Enable Pseudo FIM",
+				generalGroup));
 
 		addField(new BooleanFieldEditor(
 				AiCoderPreferences.ONLY_ON_CHANGE_AUTOCOMPLETE_KEY,

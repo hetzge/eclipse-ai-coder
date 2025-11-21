@@ -41,6 +41,8 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String CHANGE_CODE_SYSTEM_PROMPT_KEY = "de.hetzge.eclipse.aicoder.change_code_system_prompt";
 	public static final String GENERATE_CODE_SYSTEM_PROMPT_KEY = "de.hetzge.eclipse.aicoder.generate_code_system_prompt";
 	public static final String OPENAI_FIM_TEMPLATE_KEY = "de.hetzge.eclipse.aicoder.openai_fim_template";
+	public static final String ENABLE_PSEUDO_FIM_KEY = "de.hetzge.eclipse.aicoder.enable_pseduo_fim";
+	public static final String PSEUDO_FIM_SYSTEM_PROMPT_KEY = "de.hetzge.eclipse.aicoder.pseudo_fim_system_prompt";
 
 	@Override
 	public void initializeDefaultPreferences() {
@@ -72,10 +74,13 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(CHANGE_CODE_SYSTEM_PROMPT_KEY, LlmPromptTemplates.changeCodeSystemPrompt());
 		store.setDefault(GENERATE_CODE_SYSTEM_PROMPT_KEY, LlmPromptTemplates.generateCodeSystemPrompt());
 		store.setDefault(OPENAI_FIM_TEMPLATE_KEY, "<|fim_prefix|>{{prefix}}<|fim_suffix|>{{suffix}}<|fim_middle|>");
+		store.setDefault(ENABLE_PSEUDO_FIM_KEY, false);
+		store.setDefault(PSEUDO_FIM_SYSTEM_PROMPT_KEY, LlmPromptTemplates.pseudoFimCodeSystemPrompt());
 	}
 
 	public static String getCodestralApiKey() {
 		return getStore().getString(CODESTRAL_API_KEY_KEY);
+		
 	}
 
 	public static String getOllamaBaseUrl() {
@@ -202,9 +207,16 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static String getGenerateCodeSystemPrompt() {
 		return getStore().getString(GENERATE_CODE_SYSTEM_PROMPT_KEY);
 	}
-
+	
 	public static String getOpenAiFimTemplate() {
 		return getStore().getString(OPENAI_FIM_TEMPLATE_KEY);
 	}
-
+	
+	public static boolean isEnablePseduoFim() {
+		return getStore().getBoolean(ENABLE_PSEUDO_FIM_KEY);
+	}
+	
+	public static String getPseudoFimSystemPrompt() {
+		return getStore().getString(PSEUDO_FIM_SYSTEM_PROMPT_KEY);
+	}
 }
