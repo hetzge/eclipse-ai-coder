@@ -50,6 +50,7 @@ import de.hetzge.eclipse.aicoder.context.ContextContext;
 import de.hetzge.eclipse.aicoder.context.ContextEntry;
 import de.hetzge.eclipse.aicoder.context.ContextEntryKey;
 import de.hetzge.eclipse.aicoder.context.CustomContextEntry;
+import de.hetzge.eclipse.aicoder.context.CustomContextEntryData;
 import de.hetzge.eclipse.aicoder.context.EmptyContextEntry;
 import de.hetzge.eclipse.aicoder.context.UserContextEntry;
 import de.hetzge.eclipse.aicoder.handler.ToggleMultilineHandler;
@@ -133,9 +134,9 @@ public class ContextView extends ViewPart {
 					public void run() {
 						final CustomContextEntryDialog dialog = new CustomContextEntryDialog(ContextView.this.viewer.getControl().getShell(), null);
 						if (dialog.open() == Dialog.OK) {
-							final CustomContextEntry newEntry = dialog.createEntry();
-							final List<CustomContextEntry> currentEntries = ContextPreferences.getCustomContextEntries();
-							final List<CustomContextEntry> newEntries = new ArrayList<>(currentEntries);
+							final CustomContextEntryData newEntry = dialog.createEntry();
+							final List<CustomContextEntryData> currentEntries = ContextPreferences.getCustomContextEntryDatas();
+							final List<CustomContextEntryData> newEntries = new ArrayList<>(currentEntries);
 							newEntries.add(newEntry);
 							ContextPreferences.setCustomContextEntries(newEntries);
 							ContextView.this.viewer.refresh(firstEntry);
@@ -151,9 +152,9 @@ public class ContextView extends ViewPart {
 						final CustomContextEntry customEntry = (CustomContextEntry) firstEntry;
 						final CustomContextEntryDialog dialog = new CustomContextEntryDialog(ContextView.this.viewer.getControl().getShell(), customEntry);
 						if (dialog.open() == Dialog.OK) {
-							final CustomContextEntry editedEntry = dialog.createEntry();
-							final List<CustomContextEntry> currentEntries = ContextPreferences.getCustomContextEntries();
-							final List<CustomContextEntry> newEntries = new ArrayList<>(currentEntries);
+							final CustomContextEntryData editedEntry = dialog.createEntry();
+							final List<CustomContextEntryData> currentEntries = ContextPreferences.getCustomContextEntryDatas();
+							final List<CustomContextEntryData> newEntries = new ArrayList<>(currentEntries);
 							// Replace the existing entry with the edited one
 							for (int i = 0; i < newEntries.size(); i++) {
 								if (newEntries.get(i).getId().equals(editedEntry.getId())) {
@@ -174,8 +175,8 @@ public class ContextView extends ViewPart {
 					public void run() {
 						final CustomContextEntry customEntry = (CustomContextEntry) firstEntry;
 						if (MessageDialog.openConfirm(ContextView.this.viewer.getControl().getShell(), "Confirm", "Are you sure?")) {
-							final List<CustomContextEntry> currentEntries = ContextPreferences.getCustomContextEntries();
-							final List<CustomContextEntry> newEntries = currentEntries.stream().filter(it -> !Objects.equals(customEntry, it)).toList();
+							final List<CustomContextEntryData> currentDatas = ContextPreferences.getCustomContextEntryDatas();
+							final List<CustomContextEntryData> newEntries = currentDatas.stream().filter(it -> !Objects.equals(customEntry.getData(), it)).toList();
 							ContextPreferences.setCustomContextEntries(newEntries);
 							ContextView.this.viewer.refresh(firstEntry);
 						}

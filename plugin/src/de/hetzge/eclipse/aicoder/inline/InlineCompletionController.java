@@ -1,7 +1,5 @@
 package de.hetzge.eclipse.aicoder.inline;
 
-import java.awt.datatransfer.UnsupportedFlavorException;
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +64,7 @@ import de.hetzge.eclipse.aicoder.util.Utils;
 // TODO spacing bug while completion is open
 // TODO overlay moves while scrolling bug
 // TODO regenerate button in inline suggestion
+// TODO last input tokens status bar information (to keep an eye on token usage), use colors to indicate if it is too much
 
 public final class InlineCompletionController {
 
@@ -185,6 +184,7 @@ public final class InlineCompletionController {
 		final AiCoderHistoryEntry historyEntry = new AiCoderHistoryEntry(mode, filePath, this.textViewer.getDocument().get());
 		this.job = Job.create("AI completion", monitor -> {
 			String prompt = "";
+			LlmResponse llmResponse = null;
 			try {
 				updateHistoryEntry(historyEntry);
 				final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
@@ -197,7 +197,6 @@ public final class InlineCompletionController {
 				final String prefix = contextParts[0];
 				final String suffix = contextParts.length > 1 ? contextParts[1] : "";
 				final String selectionText = EclipseUtils.getSelectionText(this.textViewer);
-				LlmResponse llmResponse = null;
 				if (mode == CompletionMode.EDIT || mode == CompletionMode.GENERATE || mode == CompletionMode.QUICK_FIX) {
 					final String fileType = EclipseUtils.getFileExtension(this.textEditor.getEditorInput());
 					final String systemPrompt = hasSelection
@@ -280,19 +279,19 @@ public final class InlineCompletionController {
 				historyEntry.setInput(prompt);
 				historyEntry.setOutput(content);
 				updateHistoryEntry(historyEntry);
-			} catch (final IOException | BadLocationException | UnsupportedFlavorException exception) {
+			} catch (final Exception exception) {
 				AiCoderActivator.log().error("AI Coder completion failed", exception);
 				final long duration = System.currentTimeMillis() - startTime;
 				final String stacktrace = Utils.getStacktraceString(exception);
 				historyEntry.setStatus(HistoryStatus.ERROR);
 				historyEntry.setDurationMs(duration);
 				historyEntry.setLlmDurationMs(0);
-				historyEntry.setPlainLlmResponse(stacktrace);
+				historyEntry.setPlainLlmResponse(llmResponse != null ? llmResponse.getPlainResponse() : "");
 				historyEntry.setModelLabel(null);
 				historyEntry.setInputTokenCount(0);
 				historyEntry.setOutputTokenCount(0);
 				historyEntry.setInput(prompt);
-				historyEntry.setOutput(stacktrace);
+				historyEntry.setOutput((llmResponse != null ? llmResponse.getContent() : "") + stacktrace);
 				updateHistoryEntry(historyEntry);
 			}
 		});
@@ -385,14 +384,18 @@ public final class InlineCompletionController {
 		}
 		if (this.suggestion != null) {
 			AiCoderActivator.log().info(String.format("Unset suggestion (reason: '%s')", reason));
-			this.suggestion.historyEntry().setStatus(HistoryStatus.REJECTED);
+			if (this.suggestion.historyEntry().getStatus() == HistoryStatus.GENERATED) {
+				this.suggestion.historyEntry().setStatus(HistoryStatus.REJECTED);
+			}
 			this.suggestion = null;
 			AiCoderHistoryView.get().ifPresent(AiCoderHistoryView::refresh);
 			this.paintListener.resetMetrics();
 		}
 		if (this.completion != null) {
 			AiCoderActivator.log().info(String.format("Unset completions (reason: '%s')", reason));
-			this.completion.historyEntry().setStatus(HistoryStatus.REJECTED);
+			if (this.completion.historyEntry().getStatus() == HistoryStatus.GENERATED) {
+				this.completion.historyEntry().setStatus(HistoryStatus.REJECTED);
+			}
 			this.completion = null;
 			AiCoderHistoryView.get().ifPresent(AiCoderHistoryView::refresh);
 			this.paintListener.resetMetrics();
@@ -537,7 +540,7 @@ public final class InlineCompletionController {
 			final InlineCompletion completion = InlineCompletionController.this.completion;
 			if (completion != null) {
 				final Point location = widget.getLocationAtOffset(completion.widgetOffset());
-				final List<String> lines = completion.content().lines().toList();
+				final List<String> lines = completion.lines();
 				event.gc.setBackground(new Color(200, 255, 200));
 				event.gc.setForeground(widget.getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
 				event.gc.setFont(font);
@@ -545,16 +548,18 @@ public final class InlineCompletionController {
 					final String line = lines.get(i);
 					if (i == 0) {
 						// first line
-						event.gc.drawText(completion.firstLineContent(), location.x, location.y, true);
+						event.gc.drawText(completion.firstLineFillPrefix(), location.x, location.y, true);
 						if (completion.firstLineSuffixCharacter() != null) {
 							final int suffixCharacterWidth = event.gc.textExtent(completion.firstLineSuffixCharacter()).x;
-							final int contentWidth = event.gc.textExtent(completion.firstLineContent()).x;
+							final int suffixWidth = event.gc.textExtent(completion.firstLineSuffix()).x;
+							final int fillPrefixWidth = event.gc.textExtent(completion.firstLineFillPrefix()).x;
 							final StyleRange styleRange = widget.getStyleRangeAtOffset(completion.widgetOffset());
-							final int metricWidth = contentWidth + suffixCharacterWidth;
+							final int metricWidth = fillPrefixWidth + suffixCharacterWidth;
 							if (needMetricUpdate(styleRange, metricWidth)) {
 								updateMetrics(event, completion, widget, metricWidth);
 							}
-							event.gc.drawText(completion.firstLineSuffixCharacter(), location.x + contentWidth, location.y, false);
+							event.gc.drawText(completion.firstLineSuffixCharacter(), location.x + fillPrefixWidth, location.y, false);
+							event.gc.drawText(completion.firstLineFillSuffix(), location.x + fillPrefixWidth + suffixWidth, location.y, true);
 						}
 					} else {
 						event.gc.drawText(line.replace("\t", " ".repeat(InlineCompletionController.this.widget.getTabs())), -widget.getHorizontalPixel(), location.y + i * completion.lineHeight(), true);

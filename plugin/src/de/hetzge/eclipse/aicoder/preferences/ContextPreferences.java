@@ -14,7 +14,7 @@ import org.osgi.service.prefs.Preferences;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.context.ContextEntryKey;
-import de.hetzge.eclipse.aicoder.context.CustomContextEntry;
+import de.hetzge.eclipse.aicoder.context.CustomContextEntryData;
 import mjson.Json;
 
 public final class ContextPreferences {
@@ -26,7 +26,7 @@ public final class ContextPreferences {
 
 	private static final Set<ContextEntryKey> BLACKLIST = new HashSet<>();
 	private static final Set<ContextEntryKey> STICKYLIST = new HashSet<>();
-	private static final List<CustomContextEntry> CUSTOM_CONTEXT_ENTRIES = new ArrayList<>();
+	private static final List<CustomContextEntryData> CUSTOM_CONTEXT_ENTRY_DATAS = new ArrayList<>();
 	private static final List<ContextTypePositionItem> CONTEXT_TYPE_POSITIONS = new ArrayList<>();
 
 	static {
@@ -63,7 +63,7 @@ public final class ContextPreferences {
 
 		// Load user/custom context
 		final String userContextString = preferences.get(CUSTOM_CONTEXT_PREFERENCE_KEY, "[]");
-		CUSTOM_CONTEXT_ENTRIES.addAll(Json.read(userContextString).asJsonList().stream().map(CustomContextEntry::createFromJson).toList());
+		CUSTOM_CONTEXT_ENTRY_DATAS.addAll(Json.read(userContextString).asJsonList().stream().map(CustomContextEntryData::createFromJson).toList());
 
 		// Load context type positions
 		final String contextTypePositionsString = preferences.get(CONTEXT_TYPE_POSITIONS_PREFERENCE_KEY, "[]");
@@ -86,8 +86,8 @@ public final class ContextPreferences {
 		preferences.put(STICKYLIST_PREFERENCE_KEY, stickylistString);
 
 		// Save user/custom context
-		final String userContextString = Json.array(CUSTOM_CONTEXT_ENTRIES.stream()
-				.map(CustomContextEntry::toJson)
+		final String userContextString = Json.array(CUSTOM_CONTEXT_ENTRY_DATAS.stream()
+				.map(CustomContextEntryData::toJson)
 				.toArray()).toString();
 		preferences.put(CUSTOM_CONTEXT_PREFERENCE_KEY, userContextString);
 
@@ -140,13 +140,13 @@ public final class ContextPreferences {
 		return new HashSet<>(STICKYLIST);
 	}
 
-	public static List<CustomContextEntry> getCustomContextEntries() {
-		return CUSTOM_CONTEXT_ENTRIES;
+	public static List<CustomContextEntryData> getCustomContextEntryDatas() {
+		return CUSTOM_CONTEXT_ENTRY_DATAS;
 	}
 
-	public static void setCustomContextEntries(List<CustomContextEntry> newEntries) {
-		CUSTOM_CONTEXT_ENTRIES.clear();
-		CUSTOM_CONTEXT_ENTRIES.addAll(newEntries);
+	public static void setCustomContextEntries(List<CustomContextEntryData> datas) {
+		CUSTOM_CONTEXT_ENTRY_DATAS.clear();
+		CUSTOM_CONTEXT_ENTRY_DATAS.addAll(datas);
 		savePreferences();
 	}
 

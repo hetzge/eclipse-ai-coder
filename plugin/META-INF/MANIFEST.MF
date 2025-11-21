@@ -23,7 +23,9 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.compare,
  org.eclipse.compare.core,
  org.junit,
- junit-jupiter-api;resolution:=optional
+ junit-jupiter-api;resolution:=optional,
+ org.eclipse.egit.core,
+ org.eclipse.jgit
 Bundle-RequiredExecutionEnvironment: JavaSE-21
 Automatic-Module-Name: codestral.eclipse
 Bundle-ActivationPolicy: lazy

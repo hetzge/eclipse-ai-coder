@@ -1,5 +1,6 @@
 package de.hetzge.eclipse.aicoder.context;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 
@@ -22,18 +23,15 @@ public class UserContextEntry extends ContextEntry {
 		return "Custom";
 	}
 
-	@Override
-	public String getContent(ContextContext context) {
-		return super.getContent(context) + "\n";
+	public static ContextEntryFactory factory(Path path) {
+		return new ContextEntryFactory(PREFIX, () -> create(path));
 	}
 
-	public static ContextEntryFactory factory() {
-		return new ContextEntryFactory(PREFIX, () -> create());
-	}
-
-	public static UserContextEntry create() {
+	public static UserContextEntry create(Path path) {
 		final long before = System.currentTimeMillis();
-		final List<CustomContextEntry> entries = ContextPreferences.getCustomContextEntries();
+		final List<CustomContextEntry> entries = ContextPreferences.getCustomContextEntryDatas().stream()
+				.map(data -> new CustomContextEntry(data, data.matches(path)))
+				.toList();
 		return new UserContextEntry(entries, Duration.ofMillis(System.currentTimeMillis() - before));
 	}
 }

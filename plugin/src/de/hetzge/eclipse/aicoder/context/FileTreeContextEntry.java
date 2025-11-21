@@ -1,5 +1,6 @@
 package de.hetzge.eclipse.aicoder.context;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 
@@ -12,6 +13,8 @@ import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IFileEditorInput;
 
 import de.hetzge.eclipse.aicoder.util.ContextUtils;
+import de.hetzge.eclipse.aicoder.util.GitUtils;
+import de.hetzge.eclipse.aicoder.util.GitUtils.GitState;
 
 public class FileTreeContextEntry extends ContextEntry {
 
@@ -32,10 +35,11 @@ public class FileTreeContextEntry extends ContextEntry {
 	@Override
 	public String getContent(ContextContext context) {
 		try {
+			final GitState gitState = GitUtils.getGitState(this.project);
 			final StringBuilder stringBuilder = new StringBuilder();
-			appendResourceTree(stringBuilder, this.project, 0);
+			appendResourceTree(stringBuilder, this.project, gitState, 0);
 			return ContextUtils.codeTemplate("Project file tree", stringBuilder.toString());
-		} catch (final CoreException exception) {
+		} catch (final CoreException | IOException exception) {
 			throw new RuntimeException("Error reading file tree", exception);
 		}
 	}
@@ -45,20 +49,20 @@ public class FileTreeContextEntry extends ContextEntry {
 		return new ContextEntryKey(PREFIX, this.project.getName());
 	}
 
-	private void appendResourceTree(StringBuilder stringBuilder, IResource resource, int depth) throws CoreException {
+	private void appendResourceTree(StringBuilder stringBuilder, IResource resource, GitState gitState, int depth) throws CoreException {
+		if (gitState.isIgnored(resource)) {
+			return;
+		}
 		if (resource instanceof final IContainer container) {
+			final String indent = "  ".repeat(depth);
+			stringBuilder.append(indent).append(container.getName()).append("\n");
 			final IResource[] members = container.members();
 			for (final IResource child : members) {
-				final String indent = "  ".repeat(depth);
-				stringBuilder.append(indent).append(child.getName());
-				if (child instanceof IContainer) {
-					stringBuilder.append("/");
-				}
-				stringBuilder.append("\n");
-				if (child instanceof final IContainer childContainer) {
-					appendResourceTree(stringBuilder, childContainer, depth + 1);
-				}
+				appendResourceTree(stringBuilder, child, gitState, depth + 1);
 			}
+		} else if (resource instanceof final IFile file) {
+			final String indent = "  ".repeat(depth);
+			stringBuilder.append(indent).append(file.getName()).append("\n");
 		}
 	}
 

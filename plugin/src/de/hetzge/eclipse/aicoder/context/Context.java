@@ -33,6 +33,7 @@ import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
  * TODO mark context entries with error that occured while creation
  * TODO mark sticky / disabled in resource tree
  * TODO multiple suggestions (count configurable, or as long as user does not select one)
+ * TODO grep blacklist for files and folders (and use gitignore) -> use for File Tree context
  */
 
 public final class Context {
@@ -82,7 +83,7 @@ public final class Context {
 				LambdaExceptionUtils.rethrowFunction(TypeMemberContextEntry::create),
 				LambdaExceptionUtils.rethrowFunction(PackageContextEntry::create),
 				LambdaExceptionUtils.rethrowFunction(TypeContextEntry::create),
-				LambdaExceptionUtils.rethrowFunction(CustomContextEntry::create));
+				LambdaExceptionUtils.rethrowFunction(CustomContextEntryData::create));
 		return factories.stream().flatMap(factory -> factory.apply(key).stream()).findFirst();
 	}
 }

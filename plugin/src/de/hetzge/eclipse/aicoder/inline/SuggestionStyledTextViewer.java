@@ -23,9 +23,18 @@ public final class SuggestionStyledTextViewer {
 	private final String originalContent;
 	private final StyledText styledText;
 	private final String newContent;
+	private final Color addedColor;
+	private final Color removedColor;
 
 	public SuggestionStyledTextViewer(Composite parent, ITextViewer parentTextViewer, String newContent) {
 		this.parentStyledText = parentTextViewer.getTextWidget();
+		if (isDarkColor(parentTextViewer.getTextWidget().getForeground())) {
+			this.addedColor = new Color(200, 255, 200);
+			this.removedColor = new Color(255, 200, 200);
+		} else {
+			this.addedColor = new Color(50, 100, 50);
+			this.removedColor = new Color(100, 50, 50);
+		}
 		this.originalContent = EclipseUtils.getSelectionText(parentTextViewer);
 		this.styledText = new StyledText(parent, SWT.BORDER);
 		this.styledText.setEditable(false);
@@ -57,13 +66,13 @@ public final class SuggestionStyledTextViewer {
 				final StyleRange styleRange = new StyleRange();
 				styleRange.start = this.styledText.getCharCount() - line.length();
 				styleRange.length = line.length();
-				styleRange.background = new Color(200, 255, 200);
+				styleRange.background = this.addedColor;
 				this.styledText.setStyleRange(styleRange);
 			} else if (diffLine.startsWith("-")) {
 				final StyleRange styleRange = new StyleRange();
 				styleRange.start = this.styledText.getCharCount() - line.length();
 				styleRange.length = line.length();
-				styleRange.background = new Color(255, 200, 200);
+				styleRange.background = this.removedColor;
 				this.styledText.setStyleRange(styleRange);
 				originalOffset += line.length() + 1;
 			} else {
@@ -106,7 +115,7 @@ public final class SuggestionStyledTextViewer {
 						continue;
 					}
 					final StyleRange suggestionStyleRange = createCopy(originalStyleRange);
-					suggestionStyleRange.background = new Color(255, 200, 200);
+					suggestionStyleRange.background = this.removedColor;
 					suggestionStyleRange.start = suggestionOffset + i;
 					suggestionStyleRange.length = Math.min(suggestionOffset + diff.text.length() - suggestionStyleRange.start, originalStyleRange.length);
 					this.styledText.setStyleRange(suggestionStyleRange);
@@ -116,7 +125,7 @@ public final class SuggestionStyledTextViewer {
 				suggestionOffset += diff.text.length();
 			} else if (diff.operation == Operation.INSERT) {
 				final StyleRange suggestionStyleRange = new StyleRange();
-				suggestionStyleRange.background = new Color(200, 255, 200);
+				suggestionStyleRange.background = this.addedColor;
 				suggestionStyleRange.start = suggestionOffset;
 				suggestionStyleRange.length = diff.text.length();
 				this.styledText.setStyleRange(suggestionStyleRange);
@@ -223,5 +232,9 @@ public final class SuggestionStyledTextViewer {
 		}
 
 		return stringBuilder.toString();
+	}
+
+	private static boolean isDarkColor(final Color color) {
+		return color.getRed() + color.getGreen() + color.getBlue() < 382;
 	}
 }
