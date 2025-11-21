@@ -2,6 +2,7 @@ package de.hetzge.eclipse.aicoder.context;
 
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -42,9 +43,10 @@ public class RootContextEntry extends ContextEntry {
 	}
 
 	public static RootContextEntry create(IDocument document, IEditorInput editorInput, int offset) throws BadLocationException, UnsupportedFlavorException, IOException, CoreException {
+		final long before = System.currentTimeMillis();
 		final IProject project = EclipseUtils.getProject(editorInput);
 		final String filename = EclipseUtils.getFilename(editorInput).orElse("Active File");
-		final long before = System.currentTimeMillis();
+		final Path path = Path.of(filename);
 		final Optional<ICompilationUnit> compilationUnitOptional = EclipseUtils.getCompilationUnit(editorInput);
 		final List<ContextEntryFactory> factories = new ArrayList<>();
 		factories.add(ProjectInformationsContextEntry.factory(project));
@@ -52,7 +54,7 @@ public class RootContextEntry extends ContextEntry {
 		factories.add(DependenciesContextEntry.factory(project));
 		factories.add(OpenEditorsContextEntry.factory());
 		factories.add(StickyContextEntry.factory());
-		factories.add(UserContextEntry.factory());
+		factories.add(UserContextEntry.factory(path));
 		if (compilationUnitOptional.isPresent()) {
 			final ICompilationUnit unit = compilationUnitOptional.get();
 			factories.add(SuperContextEntry.factory(unit, offset));

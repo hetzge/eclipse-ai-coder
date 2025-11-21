@@ -1,5 +1,7 @@
 package de.hetzge.eclipse.aicoder.context;
 
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
@@ -57,6 +59,13 @@ public class CustomContextEntry extends ContextEntry {
 
 	public String getGlob() {
 		return this.glob;
+	}
+
+	public boolean matches(Path path) {
+		if (this.glob == null) {
+			return false;
+		}
+		return FileSystems.getDefault().getPathMatcher("glob:" + this.glob).matches(path);
 	}
 
 	public Json toJson() {
