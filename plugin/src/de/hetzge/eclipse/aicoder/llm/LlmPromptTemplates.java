@@ -123,12 +123,10 @@ public final class LlmPromptTemplates {
 			```.println(title);```
 			
 			## Additional information ##
-			- Use Java 21 syntax
 			- Use the correct variables based on the context
-			- If a comment precedes the line to you be completed, implement it
 			- Focus on short, high confidence completions
 			- Do not generate extraneous code that does not logically fill in the completion
-			- When the completion is combined with the context code, it should be logically and syntactically correct and compliable
+			- When the completion is combined with the context code, it should be logically and syntactically correct and compilable
 			- Pay attention to opening and closing characters such as braces and parentheses
 			""".trim();
 	}	
