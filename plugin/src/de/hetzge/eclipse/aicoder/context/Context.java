@@ -83,7 +83,7 @@ public final class Context {
 				LambdaExceptionUtils.rethrowFunction(TypeMemberContextEntry::create),
 				LambdaExceptionUtils.rethrowFunction(PackageContextEntry::create),
 				LambdaExceptionUtils.rethrowFunction(TypeContextEntry::create),
-				LambdaExceptionUtils.rethrowFunction(CustomContextEntry::create));
+				LambdaExceptionUtils.rethrowFunction(CustomContextEntryData::create));
 		return factories.stream().flatMap(factory -> factory.apply(key).stream()).findFirst();
 	}
 }
