@@ -1,7 +1,5 @@
 package de.hetzge.eclipse.aicoder.inline;
 
-import java.awt.datatransfer.UnsupportedFlavorException;
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +64,7 @@ import de.hetzge.eclipse.aicoder.util.Utils;
 // TODO spacing bug while completion is open
 // TODO overlay moves while scrolling bug
 // TODO regenerate button in inline suggestion
+// TODO last input tokens status bar information (to keep an eye on token usage), use colors to indicate if it is too much
 
 public final class InlineCompletionController {
 
@@ -185,6 +184,7 @@ public final class InlineCompletionController {
 		final AiCoderHistoryEntry historyEntry = new AiCoderHistoryEntry(mode, filePath, this.textViewer.getDocument().get());
 		this.job = Job.create("AI completion", monitor -> {
 			String prompt = "";
+			LlmResponse llmResponse = null;
 			try {
 				updateHistoryEntry(historyEntry);
 				final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
@@ -197,7 +197,6 @@ public final class InlineCompletionController {
 				final String prefix = contextParts[0];
 				final String suffix = contextParts.length > 1 ? contextParts[1] : "";
 				final String selectionText = EclipseUtils.getSelectionText(this.textViewer);
-				LlmResponse llmResponse = null;
 				if (mode == CompletionMode.EDIT || mode == CompletionMode.GENERATE || mode == CompletionMode.QUICK_FIX) {
 					final String fileType = EclipseUtils.getFileExtension(this.textEditor.getEditorInput());
 					final String systemPrompt = hasSelection
@@ -280,19 +279,19 @@ public final class InlineCompletionController {
 				historyEntry.setInput(prompt);
 				historyEntry.setOutput(content);
 				updateHistoryEntry(historyEntry);
-			} catch (final IOException | BadLocationException | UnsupportedFlavorException exception) {
+			} catch (final Exception exception) {
 				AiCoderActivator.log().error("AI Coder completion failed", exception);
 				final long duration = System.currentTimeMillis() - startTime;
 				final String stacktrace = Utils.getStacktraceString(exception);
 				historyEntry.setStatus(HistoryStatus.ERROR);
 				historyEntry.setDurationMs(duration);
 				historyEntry.setLlmDurationMs(0);
-				historyEntry.setPlainLlmResponse(stacktrace);
+				historyEntry.setPlainLlmResponse(llmResponse != null ? llmResponse.getPlainResponse() : "");
 				historyEntry.setModelLabel(null);
 				historyEntry.setInputTokenCount(0);
 				historyEntry.setOutputTokenCount(0);
 				historyEntry.setInput(prompt);
-				historyEntry.setOutput(stacktrace);
+				historyEntry.setOutput((llmResponse != null ? llmResponse.getContent() : "") + stacktrace);
 				updateHistoryEntry(historyEntry);
 			}
 		});
