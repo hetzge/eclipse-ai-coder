@@ -1,614 +1,489 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-	<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-	<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
-	<link rel="manifest" href="site.webmanifest">
-	<title>Eclipse AI Coder</title>
-	<style>
-		table {
-			border-collapse: collapse;
-			width: 100%;
-		}
-
-		th,
-		td {
-			border: 1px solid black;
-			padding: 8px;
-			text-align: left;
-		}
-
-		th {
-			background-color: #f2f2f2;
-		}
-
-		img {
-			box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px, rgba(60, 64, 67, 0.15) 0px 2px 6px 2px;
-			padding: 1rem;
-			max-width: 85vw;
-		}
-
-		.gallery {
-			display: flex;
-			flex-direction: row;
-			flex-wrap: wrap;
-			align-items: center;
-			gap: 1rem;
-			margin: 0 auto;
-		}
-
-		.gallery img {
-			height: 400px;
-			object-fit: contain;
-			border-radius: 10px;
-		}
-
-		.gallery::after {
-			content: "";
-			width: 350px;
-		}
-
-		main,
-		header {
-			margin: 0 auto;
-			padding: 1rem;
-			max-width: 1200px;
-			background-color: white;
-			box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px, rgba(60, 64, 67, 0.15) 0px 2px 6px 2px;
-			border-radius: 1rem;
-		}
-
-		header {
-			border-bottom-left-radius: 0px;
-			border-bottom-right-radius: 0px;
-			background-color: black;
-			margin-top: 2rem;
-			padding-bottom: 0rem;
-			border: 4px solid greenyellow;
-		}
-
-		.logo {
-			display: flex;
-			align-items: center;
-			justify-content: center;
-		}
-
-		main {
-			border-top-left-radius: 0px;
-			border-top-right-radius: 0px;
-			border: 4px solid darkgrey;
-			box-shadow: rgba(50, 50, 93, 0.25) 0px 30px 60px -12px inset, rgba(0, 0, 0, 0.3) 0px 18px 36px -18px inset;
-			margin-bottom: 2rem;
-		}
-
-		body {
-			background: #2A7B9B;
-			background: linear-gradient(90deg, rgba(42, 123, 155, 1) 0%, rgba(87, 199, 133, 1) 50%, rgba(237, 221, 83, 1) 100%);
-		}
-
-		.key {
-			border: 1px solid #ccc;
-			border-radius: 4px;
-			padding: 2px 4px;
-			background-color: #f9f9f9;
-			font-family: monospace;
-		}
-
-		/* Tab Styles */
-		.tabs {
-			display: flex;
-			flex-wrap: wrap;
-			justify-content: center;
-		}
-
-		.tab {
-			background-color: #f1f1f1;
-			border: none;
-			padding: 12px 16px;
-			cursor: pointer;
-			transition: background-color 0.3s;
-			border-top-left-radius: 8px;
-			border-top-right-radius: 8px;
-			margin-right: 2px;
-			font-size: 14px;
-		}
-
-		.tab:hover {
-			background-color: #ddd;
-		}
-
-		.tab.active {
-			background-color: greenyellow;
-			font-weight: bold;
-		}
-
-		.tab-content {
-			display: none;
-			animation: fadeIn 0.3s;
-		}
-
-		.tab-content.active {
-			display: block;
-		}
-
-		@keyframes fadeIn {
-			from {
-				opacity: 0;
-			}
-
-			to {
-				opacity: 1;
-			}
-		}
-
-		@media (max-width: 768px) {
-			.tab {
-				font-size: 12px;
-				padding: 8px 12px;
-			}
-		}
-	</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eclipse AI Coder</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <link rel="manifest" href="site.webmanifest">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        h2, h3 {
+            color: #3498db;
+            margin-top: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .screenshot-gallery {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+        .screenshot {
+            max-height: 400px;
+            margin: 10px;
+            object-fit: contain;
+        }
+        .feature-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .feature-list li {
+            margin-bottom: 10px;
+            padding-left: 20px;
+            position: relative;
+        }
+        .feature-list li:before {
+            content: "•";
+            color: #3498db;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+        .check {
+            color: green;
+            font-weight: bold;
+        }
+        .cross {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
 </head>
-
 <body>
-	<header>
-		<div class="logo">
-			<img style="width: 400px; height: 400px;" src="images/title.webp" alt="Eclipse AI Coder Example">
-		</div>
-		<div class="tabs">
-			<button class="tab active" onclick="openTab(event, 'overview')">Overview</button>
-			<button class="tab" onclick="openTab(event, 'screenshots')">Screenshots</button>
-			<button class="tab" onclick="openTab(event, 'comparison')">Comparison</button>
-			<button class="tab" onclick="openTab(event, 'documentation')">Documentation</button>
-			<button class="tab" onclick="openTab(event, 'providers')">LLM Providers</button>
-			<button class="tab" onclick="openTab(event, 'releases')">Release Notes</button>
-			<button class="tab" onclick="openTab(event, 'feedback')">Feedback</button>
-		</div>
-	</header>
-	<main>
+    <header>
+        <img src="images/title.webp" alt="Eclipse AI Coder Logo" width="100">
+        <h1>Eclipse AI Coder</h1>
+    </header>
 
-		<div id="overview" class="tab-content active">
-			<section>
-				<h2>About the project</h2>
-				<p>Eclipse AI Coder is an extension for the <a href="https://eclipseide.org">Eclipse IDE</a>. It brings AI driven inline completion to the editor.</p>
-			</section>
-			<section>
-				<h2>Features</h2>
-				<ul>
-					<li>Use local running <a href="https://ollama.com">Ollama</a> models</li>
-					<li>Support for <b>Codestral</b> (by <a href="https://mistral.ai">Mistral</a>) large language model (<b>bring your own key</b>)</li>
-					<li>Triggers completion <b>automatically</b> or <b>by shortcut</b> (<span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">Space</span>)</li>
-					<li><b>Controllable context</b>. See how the prompt is build and control its content</li>
-					<li><b>Insights</b> about each request: Word count, durations, status</li>
-					<li>Deep understanding of <b>Java</b> projects. Adds imports and variables in scope to the prompt</li>
-					<li>Toggle between <b>single</b> and <b>multiline</b> completion</li>
-					<li>Complete selected code</li>
-					<li>Apply instructions on selected code</li>
-					<li>Inline generate code by instructions</li>
-				</ul>
-			</section>
-			<section>
-				<h2>Installation</h2>
-				<ul>
-					<li>Option A: Install from <a href="https://marketplace.eclipse.org/content/ai-coder">Eclipse Marketplace</a></li>
-					<li>Option B: Install from updatesite: <input value="https://eclipse.hetzge.de/aicoder/repository" readonly onclick="this.select();" style="width: 320px" /></li>
-					<li>Option C: <a href="https://eclipse.hetzge.de/aicoder/repository/plugins/de.hetzge.eclipse.aicoder_1.0.0.202507142020.jar">Download</a> the JAR</li>
-				</ul>
-			</section>
-		</div>
+    <section id="overview">
+        <h2>1. Overview</h2>
+        <h3>About the Project</h3>
+        <p>An extension for the <a href="https://eclipseide.org">Eclipse IDE</a> that brings <strong>AI-driven inline completion</strong> to the editor.</p>
 
-		<div id="screenshots" class="tab-content">
-			<section>
-				<h2>Screenshots</h2>
-				<div class="gallery">
-					<img src="images/example.png" alt="Example Screenshot">
-					<img src="images/context.png" alt="Context Screenshot">
-					<img src="images/history.png" alt="History Screenshot">
-				</div>
-			</section>
-		</div>
+        <h3>Features</h3>
+        <ol class="feature-list">
+            <li><strong>Local Model Support</strong>: Works with locally running models (e.g., <a href="https://ollama.com">Ollama</a>, <a href="https://lmstudio.ai">LM Studio</a>).</li>
+            <li><strong>Cloud LLM Support</strong>: Supports <strong>Codestral</strong> (by <a href="https://mistral.ai">Mistral AI</a>)—requires a user-provided API key.</li>
+            <li><strong>Completion Triggers</strong>:
+                <ul>
+                    <li><strong>Automatic</strong> or <strong>manual</strong> via shortcut:
+                        <ul>
+                            <li><strong>Inline completion</strong>: <code>Ctrl</code> + <code>Shift</code> + <code>Space</code></li>
+                            <li><strong>Complete selected code</strong>: <code>Ctrl</code> + <code>Shift</code> + <code>Space</code></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li><strong>Code Generation/Editing</strong>: <strong>Inline edit/generate</strong> via instructions: <code>Ctrl</code> + <code>Shift</code> + <code>1</code></li>
+            <li><strong>Context Control</strong>: View and modify the prompt context.</li>
+            <li><strong>Insights</strong>: Token count, request durations, and status for each request.</li>
+            <li><strong>Java-Specific Features</strong>: Deep understanding of Java projects (adds imports, variables in scope to prompts).</li>
+            <li><strong>Multiline Toggle</strong>: Switch between single-line and multiline completions.</li>
+        </ol>
 
-		<div id="comparison" class="tab-content">
-			<section>
-				<h2>Comparison with other solutions</h2>
-				<table style="background-color: white;">
-					<tr>
-						<td style="border-top: 0px; border-left: 0px;"></td>
-						<th>Eclipse AI Coder</th>
-						<th><a href="https://www.tabnine.com">Tabnine</a></th>
-						<th><a href="https://github.com/features/copilot">GitHub Copilot</a></th>
-						<th><a href="https://www.genuitec.com/products/copilot4eclipse">Copilot4Eclipse</a></th>
-						<th><a href="https://www.tabbyml.com">Tabby</a></th>
-						<th><a href="https://marketplace.eclipse.org/content/gitlab-eclipse">GitLab Duo</a></th>
-						<th><a href="https://marketplace.eclipse.org/content/amazon-q">Amazon Q</a></th>
-					</tr>
-					<tr>
-						<th>Inline Completion</th>
-						<td>✅</td>
-						<td>✅</td>
-						<td>✅</td>
-						<td>✅</td>
-						<td>✅</td>
-						<td>✅</td>
-						<td>✅</td>
-					</tr>
-					<tr>
-						<th>Eclipse Support</th>
-						<td>✅</td>
-						<td>✅</td>
-						<td>✅</td>
-						<td>✅</td>
-						<td>✅</td>
-						<td>✅</td>
-						<td>✅</td>
-					</tr>
-					<tr>
-						<th>Non-commercial</th>
-						<td>✅</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>❌</td>
-					</tr>
-					<tr>
-						<th>Open Source</th>
-						<td>✅</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>✅</td>
-						<td>❌</td>
-						<td>❌</td>
-					</tr>
-					<tr>
-						<th>Manual Trigger</th>
-						<td>✅</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>✅</td>
-						<td>✅</td>
-						<td>❌</td>
-						<td>❌</td>
-					</tr>
-					<tr>
-						<th>Bring your own key</th>
-						<td>✅</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>✅</td>
-						<td>❌</td>
-						<td>❌</td>
-					</tr>
-					<tr>
-						<th>Local LLMs</th>
-						<td>✅</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>✅</td>
-						<td>❌</td>
-						<td>❌</td>
-					</tr>
-					<tr>
-						<th>Toggle Multiline Completion</th>
-						<td>✅</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>❌</td>
-					</tr>
-					<tr>
-						<th>Context Control</th>
-						<td>✅</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>❌</td>
-					</tr>
-					<tr>
-						<th>Next Edit Suggestion</th>
-						<td>❌</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>❌</td>
-						<td>❌</td>
-					</tr>
-					<tr>
-						<th>LLM Providers</th>
-						<td>Local,<br />Mistral</td>
-						<td>Tabnine</td>
-						<td>Github Copilot</td>
-						<td>Github Copilot</td>
-						<td>Deepseek,<br />Local,<br />Mistral</td>
-						<td>Gitlab</td>
-						<td>Amazon</td>
-					</tr>
-				</table>
-			</section>
-		</div>
+        <h3>Installation</h3>
+        <ul class="feature-list">
+            <li><strong>Option A</strong>: Install from <a href="https://marketplace.eclipse.org/content/ai-coder">Eclipse Marketplace</a>.</li>
+            <li><strong>Option B</strong>: Use the update site:
+                <pre>https://hetzge.github.io/aicoder/eclipse/beta1</pre>
+            </li>
+        </ul>
+    </section>
 
-		<div id="providers" class="tab-content">
-			<section>
-				<h2>LLM Provider</h2>
-				<h3>Codestral</h3>
-				<p>
-					You require a (currently free) Codestral API key. You can get one <a href="https://console.mistral.ai/codestral">here</a>.
-					<img src="images/codestral.png" alt="Screenshot Mistral Console" />
-				</p>
-				<p>
-					The Codestral API key can then be configured in the Eclipse preferences like in the following screenshot:
-					<img src="images/settings.png" alt="Settings Screenshot">
-				</p>
-				<h3>Ollama</h3>
-				<p>You can also use <a href="https://ollama.com/">Ollama</a> to run a local LLM.</p>
-				<p>
-					Here is an example how to run the <a href="https://ollama.com/library/qwen2.5-coder">Qwen2.5-Coder</a>:
-				<ul>
-					<li>Follow the <a href="https://ollama.com/download">installation instructions</a> to install Ollama</li>
-					<li>Run
-						<pre>ollama pull qwen2.5-coder:3b</pre> to download the LLM
-					</li>
-					<li>In Eclipse go to Window > Preferences > AI Coder > Provider</li>
-					<li>Setup the Ollama base url
-						<pre>http://localhost:11434</pre> and model
-						<pre>qwen2.5-coder:3b</pre> in the preferences page
-					</li>
-				</ul>
-				</p>
-				<p>Models that are used in AI Coder must support additionaly to the prompt a suffix input. Here is an example:
-					<img src="images/ollama-template.png" alt="Ollama Template Screenshot">
-				</p>
-				<h3>OpenAI compatible</h3>
-				<p>You can use every llm provider that provide an OpenAI compatible API</p>
-				<p>As example for <b>OpenRouter</b> you can use the
-				<pre>https://openrouter.ai/api</pre> base url</p>
-				<p>Be aware that many models from LLM provider like OpenAI does not work as Fill in the middle models.</p>
-			</section>
-		</div>
+    <section id="screenshots">
+        <h2>2. Screenshots</h2>
+        <div class="screenshot-gallery">
+            <img src="images/example.png" alt="Example Screenshot" class="screenshot">
+            <img src="images/context.png" alt="Context Screenshot" class="screenshot">
+            <img src="images/history.png" alt="History Screenshot" class="screenshot">
+        </div>
+    </section>
 
-		<div id="documentation" class="tab-content">
-			<section>
-				<h2>Controls</h2>
-				<table>
-					<thead>
-						<tr>
-							<th>Shortcut</th>
-							<th>Selection</th>
-							<th>Action</th>
-						</tr>
-					</thead>
-					<tbody>
-						<tr>
-							<td><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">Space</span></td>
-							<td>❌</td>
-							<td>Trigger inline completion at the position of the cursor</td>
-						</tr>
-						<tr>
-							<td><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">Space</span></td>
-							<td>✅</td>
-							<td>Trigger completion/correction of the selected code</td>
-						</tr>
-						<tr>
-							<td><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">1</span></td>
-							<td>❌</td>
-							<td>Trigger dialog to enter instruction to generate code at the position of the cursor</td>
-						</tr>
-						<tr>
-							<td><span class="key">Ctrl</span> + <span class="key">Shift</span> + <span class="key">1</span></td>
-							<td>✅</td>
-							<td>Trigger dialog to enter instruction to edit the selected code</td>
-						</tr>
-						<tr>
-							<td><span class="key">Ctrl</span> + <span class="key">3</span></td>
-							<td>❌</td>
-							<td>Open quick access (which provides access to available instructions to generate code at the position of the cursor)</td>
-						</tr>
-						<tr>
-							<td><span class="key">Ctrl</span> + <span class="key">3</span></td>
-							<td>✅</td>
-							<td>Open quick access (which provides access to available instructions to edit the selected code)</td>
-						</tr>
-					</tbody>
-				</table>
-			</section>
-			<section>
-				<h2>Settings</h2>
-				<table>
-					<tr>
-						<th>Setting</th>
-						<th>Description</th>
-					</tr>
-					<tr>
-						<td>Enable Multiline Completion</td>
-						<td>If enabled inline completions that spans multiple lines will be recommended</td>
-					</tr>
-					<tr>
-						<td>Enable Autocomplete</td>
-						<td>If enabled inline completion will be triggered automatically (by typing or other changes). If disabled inline completion can only be triggered by configured shortcut.</td>
-					</tr>
-					<tr>
-						<td>Only on Change Autocomplete</td>
-						<td>If enabled autocomplete will only be triggered after a change in the file. As example after typing a letter. Other actions like moving the cursor will not trigger inline completion.</td>
-					</tr>
-					<tr>
-						<td>Ignore JRE Classes</td>
-						<td>Exclude JRE classes from context. These classes are typically already known by the LLMs.</td>
-					</tr>
-					<tr>
-						<td>Cleanup code on apply</td>
-						<td>When an code suggestion is applied then code cleanup actions (format...) are executed (for java)</td>
-					</tr>
-					<tr>
-						<td>Maximum Prefix Size (lines)</td>
-						<td>How many lines before the current cursor position should be included into the prompt</td>
-					</tr>
-					<tr>
-						<td>Maximum Suffix Size (lines)</td>
-						<td>How many lines after the current cursor position should be included into the prompt</td>
-					</tr>
-					<tr>
-						<td>Maximum Tokens</td>
-						<td>Limit the amount of tokens the used LLM should generate.</td>
-					</tr>
-					<tr>
-						<td>Debounce (in ms)</td>
-						<td>Autocompletion will wait this delay, and only if in this time no other trigger action is executed, execute the calculation of the inline completion. Only affects autocompletion.</td>
-					</tr>
-				</table>
-			</section>
-			<section>
-				<h2>Contexts</h2>
-				<p>This section describes the context informations that can be included into the prompt</p>
-				<table>
-					<thead>
-						<tr>
-							<th>Context</th>
-							<th>Description</th>
-							<th>Filetype</th>
-						</tr>
-					</thead>
-					<tbody>
-						<tr>
-							<td>Project informations</td>
-							<td>Name, location of the project. For java projects the java version is included.</td>
-							<td>All</td>
-						</tr>
-						<tr>
-							<td>File tree</td>
-							<td>Tree of the files in the current project</td>
-							<td>All</td>
-						</tr>
-						<tr>
-							<td>Dependencies</td>
-							<td>List of dependencies available in the current project (WIP)</td>
-							<td>All</td>
-						</tr>
-						<tr>
-							<td>Open editors</td>
-							<td>The content of the currently open editors</td>
-							<td>All</td>
-						</tr>
-						<tr>
-							<td>Super (Java)</td>
-							<td>The interface of the supertypes of the current java file</td>
-							<td>Java</td>
-						</tr>
-						<tr>
-							<td>Scope (Java)</td>
-							<td>The interface of the types in the current scope at the current cursor position</td>
-							<td>Java</td>
-						</tr>
-						<tr>
-							<td>Imports (Java)</td>
-							<td>The interface of the imported types in the current file</td>
-							<td>Java</td>
-						</tr>
-						<tr>
-							<td>Package (Java)</td>
-							<td>The interface of the types in the current package</td>
-							<td>Java</td>
-						</tr>
-						<tr>
-							<td>User</td>
-							<td>Custom contents provided by the user</td>
-							<td>All</td>
-						</tr>
-						<tr>
-							<td>Last edits</td>
-							<td>The sourcecode around the last edited locations</td>
-							<td>All</td>
-						</tr>
-						<tr>
-							<td>Clipboard</td>
-							<td>The content of the clipboard</td>
-							<td>All</td>
-						</tr>
-						<tr>
-							<td>Fill in middle</td>
-							<td>The current edit location and context lines around</td>
-							<td>All</td>
-						</tr>
-					</tbody>
-				</table>
-			</section>
-		</div>
+    <section id="comparison">
+        <h2>3. Comparison with Other Solutions</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Eclipse AI Coder</th>
+                    <th><a href="https://www.tabnine.com">Tabnine</a></th>
+                    <th><a href="https://github.com/features/copilot">GitHub Copilot</a></th>
+                    <th><a href="https://www.genuitec.com/products/copilot4eclipse">Copilot4Eclipse</a></th>
+                    <th><a href="https://www.tabbyml.com">Tabby</a></th>
+                    <th><a href="https://marketplace.eclipse.org/content/gitlab-eclipse">GitLab Duo</a></th>
+                    <th><a href="https://marketplace.eclipse.org/content/amazon-q">Amazon Q</a></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Inline Completion</strong></td>
+                    <td class="check">✅</td>
+                    <td class="check">✅</td>
+                    <td class="check">✅</td>
+                    <td class="check">✅</td>
+                    <td class="check">✅</td>
+                    <td class="check">✅</td>
+                    <td class="check">✅</td>
+                </tr>
+                <tr>
+                    <td><strong>Eclipse Support</strong></td>
+                    <td class="check">✅</td>
+                    <td class="check">✅</td>
+                    <td class="check">✅</td>
+                    <td class="check">✅</td>
+                    <td class="check">✅</td>
+                    <td class="check">✅</td>
+                    <td class="check">✅</td>
+                </tr>
+                <tr>
+                    <td><strong>Non-commercial</strong></td>
+                    <td class="check">✅</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                </tr>
+                <tr>
+                    <td><strong>Open Source</strong></td>
+                    <td class="check">✅</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="check">✅</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                </tr>
+                <tr>
+                    <td><strong>Manual Trigger</strong></td>
+                    <td class="check">✅</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="check">✅</td>
+                    <td class="check">✅</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                </tr>
+                <tr>
+                    <td><strong>Bring Your Own Key</strong></td>
+                    <td class="check">✅</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="check">✅</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                </tr>
+                <tr>
+                    <td><strong>Local LLMs</strong></td>
+                    <td class="check">✅</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="check">✅</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                </tr>
+                <tr>
+                    <td><strong>Toggle Multiline</strong></td>
+                    <td class="check">✅</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                </tr>
+                <tr>
+                    <td><strong>Context Control</strong></td>
+                    <td class="check">✅</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                </tr>
+                <tr>
+                    <td><strong>Next Edit Suggestion</strong></td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="check">✅</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                    <td class="cross">❌</td>
+                </tr>
+                <tr>
+                    <td><strong>LLM Providers</strong></td>
+                    <td>Local, Mistral</td>
+                    <td>Tabnine</td>
+                    <td>GitHub Copilot</td>
+                    <td>GitHub Copilot</td>
+                    <td>Deepseek, Local, Mistral</td>
+                    <td>GitLab</td>
+                    <td>Amazon</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
 
-		<div id="releases" class="tab-content">
-			<section>
-				<h2>Release Notes</h2>
-				<h3>2025-08-xx</h3>
-				<ul>
-					<li>Improved autocompletion trigger and debounce</li>
-					<li>Add only on content change autocompletion</li>
-					<li>Add token counts to history view</li>
-					<li>Add preferences to controll available context types and their position in the prompt</li>
-					<li>Add selection completion</li>
-					<li>Add insert generation</li>
-					<li>Add execute edit instructions</li>
-					<li>Add MCP (prompts) support</li>
-					<li>Add code cleanup on apply (Java)</li>
-					<li>Codestral base url is no longer configurable</li>
-					<li>Improved context performance (lazy calculations)</li>
-					<li>Restructured preferences pages</li>
-					<li>Open AI compatible apis support</li>
-					<li>Completion now also working in multipage editors (as example pom.xml)</li>
-				</ul>
-				<h3>2025-07-15</h3>
-				<ul>
-					<li>Add support for <a href="https://ollama.com/">Ollama</a></li>
-				</ul>
-				<h3>2025-07-12</h3>
-				<ul>
-					<li>Initial release</li>
-				</ul>
-			</section>
-		</div>
+    <section id="llm-providers">
+        <h2>4. LLM Providers</h2>
+        <h3>Codestral (Mistral AI)</h3>
+        <ul class="feature-list">
+            <li><strong>API Key</strong>: Free (currently). Get one <a href="https://console.mistral.ai/codestral">here</a>.</li>
+            <li><strong>Configuration</strong>: Set the API key in Eclipse preferences (screenshot: <code>images/settings.png</code>).</li>
+        </ul>
 
-		<div id="feedback" class="tab-content">
-			<section>
-				<h2>Feedback</h2>
-				<p>Report any issues or feature requests on <a href="https://github.com/hetzge/eclipse-ai-coder/issues">Github Issues</a></p>
-				<p>If you like the software please star the project on <a href="https://github.com/hetzge/eclipse-ai-coder">Github</a></p>
-			</section>
-		</div>
-	</main>
-	<footer>
-	</footer>
+        <h3>Ollama</h3>
+        <ul class="feature-list">
+            <li><strong>Setup Steps</strong>:
+                <ol>
+                    <li>Install Ollama (<a href="https://ollama.com/download">download</a>).</li>
+                    <li>Pull a model (e.g., <a href="https://ollama.com/library/qwen2.5-coder">Qwen2.5-Coder</a>):
+                        <pre>ollama pull qwen2.5-coder:3b</pre>
+                    </li>
+                    <li>Configure in Eclipse:
+                        <ul>
+                            <li><strong>Base URL</strong>: <code>http://localhost:11434</code></li>
+                            <li><strong>Model</strong>: <code>qwen2.5-coder:3b</code></li>
+                        </ul>
+                        <p><em>Models must support suffix input; example: <code>images/ollama-template.png</code></em></p>
+                    </li>
+                </ol>
+            </li>
+        </ul>
 
-	<script>
-		function openTab(evt, tabName) {
-			var i, tabcontent, tabs;
+        <h3>OpenAI-Compatible APIs</h3>
+        <ul class="feature-list">
+            <li><strong>Example</strong>: <a href="https://openrouter.ai/api">OpenRouter</a> (base URL: <code>https://openrouter.ai/api</code>).</li>
+            <li><strong>Note</strong>: Many OpenAI models may not support "fill-in-the-middle" tasks.</li>
+        </ul>
+    </section>
 
-			// Hide all tab content
-			tabcontent = document.getElementsByClassName("tab-content");
-			for (i = 0; i < tabcontent.length; i++) {
-				tabcontent[i].classList.remove("active");
-			}
+    <section id="documentation">
+        <h2>5. Documentation</h2>
+        <h3>Controls (Shortcuts)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Shortcut</th>
+                    <th>Selection</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>Ctrl</code> + <code>Shift</code> + <code>Space</code></td>
+                    <td>❌</td>
+                    <td>Trigger inline completion at cursor position.</td>
+                </tr>
+                <tr>
+                    <td><code>Ctrl</code> + <code>Shift</code> + <code>Space</code></td>
+                    <td>✅</td>
+                    <td>Trigger completion/correction of selected code.</td>
+                </tr>
+                <tr>
+                    <td><code>Ctrl</code> + <code>Shift</code> + <code>1</code></td>
+                    <td>❌</td>
+                    <td>Open dialog to generate code at cursor via instruction.</td>
+                </tr>
+                <tr>
+                    <td><code>Ctrl</code> + <code>Shift</code> + <code>1</code></td>
+                    <td>✅</td>
+                    <td>Open dialog to edit selected code via instruction.</td>
+                </tr>
+                <tr>
+                    <td><code>Ctrl</code> + <code>3</code></td>
+                    <td>❌</td>
+                    <td>Open quick access for code generation instructions at cursor.</td>
+                </tr>
+                <tr>
+                    <td><code>Ctrl</code> + <code>3</code></td>
+                    <td>✅</td>
+                    <td>Open quick access for editing instructions on selected code.</td>
+                </tr>
+            </tbody>
+        </table>
 
-			// Remove active class from all tabs
-			tabs = document.getElementsByClassName("tab");
-			for (i = 0; i < tabs.length; i++) {
-				tabs[i].classList.remove("active");
-			}
+        <h3>Settings</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Setting</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Enable Multiline Completion</strong></td>
+                    <td>Allow multiline suggestions.</td>
+                </tr>
+                <tr>
+                    <td><strong>Enable Autocomplete</strong></td>
+                    <td>Trigger completions automatically (or only via shortcut if disabled).</td>
+                </tr>
+                <tr>
+                    <td><strong>Only on Change Autocomplete</strong></td>
+                    <td>Trigger only after file changes (e.g., typing).</td>
+                </tr>
+                <tr>
+                    <td><strong>Ignore JRE Classes</strong></td>
+                    <td>Exclude Java Runtime Environment classes from context (assumed known by LLMs).</td>
+                </tr>
+                <tr>
+                    <td><strong>Cleanup Code on Apply</strong></td>
+                    <td>Format Java code when applying suggestions.</td>
+                </tr>
+                <tr>
+                    <td><strong>Maximum Prefix Size</strong></td>
+                    <td>Lines before cursor to include in prompt.</td>
+                </tr>
+                <tr>
+                    <td><strong>Maximum Suffix Size</strong></td>
+                    <td>Lines after cursor to include in prompt.</td>
+                </tr>
+                <tr>
+                    <td><strong>Maximum Tokens</strong></td>
+                    <td>Limit tokens generated by the LLM.</td>
+                </tr>
+                <tr>
+                    <td><strong>Debounce (ms)</strong></td>
+                    <td>Delay before autocompletion triggers (to avoid rapid recalculations).</td>
+                </tr>
+            </tbody>
+        </table>
 
-			// Show the selected tab content and mark the button as active
-			document.getElementById(tabName).classList.add("active");
-			evt.currentTarget.classList.add("active");
-		}
-	</script>
+        <h3>Contexts (Prompt Inclusions)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Context</th>
+                    <th>Description</th>
+                    <th>Filetype</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Project Informations</strong></td>
+                    <td>Project name, location, Java version (for Java projects).</td>
+                    <td>All</td>
+                </tr>
+                <tr>
+                    <td><strong>File Tree</strong></td>
+                    <td>Tree structure of project files.</td>
+                    <td>All</td>
+                </tr>
+                <tr>
+                    <td><strong>Dependencies</strong></td>
+                    <td>List of project dependencies (WIP).</td>
+                    <td>All</td>
+                </tr>
+                <tr>
+                    <td><strong>Open Editors</strong></td>
+                    <td>Content of currently open files.</td>
+                    <td>All</td>
+                </tr>
+                <tr>
+                    <td><strong>Super (Java)</strong></td>
+                    <td>Interfaces of supertypes in the current Java file.</td>
+                    <td>Java</td>
+                </tr>
+                <tr>
+                    <td><strong>Scope (Java)</strong></td>
+                    <td>Interfaces of types in the current scope.</td>
+                    <td>Java</td>
+                </tr>
+                <tr>
+                    <td><strong>Imports (Java)</strong></td>
+                    <td>Interfaces of imported types.</td>
+                    <td>Java</td>
+                </tr>
+                <tr>
+                    <td><strong>Package (Java)</strong></td>
+                    <td>Interfaces of types in the current package.</td>
+                    <td>Java</td>
+                </tr>
+                <tr>
+                    <td><strong>User</strong></td>
+                    <td>Custom user-provided content. Add content in context view (right click)</td>
+                    <td>All</td>
+                </tr>
+                <tr>
+                    <td><strong>Last Edits</strong></td>
+                    <td>Source code around recently edited locations.</td>
+                    <td>All</td>
+                </tr>
+                <tr>
+                    <td><strong>Clipboard</strong></td>
+                    <td>Content of the clipboard.</td>
+                    <td>All</td>
+                </tr>
+                <tr>
+                    <td><strong>Fill in Middle</strong></td>
+                    <td>Current edit location + surrounding context lines.</td>
+                    <td>All</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="feedback">
+        <h2>7. Feedback</h2>
+        <ul class="feature-list">
+            <li><strong>Report Issues</strong>: <a href="https://github.com/hetzge/eclipse-ai-coder/issues">GitHub Issues</a>.</li>
+            <li><strong>Star the Project</strong>: <a href="https://github.com/hetzge/eclipse-ai-coder">GitHub Repository</a>.</li>
+        </ul>
+    </section>
 </body>
-
 </html>
