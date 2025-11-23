@@ -172,7 +172,8 @@ public final class LlmUtils {
 					Map.entry("prefix", prompt),
 					Map.entry("suffix", suffix)));
 			json.set("prompt", fimPrompt)
-					.set("max_tokens", AiCoderPreferences.getMaxTokens());
+					.set("max_tokens", AiCoderPreferences.getMaxTokens())
+					.set("stop", createStop(AiCoderPreferences.isMultilineEnabled()));
 		}
 
 		final URL url = URI.create(urlString + "/").resolve(isFillInTheMiddle ? "./v1/completions" : "./v1/chat/completions").toURL();

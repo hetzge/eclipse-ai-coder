@@ -17,6 +17,7 @@ import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
 import de.hetzge.eclipse.aicoder.util.ContextUtils;
 import de.hetzge.eclipse.aicoder.util.JavaProjectUtils;
+import de.hetzge.eclipse.aicoder.util.JdtUtils;
 import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
 import de.hetzge.eclipse.aicoder.util.Utils;
 
@@ -81,7 +82,8 @@ public class PackageContextEntry extends ContextEntry {
 	private static PackageContextEntry create(final IPackageFragment packageFragment) throws CoreException {
 		final long before = System.currentTimeMillis();
 		final String elementName = packageFragment.getElementName();
-		final List<TypeContextEntry> entries = Arrays.stream(packageFragment.getCompilationUnits())
+		final ICompilationUnit[] compilationUnits = JdtUtils.getCompilationUnits(packageFragment);
+		final List<TypeContextEntry> entries = Arrays.stream(compilationUnits)
 				.flatMap(LambdaExceptionUtils.rethrowFunction(it -> Arrays.stream(it.getAllTypes())))
 				.filter(Utils::checkType)
 				.map(LambdaExceptionUtils.rethrowFunction(TypeContextEntry::create))

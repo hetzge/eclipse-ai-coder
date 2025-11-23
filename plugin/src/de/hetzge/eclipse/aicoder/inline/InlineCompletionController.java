@@ -427,6 +427,7 @@ public final class InlineCompletionController {
 			acceptSuggestion();
 		}
 		if (AiCoderPreferences.isCleanupCodeOnApplyEnabled()) {
+			// TODO only cleanup if syntax is complete
 			AiCoderActivator.log().info("Trigger code cleanup on apply");
 			final Optional<ICompilationUnit> compilationUnitOptional = EclipseUtils.getCompilationUnit(this.textEditor.getEditorInput());
 			if (compilationUnitOptional.isPresent()) {
