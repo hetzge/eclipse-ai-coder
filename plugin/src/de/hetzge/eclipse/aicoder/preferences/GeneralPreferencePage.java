@@ -1,5 +1,7 @@
 package de.hetzge.eclipse.aicoder.preferences;
 
+import java.time.Duration;
+
 import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.IntegerFieldEditor;
@@ -41,7 +43,7 @@ public class GeneralPreferencePage extends FieldEditorPreferencePage implements 
 				AiCoderPreferences.ENABLE_AUTOCOMPLETE_KEY,
 				"Enable autocomplete",
 				generalGroup));
-		
+
 		// Pseudo FIM setting
 		addField(new BooleanFieldEditor(
 				AiCoderPreferences.ENABLE_PSEUDO_FIM_KEY,
@@ -94,5 +96,13 @@ public class GeneralPreferencePage extends FieldEditorPreferencePage implements 
 				generalGroup);
 		debounceInMsEditor.setValidRange(0, 10000);
 		addField(debounceInMsEditor);
+
+		// Timeout setting
+		final IntegerFieldEditor timeoutEditor = new IntegerFieldEditor(
+				AiCoderPreferences.TIMEOUT_KEY,
+				"Timeout (in ms):",
+				generalGroup);
+		timeoutEditor.setValidRange(0, (int) Duration.ofHours(1).toMillis());
+		addField(timeoutEditor);
 	}
 }

@@ -1,43 +1,46 @@
 package de.hetzge.eclipse.aicoder.llm;
 
-import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.net.URI;
-import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
-import de.hetzge.eclipse.aicoder.util.HttpUtils;
 import de.hetzge.eclipse.aicoder.util.JinjaUtils;
 import mjson.Json;
 
 public final class LlmUtils {
 
+	private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
+
 	private LlmUtils() {
 	}
 
-	public static LlmResponse executeGenerate(String systemPrompt, String prompt) throws IOException {
+	public static CompletableFuture<LlmResponse> executeGenerate(String systemPrompt, String prompt) {
 		return execute(LlmOption.createEditModelOptionFromPreferences(), systemPrompt, prompt, null);
 	}
 
-	public static LlmResponse executeEdit(String systemPrompt, String prompt) throws IOException {
+	public static CompletableFuture<LlmResponse> executeEdit(String systemPrompt, String prompt) {
 		return execute(LlmOption.createEditModelOptionFromPreferences(), systemPrompt, prompt, null);
 	}
 
-	public static LlmResponse executeQuickFix(String systemPrompt, String prompt) throws IOException {
+	public static CompletableFuture<LlmResponse> executeQuickFix(String systemPrompt, String prompt) {
 		return execute(LlmOption.createQuickFixModelOptionFromPreferences(), systemPrompt, prompt, null);
 	}
 
-	public static LlmResponse executeFillInTheMiddle(String prefix, String suffix) throws IOException {
+	public static CompletableFuture<LlmResponse> executeFillInTheMiddle(String prefix, String suffix) {
 		return execute(LlmOption.createFillInMiddleModelOptionFromPreferences(), null, prefix, suffix);
 	}
 
-	private static LlmResponse execute(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
+	private static CompletableFuture<LlmResponse> execute(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) {
+		AiCoderActivator.log().log(new Status(IStatus.INFO, AiCoderActivator.PLUGIN_ID, String.format("Executing LLM: %s", llmModelOption)));
 		final LlmProvider provider = llmModelOption.provider();
 		switch (provider) {
 		case NONE:
@@ -53,7 +56,7 @@ public final class LlmUtils {
 		}
 	}
 
-	private static LlmResponse executeOllama(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
+	private static CompletableFuture<LlmResponse> executeOllama(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) {
 		final boolean isFillInTheMiddle = suffix != null;
 		final boolean isPseudoFim = isFillInTheMiddle && AiCoderPreferences.isEnablePseduoFim();
 		final String urlString = AiCoderPreferences.getOllamaBaseUrl();
@@ -79,32 +82,33 @@ public final class LlmUtils {
 			json.set("prompt", prompt);
 			json.set("system", systemPrompt);
 		}
-		final URL url = URI.create(urlString).resolve("/api/generate").toURL();
+		final URI uri = URI.create(urlString).resolve("/api/generate");
 		final long beforeTimestamp = System.currentTimeMillis();
-		final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-		connection.setRequestMethod("POST");
-		connection.setRequestProperty("Content-Type", "application/json");
-		connection.setRequestProperty("Accept", "application/json");
-		connection.setDoOutput(true);
-		HttpUtils.writeRequestBody(connection, json);
-		final int responseCode = connection.getResponseCode();
-		if (responseCode == HttpURLConnection.HTTP_OK) {
-			final String responseBody = HttpUtils.readResponseBody(connection);
-			final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
-			final Json responseJson = Json.read(responseBody);
-			final String content = responseJson.at("response").asString();
-			final int inputTokens = responseJson.at("prompt_eval_count").asInteger();
-			final int outputTokens = responseJson.at("eval_count").asInteger();
-			return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration, false);
-		} else {
-			AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", connection.getResponseMessage(), responseCode)));
-			final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
-			final String responseBody = HttpUtils.readErrorResponseBody(connection);
-			return new LlmResponse(llmModelOption, "", responseBody, 0, 0, duration, true);
-		}
+		final HttpRequest request = HttpRequest.newBuilder()
+				.uri(uri)
+				.header("Content-Type", "application/json")
+				.header("Accept", "application/json")
+				.timeout(AiCoderPreferences.getTimeout())
+				.POST(HttpRequest.BodyPublishers.ofString(json.toString()))
+				.build();
+		return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+				.thenApply(response -> {
+					final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
+					if (response.statusCode() == 200) {
+						final String responseBody = response.body();
+						final Json responseJson = Json.read(responseBody);
+						final String content = responseJson.at("response").asString();
+						final int inputTokens = responseJson.at("prompt_eval_count").asInteger();
+						final int outputTokens = responseJson.at("eval_count").asInteger();
+						return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration, false);
+					} else {
+						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
+						return new LlmResponse(llmModelOption, "", response.body(), 0, 0, duration, true);
+					}
+				});
 	}
 
-	private static LlmResponse executeMistral(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
+	private static CompletableFuture<LlmResponse> executeMistral(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) {
 		final boolean isFillInTheMiddle = suffix != null;
 		final boolean isPseudoFim = isFillInTheMiddle && AiCoderPreferences.isEnablePseduoFim();
 		final String urlString = "https://codestral.mistral.ai";
@@ -131,33 +135,34 @@ public final class LlmUtils {
 			json.set("messages", createMessages(systemPrompt, prompt));
 		}
 		final String path = isFillInTheMiddle && !isPseudoFim ? "/v1/fim/completions" : "/v1/chat/completions";
-		final URL url = URI.create(urlString).resolve(path).toURL();
+		final URI uri = URI.create(urlString).resolve(path);
 		final long beforeTimestamp = System.currentTimeMillis();
-		final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-		connection.setRequestMethod("POST");
-		connection.setRequestProperty("Content-Type", "application/json");
-		connection.setRequestProperty("Accept", "application/json");
-		connection.setRequestProperty("Authorization", "Bearer " + codestralApiKey);
-		connection.setDoOutput(true);
-		HttpUtils.writeRequestBody(connection, json);
-		final int responseCode = connection.getResponseCode();
-		if (responseCode == HttpURLConnection.HTTP_OK) {
-			final String responseBody = HttpUtils.readResponseBody(connection);
-			final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
-			final Json responseJson = Json.read(responseBody);
-			final String content = responseJson.at("choices").at(0).at("message").at("content").asString();
-			final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
-			final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
-			return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration, false);
-		} else {
-			AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", connection.getResponseMessage(), responseCode)));
-			final String responseBody = HttpUtils.readErrorResponseBody(connection);
-			final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
-			return new LlmResponse(llmModelOption, "", responseBody, 0, 0, duration, true);
-		}
+		final HttpRequest request = HttpRequest.newBuilder()
+				.uri(uri)
+				.header("Content-Type", "application/json")
+				.header("Accept", "application/json")
+				.header("Authorization", "Bearer " + codestralApiKey)
+				.timeout(AiCoderPreferences.getTimeout())
+				.POST(HttpRequest.BodyPublishers.ofString(json.toString()))
+				.build();
+		return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+				.thenApply(response -> {
+					final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
+					if (response.statusCode() == 200) {
+						final String responseBody = response.body();
+						final Json responseJson = Json.read(responseBody);
+						final String content = responseJson.at("choices").at(0).at("message").at("content").asString();
+						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
+						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
+						return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration, false);
+					} else {
+						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
+						return new LlmResponse(llmModelOption, "", response.body(), 0, 0, duration, true);
+					}
+				});
 	}
 
-	private static LlmResponse executeOpenAi(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
+	private static CompletableFuture<LlmResponse> executeOpenAi(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) {
 		final boolean isFillInTheMiddle = suffix != null;
 		final boolean isPseudoFim = isFillInTheMiddle && AiCoderPreferences.isEnablePseduoFim();
 		final String urlString = AiCoderPreferences.getOpenAiBaseUrl();
@@ -184,32 +189,33 @@ public final class LlmUtils {
 			json.set("messages", createMessages(systemPrompt, prompt));
 		}
 		final String path = isFillInTheMiddle && !isPseudoFim ? "./v1/completions" : "./v1/chat/completions";
-		final URL url = URI.create(urlString).resolve(path).toURL();
+		final URI uri = URI.create(urlString).resolve(path);
 		final long beforeTimestamp = System.currentTimeMillis();
-		final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-		connection.setRequestMethod("POST");
-		connection.setRequestProperty("Content-Type", "application/json");
-		connection.setRequestProperty("Accept", "application/json");
-		connection.setRequestProperty("Authorization", "Bearer " + openAiApiKey);
-		connection.setDoOutput(true);
-		HttpUtils.writeRequestBody(connection, json);
-		final int responseCode = connection.getResponseCode();
-		if (responseCode == HttpURLConnection.HTTP_OK) {
-			final String responseBody = HttpUtils.readResponseBody(connection);
-			final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
-			final Json responseJson = Json.read(responseBody);
-			final String content = isFillInTheMiddle && !isPseudoFim
-					? responseJson.at("choices").at(0).at("text").asString()
-					: responseJson.at("choices").at(0).at("message").at("content").asString();
-			final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
-			final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
-			return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration, false);
-		} else {
-			AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", connection.getResponseMessage(), responseCode)));
-			final String responseBody = HttpUtils.readErrorResponseBody(connection);
-			final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
-			return new LlmResponse(llmModelOption, "", responseBody, 0, 0, duration, true);
-		}
+		final HttpRequest request = HttpRequest.newBuilder()
+				.uri(uri)
+				.header("Content-Type", "application/json")
+				.header("Accept", "application/json")
+				.header("Authorization", "Bearer " + openAiApiKey)
+				.timeout(AiCoderPreferences.getTimeout())
+				.POST(HttpRequest.BodyPublishers.ofString(json.toString()))
+				.build();
+		return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+				.thenApply(response -> {
+					final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
+					if (response.statusCode() == 200) {
+						final String responseBody = response.body();
+						final Json responseJson = Json.read(responseBody);
+						final String content = isFillInTheMiddle && !isPseudoFim
+								? responseJson.at("choices").at(0).at("text").asString()
+								: responseJson.at("choices").at(0).at("message").at("content").asString();
+						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
+						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
+						return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration, false);
+					} else {
+						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
+						return new LlmResponse(llmModelOption, "", response.body(), 0, 0, duration, true);
+					}
+				});
 	}
 
 	private static String getPseduoFIMSystemPrompt() {

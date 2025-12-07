@@ -5,10 +5,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.OperationCanceledException;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.ISchedulingRule;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jdt.core.ICompilationUnit;
@@ -119,6 +125,7 @@ public final class InlineCompletionController {
 	private boolean abortDisabled;
 	private SuggestionPopupDialog suggestionPopupDialog;
 	private Suggestion suggestion;
+	private Future<LlmResponse> llmResponseFuture;
 
 	private InlineCompletionController(ITextViewer textViewer, ITextEditor textEditor) {
 		this.textViewer = textViewer;
@@ -139,6 +146,7 @@ public final class InlineCompletionController {
 		this.abortDisabled = false;
 		this.suggestionPopupDialog = null;
 		this.suggestion = null;
+		this.llmResponseFuture = null;
 	}
 
 	private void triggerAutocomplete() {
@@ -182,121 +190,166 @@ public final class InlineCompletionController {
 			}
 		}
 		final AiCoderHistoryEntry historyEntry = new AiCoderHistoryEntry(mode, filePath, this.textViewer.getDocument().get());
-		this.job = Job.create("AI completion", monitor -> {
-			String prompt = "";
-			LlmResponse llmResponse = null;
-			try {
-				updateHistoryEntry(historyEntry);
-				final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
-				final IDocument document = this.textViewer.getDocument();
-				final RootContextEntry rootContextEntry = RootContextEntry.create(document, this.textEditor.getEditorInput(), modelOffset);
-				final String contextString = ContextEntry.apply(rootContextEntry, new ContextContext());
-				// IMPORTANT: DO this after ContextEntry.apply(...)
-				updateContextView(rootContextEntry);
-				final String[] contextParts = contextString.split(FillInMiddleContextEntry.FILL_HERE_PLACEHOLDER);
-				final String prefix = contextParts[0];
-				final String suffix = contextParts.length > 1 ? contextParts[1] : "";
-				final String selectionText = EclipseUtils.getSelectionText(this.textViewer);
-				if (mode == CompletionMode.EDIT || mode == CompletionMode.GENERATE || mode == CompletionMode.QUICK_FIX) {
-					final String fileType = EclipseUtils.getFileExtension(this.textEditor.getEditorInput());
-					final String systemPrompt = hasSelection
-							? AiCoderPreferences.getChangeCodeSystemPrompt()
-							: AiCoderPreferences.getGenerateCodeSystemPrompt();
-					final String effectiveInstruction = instruction != null ? instruction : AiCoderPreferences.getQuickFixPrompt();
-					prompt = hasSelection
-							? LlmPromptTemplates.changeCodePrompt(fileType, selectionText, effectiveInstruction, prefix, suffix)
-							: LlmPromptTemplates.generateCodePrompt(effectiveInstruction, prefix, suffix);
-					if (mode == CompletionMode.EDIT) {
-						llmResponse = LlmUtils.executeEdit(systemPrompt, prompt);
-					} else if (mode == CompletionMode.QUICK_FIX) {
-						llmResponse = LlmUtils.executeQuickFix(systemPrompt, prompt);
-					} else {
-						llmResponse = LlmUtils.executeGenerate(systemPrompt, prompt);
+		this.job = new Job("AI completion") {
+
+			ITextViewer textViewer = InlineCompletionController.this.textViewer;
+			ITextEditor textEditor = InlineCompletionController.this.textEditor;
+
+			@Override
+			protected IStatus run(IProgressMonitor monitor) {
+				String prompt = "";
+				LlmResponse llmResponse = null;
+				try {
+					updateHistoryEntry(historyEntry);
+					final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
+					final IDocument document = this.textViewer.getDocument();
+					if (monitor.isCanceled()) {
+						historyEntry.setStatus(HistoryStatus.CANCELED);
+						updateHistoryEntry(historyEntry);
+						return Status.CANCEL_STATUS;
 					}
-				} else if (mode == CompletionMode.INLINE) {
-					prompt = prefix + "<!!!>" + suffix;
-					llmResponse = LlmUtils.executeFillInTheMiddle(prefix, suffix);
-				} else {
-					throw new IllegalStateException("Unknown completion mode: " + mode);
-				}
-				if (llmResponse.isError()) {
-					historyEntry.setStatus(HistoryStatus.ERROR);
-					historyEntry.setPlainLlmResponse(llmResponse.getPlainResponse());
-					historyEntry.setModelLabel(llmResponse.getLlmModelOption().getLabel());
-					historyEntry.setInput(prompt);
-					historyEntry.setOutput(llmResponse.getContent());
-					updateHistoryEntry(historyEntry);
-					return;
-				}
-				final String content = Utils.stripCodeMarkdownTags(llmResponse.getContent());
-				final int currentModelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
-				final boolean isMultilineContent = content.contains("\n");
-				final boolean isBlank = content.isBlank();
-				final boolean isMoved = currentModelOffset != modelOffset;
-				final boolean isSame = hasSelection
-						? false
-						: isMultilineContent && suffix.replaceAll("\\s", "").startsWith(content.replaceAll("\\s", ""));
-				if (monitor.isCanceled()) {
-					historyEntry.setStatus(HistoryStatus.CANCELED);
-					updateHistoryEntry(historyEntry);
-					return;
-				}
-				if (!isBlank && !isMoved && !isSame) {
-					if (mode == CompletionMode.EDIT || mode == CompletionMode.QUICK_FIX) {
-						final int newLineCount = (int) content.lines().count();
-						final int oldLineCount = (int) selectionText.lines().count();
-						setup(new Suggestion(
-								historyEntry,
-								content,
-								modelOffset,
-								selectionText.length(),
-								EclipseUtils.getWidgetLine(this.textViewer, modelOffset) + oldLineCount - 1,
-								newLineCount,
-								oldLineCount,
-								Math.max(newLineCount - oldLineCount, 0)));
-					} else if (mode == CompletionMode.INLINE || mode == CompletionMode.GENERATE) {
-						setup(InlineCompletion.create(
-								historyEntry,
-								document,
-								modelOffset,
-								EclipseUtils.getWidgetOffset(this.textViewer, modelOffset),
-								EclipseUtils.getWidgetLine(this.textViewer, modelOffset),
-								content,
-								lineHeight,
-								defaultLineSpacing));
+					AiCoderActivator.log().info("Calculate context");
+					final RootContextEntry rootContextEntry = RootContextEntry.create(document, this.textEditor.getEditorInput(), modelOffset);
+					final String contextString = ContextEntry.apply(rootContextEntry, new ContextContext());
+					// IMPORTANT: DO this after ContextEntry.apply(...)
+					updateContextView(rootContextEntry);
+					if (monitor.isCanceled()) {
+						historyEntry.setStatus(HistoryStatus.CANCELED);
+						updateHistoryEntry(historyEntry);
+						return Status.CANCEL_STATUS;
+					}
+					final String[] contextParts = contextString.split(FillInMiddleContextEntry.FILL_HERE_PLACEHOLDER);
+					final String prefix = contextParts[0];
+					final String suffix = contextParts.length > 1 ? contextParts[1] : "";
+					final String selectionText = EclipseUtils.getSelectionText(this.textViewer);
+					if (mode == CompletionMode.EDIT || mode == CompletionMode.GENERATE || mode == CompletionMode.QUICK_FIX) {
+						final String fileType = EclipseUtils.getFileExtension(this.textEditor.getEditorInput());
+						final String systemPrompt = hasSelection
+								? AiCoderPreferences.getChangeCodeSystemPrompt()
+								: AiCoderPreferences.getGenerateCodeSystemPrompt();
+						final String effectiveInstruction = instruction != null ? instruction : AiCoderPreferences.getQuickFixPrompt();
+						prompt = hasSelection
+								? LlmPromptTemplates.changeCodePrompt(fileType, selectionText, effectiveInstruction, prefix, suffix)
+								: LlmPromptTemplates.generateCodePrompt(effectiveInstruction, prefix, suffix);
+						if (mode == CompletionMode.EDIT) {
+							InlineCompletionController.this.llmResponseFuture = LlmUtils.executeEdit(systemPrompt, prompt);
+						} else if (mode == CompletionMode.QUICK_FIX) {
+							InlineCompletionController.this.llmResponseFuture = LlmUtils.executeQuickFix(systemPrompt, prompt);
+						} else {
+							InlineCompletionController.this.llmResponseFuture = LlmUtils.executeGenerate(systemPrompt, prompt);
+						}
+					} else if (mode == CompletionMode.INLINE) {
+						prompt = prefix + "<!!!>" + suffix;
+						InlineCompletionController.this.llmResponseFuture = LlmUtils.executeFillInTheMiddle(prefix, suffix);
 					} else {
 						throw new IllegalStateException("Unknown completion mode: " + mode);
 					}
+					AiCoderActivator.log().info("Wait for LLM response");
+					try {
+						llmResponse = InlineCompletionController.this.llmResponseFuture.get();
+					} catch (final ExecutionException exception) {
+						if (exception.getCause() instanceof CancellationException) {
+							historyEntry.setStatus(HistoryStatus.CANCELED);
+							updateHistoryEntry(historyEntry);
+							return Status.CANCEL_STATUS;
+						}
+						throw exception;
+					}
+					if (llmResponse.isError()) {
+						historyEntry.setStatus(HistoryStatus.ERROR);
+						historyEntry.setPlainLlmResponse(llmResponse.getPlainResponse());
+						historyEntry.setModelLabel(llmResponse.getLlmModelOption().getLabel());
+						historyEntry.setInput(prompt);
+						historyEntry.setOutput(llmResponse.getContent());
+						updateHistoryEntry(historyEntry);
+						return Status.OK_STATUS;
+					}
+					final String content = Utils.stripCodeMarkdownTags(llmResponse.getContent());
+					final int currentModelOffset = EclipseUtils.getCurrentOffsetInDocument(InlineCompletionController.this.textEditor);
+					final boolean isMultilineContent = content.contains("\n");
+					final boolean isBlank = content.isBlank();
+					final boolean isMoved = currentModelOffset != modelOffset;
+					final boolean isSame = hasSelection
+							? false
+							: isMultilineContent && suffix.replaceAll("\\s", "").startsWith(content.replaceAll("\\s", ""));
+					if (monitor.isCanceled()) {
+						historyEntry.setStatus(HistoryStatus.CANCELED);
+						updateHistoryEntry(historyEntry);
+						return Status.CANCEL_STATUS;
+					}
+					if (!isBlank && !isMoved && !isSame) {
+						if (mode == CompletionMode.EDIT || mode == CompletionMode.QUICK_FIX) {
+							final int newLineCount = (int) content.lines().count();
+							final int oldLineCount = (int) selectionText.lines().count();
+							setup(new Suggestion(
+									historyEntry,
+									content,
+									modelOffset,
+									selectionText.length(),
+									EclipseUtils.getWidgetLine(this.textViewer, modelOffset) + oldLineCount - 1,
+									newLineCount,
+									oldLineCount,
+									Math.max(newLineCount - oldLineCount, 0)));
+						} else if (mode == CompletionMode.INLINE || mode == CompletionMode.GENERATE) {
+							setup(InlineCompletion.create(
+									historyEntry,
+									document,
+									modelOffset,
+									EclipseUtils.getWidgetOffset(this.textViewer, modelOffset),
+									EclipseUtils.getWidgetLine(this.textViewer, modelOffset),
+									content,
+									lineHeight,
+									defaultLineSpacing));
+						} else {
+							throw new IllegalStateException("Unknown completion mode: " + mode);
+						}
+					}
+					final long duration = System.currentTimeMillis() - startTime;
+					historyEntry.setStatus(calculateStatus(isBlank, isMoved, isSame));
+					historyEntry.setDurationMs(duration);
+					historyEntry.setLlmDurationMs(llmResponse.getDuration().toMillis());
+					historyEntry.setPlainLlmResponse(llmResponse.getPlainResponse());
+					historyEntry.setModelLabel(llmResponse.getLlmModelOption().getLabel());
+					historyEntry.setInputTokenCount(llmResponse.getInputTokens());
+					historyEntry.setOutputTokenCount(llmResponse.getOutputTokens());
+					historyEntry.setInput(prompt);
+					historyEntry.setOutput(content);
+					updateHistoryEntry(historyEntry);
+					return Status.OK_STATUS;
+				} catch (final Exception exception) {
+					AiCoderActivator.log().error("AI Coder completion failed", exception);
+					final long duration = System.currentTimeMillis() - startTime;
+					final String stacktrace = Utils.getStacktraceString(exception);
+					historyEntry.setStatus(HistoryStatus.ERROR);
+					historyEntry.setDurationMs(duration);
+					historyEntry.setLlmDurationMs(0);
+					historyEntry.setPlainLlmResponse(llmResponse != null ? llmResponse.getPlainResponse() : "");
+					historyEntry.setModelLabel(null);
+					historyEntry.setInputTokenCount(0);
+					historyEntry.setOutputTokenCount(0);
+					historyEntry.setInput(prompt);
+					historyEntry.setOutput((llmResponse != null ? llmResponse.getContent() : "") + stacktrace);
+					updateHistoryEntry(historyEntry);
+					return Status.OK_STATUS;
 				}
-				final long duration = System.currentTimeMillis() - startTime;
-				historyEntry.setStatus(calculateStatus(isBlank, isMoved, isSame));
-				historyEntry.setDurationMs(duration);
-				historyEntry.setLlmDurationMs(llmResponse.getDuration().toMillis());
-				historyEntry.setPlainLlmResponse(llmResponse.getPlainResponse());
-				historyEntry.setModelLabel(llmResponse.getLlmModelOption().getLabel());
-				historyEntry.setInputTokenCount(llmResponse.getInputTokens());
-				historyEntry.setOutputTokenCount(llmResponse.getOutputTokens());
-				historyEntry.setInput(prompt);
-				historyEntry.setOutput(content);
-				updateHistoryEntry(historyEntry);
-			} catch (final Exception exception) {
-				AiCoderActivator.log().error("AI Coder completion failed", exception);
-				final long duration = System.currentTimeMillis() - startTime;
-				final String stacktrace = Utils.getStacktraceString(exception);
-				historyEntry.setStatus(HistoryStatus.ERROR);
-				historyEntry.setDurationMs(duration);
-				historyEntry.setLlmDurationMs(0);
-				historyEntry.setPlainLlmResponse(llmResponse != null ? llmResponse.getPlainResponse() : "");
-				historyEntry.setModelLabel(null);
-				historyEntry.setInputTokenCount(0);
-				historyEntry.setOutputTokenCount(0);
-				historyEntry.setInput(prompt);
-				historyEntry.setOutput((llmResponse != null ? llmResponse.getContent() : "") + stacktrace);
-				updateHistoryEntry(historyEntry);
 			}
-		});
+
+			@Override
+			protected void canceling() {
+				cancelHttpRequest();
+			}
+		};
 		this.job.setRule(COMPLETION_JOB_RULE);
 		this.job.schedule();
+	}
+
+	private void cancelHttpRequest() {
+		AiCoderActivator.log().info("Canceling");
+		if (this.llmResponseFuture != null) {
+			AiCoderActivator.log().info("Cancel LLM response future");
+			this.llmResponseFuture.cancel(true);
+			this.llmResponseFuture = null;
+		}
 	}
 
 	private HistoryStatus calculateStatus(boolean isBlank, boolean isMoved, boolean isSame) {
@@ -365,6 +418,11 @@ public final class InlineCompletionController {
 	public void abort(String reason) {
 		if (this.abortDisabled) {
 			return;
+		}
+		if (this.llmResponseFuture != null) {
+			AiCoderActivator.log().info(String.format("Cancel LLM response future (reason: '%s')", reason));
+			this.llmResponseFuture.cancel(true);
+			this.llmResponseFuture = null;
 		}
 		if (this.suggestionPopupDialog != null) {
 			AiCoderActivator.log().info(String.format("Close suggestion popup dialog (reason: '%s')", reason));
