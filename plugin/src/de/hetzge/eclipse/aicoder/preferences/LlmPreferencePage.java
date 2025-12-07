@@ -71,7 +71,6 @@ public class LlmPreferencePage extends FieldEditorPreferencePage implements IWor
 				fillInMiddleModelEditor.setStringValue(llmOption.modelKey());
 			}
 		}));
-
 		final Group quickFixModelGroup = new Group(getFieldEditorParent(), SWT.NONE);
 		quickFixModelGroup.setText("Quick fix LLM");
 		quickFixModelGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));

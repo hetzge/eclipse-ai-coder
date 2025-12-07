@@ -55,22 +55,29 @@ public final class LlmUtils {
 
 	private static LlmResponse executeOllama(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
 		final boolean isFillInTheMiddle = suffix != null;
+		final boolean isPseudoFim = isFillInTheMiddle && AiCoderPreferences.isEnablePseduoFim();
 		final String urlString = AiCoderPreferences.getOllamaBaseUrl();
 		final boolean multilineEnabled = AiCoderPreferences.isMultilineEnabled();
-		final Json json = Json.object()
-				.set("model", llmModelOption.modelKey())
-				.set("prompt", prompt)
-				.set("stream", false)
-				.set("options", Json.object()
-						.set("temperature", 0));
-		if (systemPrompt != null) {
-			json.set("system", systemPrompt);
-		}
+		final Json json = Json.object();
+		json.set("model", llmModelOption.modelKey());
+		json.set("stream", false);
+		json.set("options", Json.object().set("temperature", 0));
 		if (isFillInTheMiddle) {
-			json.set("suffix", suffix);
-			json.at("options")
-					.set("num_predict", AiCoderPreferences.getMaxTokens())
-					.set("stop", createStop(multilineEnabled));
+			if (!isPseudoFim) {
+				json.set("suffix", suffix);
+				json.at("options").set("stop", createStop(multilineEnabled));
+			} else {
+				final String pseudoFimSystemPrompt = getPseduoFIMSystemPrompt();
+				final String pseudoFimUserPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getOpenAiFimTemplate(), Map.ofEntries(
+						Map.entry("prefix", prompt),
+						Map.entry("suffix", suffix)));
+				json.set("system", pseudoFimSystemPrompt);
+				json.set("prompt", pseudoFimUserPrompt);
+			}
+			json.at("options").set("num_predict", AiCoderPreferences.getMaxTokens());
+		} else {
+			json.set("prompt", prompt);
+			json.set("system", systemPrompt);
 		}
 		final URL url = URI.create(urlString).resolve("/api/generate").toURL();
 		final long beforeTimestamp = System.currentTimeMillis();
@@ -99,30 +106,31 @@ public final class LlmUtils {
 
 	private static LlmResponse executeMistral(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
 		final boolean isFillInTheMiddle = suffix != null;
+		final boolean isPseudoFim = isFillInTheMiddle && AiCoderPreferences.isEnablePseduoFim();
 		final String urlString = "https://codestral.mistral.ai";
 		final String codestralApiKey = AiCoderPreferences.getCodestralApiKey();
 		final boolean multilineEnabled = AiCoderPreferences.isMultilineEnabled();
-		final Json json = Json.object()
-				.set("model", llmModelOption.modelKey())
-				.set("temperature", 0);
+		final Json json = Json.object();
+		json.set("model", llmModelOption.modelKey());
+		json.set("temperature", 0);
 		if (isFillInTheMiddle) {
-			json.set("prompt", prompt)
-					.set("suffix", suffix)
-					.set("max_tokens", AiCoderPreferences.getMaxTokens())
-					.set("stop", createStop(multilineEnabled));
-		} else {
-			final Json messagesJson = Json.array();
-			if (systemPrompt != null) {
-				messagesJson.add(Json.object()
-						.set("role", "system")
-						.set("content", systemPrompt));
+			if (!isPseudoFim) {
+				json.set("prompt", prompt);
+				json.set("suffix", suffix);
+				json.set("max_tokens", AiCoderPreferences.getMaxTokens());
+				json.set("stop", createStop(multilineEnabled));
+			} else {
+				final String pseudoFimSystemPrompt = getPseduoFIMSystemPrompt();
+				final String pseudoFimUserPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getOpenAiFimTemplate(), Map.ofEntries(
+						Map.entry("prefix", prompt),
+						Map.entry("suffix", suffix)));
+				json.set("max_tokens", AiCoderPreferences.getMaxTokens());
+				json.set("messages", createMessages(pseudoFimSystemPrompt, pseudoFimUserPrompt));
 			}
-			messagesJson.add(Json.object()
-					.set("role", "user")
-					.set("content", prompt));
-			json.set("messages", messagesJson);
+		} else {
+			json.set("messages", createMessages(systemPrompt, prompt));
 		}
-		final String path = isFillInTheMiddle ? "/v1/fim/completions" : "/v1/chat/completions";
+		final String path = isFillInTheMiddle && !isPseudoFim ? "/v1/fim/completions" : "/v1/chat/completions";
 		final URL url = URI.create(urlString).resolve(path).toURL();
 		final long beforeTimestamp = System.currentTimeMillis();
 		final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -151,32 +159,32 @@ public final class LlmUtils {
 
 	private static LlmResponse executeOpenAi(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) throws IOException {
 		final boolean isFillInTheMiddle = suffix != null;
+		final boolean isPseudoFim = isFillInTheMiddle && AiCoderPreferences.isEnablePseduoFim();
 		final String urlString = AiCoderPreferences.getOpenAiBaseUrl();
 		final String openAiApiKey = AiCoderPreferences.getOpenAiApiKey();
-		final Json json = Json.object()
-				.set("model", llmModelOption.modelKey())
-				.set("temperature", 0);
-		if (!isFillInTheMiddle) {
-			final Json messagesJson = Json.array();
-			if (systemPrompt != null) {
-				messagesJson.add(Json.object()
-						.set("role", "system")
-						.set("content", systemPrompt));
+		final Json json = Json.object();
+		json.set("model", llmModelOption.modelKey());
+		json.set("temperature", 0);
+		if (isFillInTheMiddle) {
+			if (!isPseudoFim) {
+				final String fimTemplatePrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getOpenAiFimTemplate(), Map.ofEntries(
+						Map.entry("prefix", prompt),
+						Map.entry("suffix", suffix)));
+				json.set("prompt", fimTemplatePrompt);
+				json.set("max_tokens", AiCoderPreferences.getMaxTokens());
+				json.set("stop", createStop(AiCoderPreferences.isMultilineEnabled()));
+			} else {
+				final String pseudoFimSystemPrompt = getPseduoFIMSystemPrompt();
+				final String pseudoFimUserPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getOpenAiFimTemplate(), Map.ofEntries(
+						Map.entry("prefix", prompt),
+						Map.entry("suffix", suffix)));
+				json.set("messages", createMessages(pseudoFimSystemPrompt, pseudoFimUserPrompt));
 			}
-			messagesJson.add(Json.object()
-					.set("role", "user")
-					.set("content", prompt));
-			json.set("messages", messagesJson);
 		} else {
-			final String fimPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getOpenAiFimTemplate(), Map.ofEntries(
-					Map.entry("prefix", prompt),
-					Map.entry("suffix", suffix)));
-			json.set("prompt", fimPrompt)
-					.set("max_tokens", AiCoderPreferences.getMaxTokens())
-					.set("stop", createStop(AiCoderPreferences.isMultilineEnabled()));
+			json.set("messages", createMessages(systemPrompt, prompt));
 		}
-
-		final URL url = URI.create(urlString + "/").resolve(isFillInTheMiddle ? "./v1/completions" : "./v1/chat/completions").toURL();
+		final String path = isFillInTheMiddle && !isPseudoFim ? "./v1/completions" : "./v1/chat/completions";
+		final URL url = URI.create(urlString).resolve(path).toURL();
 		final long beforeTimestamp = System.currentTimeMillis();
 		final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 		connection.setRequestMethod("POST");
@@ -190,7 +198,7 @@ public final class LlmUtils {
 			final String responseBody = HttpUtils.readResponseBody(connection);
 			final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
 			final Json responseJson = Json.read(responseBody);
-			final String content = isFillInTheMiddle
+			final String content = isFillInTheMiddle && !isPseudoFim
 					? responseJson.at("choices").at(0).at("text").asString()
 					: responseJson.at("choices").at(0).at("message").at("content").asString();
 			final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
@@ -204,9 +212,25 @@ public final class LlmUtils {
 		}
 	}
 
+	private static String getPseduoFIMSystemPrompt() {
+		final String systemPrompt = AiCoderPreferences.getPseudoFimSystemPrompt();
+		final boolean isMultilineEnabled = AiCoderPreferences.isMultilineEnabled();
+		return systemPrompt + (isMultilineEnabled ? "" : "\n- Only generate a single line of code. The user expects only the completion of the current line.");
+	}
+
 	private static Json createStop(final boolean multilineEnabled) {
 		return Json.array()
 				.add(multilineEnabled ? "\n\n" : "\n")
 				.add(multilineEnabled ? "\r\n\r\n" : "\r\n");
+	}
+
+	private static Json createMessages(String systemPrompt, String prompt) {
+		return Json.array()
+				.add(Json.object()
+						.set("role", "system")
+						.set("content", systemPrompt))
+				.add(Json.object()
+						.set("role", "user")
+						.set("content", prompt));
 	}
 }
