@@ -45,6 +45,8 @@ import org.eclipse.swt.graphics.GlyphMetrics;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorInput;
+import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.contexts.IContextActivation;
 import org.eclipse.ui.texteditor.ITextEditor;
 
@@ -156,6 +158,14 @@ public final class InlineCompletionController {
 			return;
 		}
 		if (AiCoderPreferences.isOnlyOnChangeAutocompleteEnabled() && !isDocumentChanged) {
+			return;
+		}
+		final boolean isActiveEditor = Display.getDefault().syncCall(() -> {
+			final IWorkbenchPage activePage = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+			return activePage != null && activePage.getActiveEditor() == InlineCompletionController.this.textEditor;
+		});
+		if (!isActiveEditor) {
+			AiCoderActivator.log().info("Not active editor");
 			return;
 		}
 		this.debouncer.debounce(() -> {
