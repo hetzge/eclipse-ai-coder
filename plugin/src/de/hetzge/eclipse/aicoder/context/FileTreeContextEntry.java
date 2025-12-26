@@ -9,9 +9,12 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IFileEditorInput;
 
+import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.util.ContextUtils;
 import de.hetzge.eclipse.aicoder.util.GitUtils;
 import de.hetzge.eclipse.aicoder.util.GitUtils.GitState;
@@ -76,6 +79,9 @@ public class FileTreeContextEntry extends ContextEntry {
 			final IProject project = file.getProject();
 			return new FileTreeContextEntry(project, Duration.ZERO);
 		}
-		throw new CoreException(null);
+		if (editorInput == null) {
+			throw new CoreException(new Status(IStatus.ERROR, AiCoderActivator.PLUGIN_ID, "Editor input is null"));
+		}
+		throw new CoreException(new Status(IStatus.ERROR, AiCoderActivator.PLUGIN_ID, "Unsupported editor input type: " + editorInput.getClass().getName()));
 	}
 }
