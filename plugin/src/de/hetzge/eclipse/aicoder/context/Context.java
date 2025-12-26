@@ -34,6 +34,8 @@ import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
  * TODO mark sticky / disabled in resource tree
  * TODO multiple suggestions (count configurable, or as long as user does not select one)
  * TODO grep blacklist for files and folders (and use gitignore) -> use for File Tree context
+ * TODO reranker context
+ * TODO clipboard history
  */
 
 public final class Context {

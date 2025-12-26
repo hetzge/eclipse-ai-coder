@@ -3,6 +3,7 @@ package de.hetzge.eclipse.aicoder.util;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.util.List;
 
 import org.eclipse.compare.CompareConfiguration;
 import org.eclipse.compare.CompareEditorInput;
@@ -24,6 +25,42 @@ import org.eclipse.ui.PlatformUI;
 public final class DiffUtils {
 
 	private DiffUtils() {
+	}
+
+	public static String diff(String oldContent, String newContent) {
+		return diff(oldContent.lines().toList(), newContent.lines().toList());
+	}
+
+	public static String diff(List<String> oldList, List<String> newList) {
+		final int m = oldList.size();
+		final int n = newList.size();
+
+		// Build LCS matrix (O(m*n))
+		final int[][] lcs = new int[m + 1][n + 1];
+		for (int i = 0; i < m; i++) {
+			for (int j = 0; j < n; j++) {
+				lcs[i + 1][j + 1] = oldList.get(i).equals(newList.get(j)) ? lcs[i][j] + 1 : Math.max(lcs[i][j + 1], lcs[i + 1][j]);
+			}
+		}
+
+		// Backtrack to produce diff hunks
+		final StringBuilder stringBuilder = new StringBuilder();
+		int i = m, j = n;
+		while (i > 0 || j > 0) {
+			if (i > 0 && j > 0 && oldList.get(i - 1).equals(newList.get(j - 1))) {
+				stringBuilder.insert(0, " " + oldList.get(i - 1) + "\n");
+				i--;
+				j--;
+			} else if (j > 0 && (i == 0 || lcs[i][j - 1] >= lcs[i - 1][j])) {
+				stringBuilder.insert(0, "+" + newList.get(j - 1) + "\n");
+				j--;
+			} else if (i > 0 && (j == 0 || lcs[i][j - 1] < lcs[i - 1][j])) {
+				stringBuilder.insert(0, "-" + oldList.get(i - 1) + "\n");
+				i--;
+			}
+		}
+
+		return stringBuilder.toString();
 	}
 
 	public static void openDiff(String content, String previousContent) {

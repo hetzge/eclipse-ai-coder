@@ -51,6 +51,8 @@ public final class LlmUtils {
 			return executeMistral(llmModelOption, systemPrompt, prompt, suffix);
 		case OPENAI:
 			return executeOpenAi(llmModelOption, systemPrompt, prompt, suffix);
+		case INCEPTIONLABS:
+			return executeInceptionLabs(llmModelOption, systemPrompt, prompt, suffix);
 		default:
 			throw new IllegalStateException("Illegal provider: " + provider);
 		}
@@ -196,6 +198,61 @@ public final class LlmUtils {
 				.header("Content-Type", "application/json")
 				.header("Accept", "application/json")
 				.header("Authorization", "Bearer " + openAiApiKey)
+				.timeout(AiCoderPreferences.getTimeout())
+				.POST(HttpRequest.BodyPublishers.ofString(json.toString()))
+				.build();
+		return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+				.thenApply(response -> {
+					final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
+					if (response.statusCode() == 200) {
+						final String responseBody = response.body();
+						final Json responseJson = Json.read(responseBody);
+						final String content = isFillInTheMiddle && !isPseudoFim
+								? responseJson.at("choices").at(0).at("text").asString()
+								: responseJson.at("choices").at(0).at("message").at("content").asString();
+						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
+						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
+						return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration, false);
+					} else {
+						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
+						return new LlmResponse(llmModelOption, "", response.body(), 0, 0, duration, true);
+					}
+				});
+	}
+
+	private static CompletableFuture<LlmResponse> executeInceptionLabs(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) {
+		final boolean isFillInTheMiddle = suffix != null;
+		final boolean isPseudoFim = isFillInTheMiddle && AiCoderPreferences.isEnablePseduoFim();
+		final String urlString = "https://api.inceptionlabs.ai";
+		final String inceptionApiKey = AiCoderPreferences.getInceptionLabsApiKey();
+		final boolean multilineEnabled = AiCoderPreferences.isMultilineEnabled();
+		final Json json = Json.object();
+		json.set("model", llmModelOption.modelKey());
+		json.set("temperature", 0);
+		if (isFillInTheMiddle) {
+			if (!isPseudoFim) {
+				json.set("prompt", prompt);
+				json.set("suffix", suffix);
+				json.set("max_tokens", AiCoderPreferences.getMaxTokens());
+				json.set("stop", createStop(multilineEnabled));
+			} else {
+				final String pseudoFimSystemPrompt = getPseduoFIMSystemPrompt();
+				final String pseudoFimUserPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getOpenAiFimTemplate(), Map.ofEntries(
+						Map.entry("prefix", prompt),
+						Map.entry("suffix", suffix)));
+				json.set("messages", createMessages(pseudoFimSystemPrompt, pseudoFimUserPrompt));
+			}
+		} else {
+			json.set("messages", createMessages(systemPrompt, prompt));
+		}
+		final String path = isFillInTheMiddle && !isPseudoFim ? "/v1/fim/completions" : "/v1/chat/completions";
+		final URI uri = URI.create(urlString).resolve(path);
+		final long beforeTimestamp = System.currentTimeMillis();
+		final HttpRequest request = HttpRequest.newBuilder()
+				.uri(uri)
+				.header("Content-Type", "application/json")
+				.header("Accept", "application/json")
+				.header("Authorization", "Bearer " + inceptionApiKey)
 				.timeout(AiCoderPreferences.getTimeout())
 				.POST(HttpRequest.BodyPublishers.ofString(json.toString()))
 				.build();

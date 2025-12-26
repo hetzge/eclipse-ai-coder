@@ -4,5 +4,6 @@ public enum LlmProvider {
 	NONE,
 	OLLAMA,
 	MISTRAL,
-	OPENAI
+	OPENAI,
+	INCEPTIONLABS;
 }

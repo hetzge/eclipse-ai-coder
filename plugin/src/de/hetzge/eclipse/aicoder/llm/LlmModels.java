@@ -29,6 +29,7 @@ public enum LlmModels {
 			this.options.addAll(loadOllamaModels());
 			this.options.addAll(loadOpenAiModels());
 			this.options.addAll(loadMistralModels());
+			this.options.addAll(loadInceptionLabsModels());
 		}
 		return this.options;
 	}
@@ -61,7 +62,7 @@ public enum LlmModels {
 	private List<LlmOption> loadOpenAiModels() {
 		try {
 			final String openAiBaseUrl = AiCoderPreferences.getOpenAiBaseUrl();
-			String openAiApiKey = AiCoderPreferences.getOpenAiApiKey();
+			final String openAiApiKey = AiCoderPreferences.getOpenAiApiKey();
 			final URL url = URI.create(openAiBaseUrl + "/").resolve("./v1/models").toURL();
 			final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 			connection.setRequestMethod("GET");
@@ -95,6 +96,36 @@ public enum LlmModels {
 			return List.of(new LlmOption(LlmProvider.MISTRAL, "codestral-latest"));
 		} catch (final Exception exception) {
 			AiCoderActivator.log().info(String.format("%s while querying mistral models: %s -> skip mistral models", exception.getClass().getName(), exception.getMessage()));
+			return List.of();
+		}
+	}
+
+	private List<LlmOption> loadInceptionLabsModels() {
+		try {
+			final String inceptionLabsApiKey = AiCoderPreferences.getInceptionLabsApiKey();
+			if (inceptionLabsApiKey == null || inceptionLabsApiKey.isBlank()) {
+				return List.of();
+			}
+			final URL url = URI.create("https://api.inceptionlabs.ai/v1/models").toURL();
+			final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+			connection.setRequestMethod("GET");
+			connection.setRequestProperty("Content-Type", "application/json");
+			connection.setRequestProperty("Accept", "application/json");
+			connection.setRequestProperty("Authorization", "Bearer " + inceptionLabsApiKey);
+			final int responseCode = connection.getResponseCode();
+			if (responseCode != HttpURLConnection.HTTP_OK) {
+				AiCoderActivator.log().info("Received inceptionlabs response code: " + responseCode + " -> skip inceptionlabs models");
+				return List.of();
+			}
+			final String responseBody = HttpUtils.readResponseBody(connection);
+			final Json responseJson = Json.read(responseBody);
+			final Json modelsJson = responseJson.at("data");
+			return modelsJson.asJsonList().stream().map(modelJson -> {
+				final String modelName = modelJson.at("id").asString();
+				return new LlmOption(LlmProvider.INCEPTIONLABS, modelName);
+			}).toList();
+		} catch (final Exception exception) {
+			AiCoderActivator.log().info(String.format("%s while querying inceptionlabs models: %s -> skip inceptionlabs models", exception.getClass().getName(), exception.getMessage()));
 			return List.of();
 		}
 	}

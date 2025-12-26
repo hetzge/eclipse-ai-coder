@@ -44,6 +44,7 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String ENABLE_PSEUDO_FIM_KEY = "de.hetzge.eclipse.aicoder.enable_pseduo_fim";
 	public static final String PSEUDO_FIM_SYSTEM_PROMPT_KEY = "de.hetzge.eclipse.aicoder.pseudo_fim_system_prompt";
 	public static final String TIMEOUT_KEY = "de.hetzge.eclipse.aicoder.timeout";
+	public static final String INCEPTIONLABS_API_KEY_KEY = "de.hetzge.eclipse.aicoder.inceptionlabs_api_key";
 
 	@Override
 	public void initializeDefaultPreferences() {
@@ -78,6 +79,7 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(ENABLE_PSEUDO_FIM_KEY, false);
 		store.setDefault(PSEUDO_FIM_SYSTEM_PROMPT_KEY, LlmPromptTemplates.pseudoFimCodeSystemPrompt());
 		store.setDefault(TIMEOUT_KEY, Duration.ofMinutes(5).toMillis());
+		store.setDefault(INCEPTIONLABS_API_KEY_KEY, "");
 	}
 
 	public static String getCodestralApiKey() {
@@ -223,5 +225,9 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 
 	public static Duration getTimeout() {
 		return Duration.ofSeconds(getStore().getInt(TIMEOUT_KEY));
+	}
+
+	public static String getInceptionLabsApiKey() {
+		return getStore().getString(INCEPTIONLABS_API_KEY_KEY);
 	}
 }

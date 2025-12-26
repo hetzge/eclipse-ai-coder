@@ -249,7 +249,7 @@ public final class InlineCompletionController {
 							InlineCompletionController.this.llmResponseFuture = LlmUtils.executeGenerate(systemPrompt, prompt);
 						}
 					} else if (mode == CompletionMode.INLINE) {
-						prompt = prefix + "<!!!>" + suffix;
+						prompt = prefix + "<|cursor|>" + suffix;
 						InlineCompletionController.this.llmResponseFuture = LlmUtils.executeFillInTheMiddle(prefix, suffix);
 					} else {
 						throw new IllegalStateException("Unknown completion mode: " + mode);

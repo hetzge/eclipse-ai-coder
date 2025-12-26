@@ -63,6 +63,17 @@ public class ProviderPreferencePage extends FieldEditorPreferencePage implements
 				AiCoderPreferences.OPENAI_FIM_TEMPLATE_KEY,
 				"FIM Template:",
 				openAiGroup));
+
+		// Inceptionlabs
+		final Group inceptionlabsGroup = new Group(getFieldEditorParent(), SWT.NONE);
+		inceptionlabsGroup.setText("Inceptionlabs");
+		inceptionlabsGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
+		final StringFieldEditor inceptionlabsApiKeyFieldEditor = new StringFieldEditor(
+				AiCoderPreferences.INCEPTIONLABS_API_KEY_KEY,
+				"API key:",
+				inceptionlabsGroup);
+		inceptionlabsApiKeyFieldEditor.getTextControl(inceptionlabsGroup).setEchoChar('*');
+		addField(inceptionlabsApiKeyFieldEditor);
 	}
 
 	@Override

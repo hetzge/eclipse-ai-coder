@@ -15,6 +15,7 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 
+import de.hetzge.eclipse.aicoder.util.DiffUtils;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 
 public final class SuggestionStyledTextViewer {
@@ -54,9 +55,7 @@ public final class SuggestionStyledTextViewer {
 
 	public void setupLineDiff() {
 		this.styledText.setText("");
-		final List<String> originalLines = this.originalContent.lines().toList();
-		final List<String> newLines = this.newContent.lines().toList();
-		final List<String> diffLines = diff(originalLines, newLines).lines().toList();
+		final List<String> diffLines = DiffUtils.diff(this.originalContent, this.newContent).lines().toList();
 		int originalOffset = this.parentStyledText.getSelectionRange().x;
 		for (int i = 0; i < diffLines.size(); i++) {
 			final String diffLine = diffLines.get(i);
@@ -200,38 +199,6 @@ public final class SuggestionStyledTextViewer {
 		newStyleRange.underlineColor = styleRange.underlineColor;
 		newStyleRange.underlineStyle = styleRange.underlineStyle;
 		return newStyleRange;
-	}
-
-	private static String diff(List<String> oldList, List<String> newList) {
-		final int m = oldList.size();
-		final int n = newList.size();
-
-		// Build LCS matrix (O(m*n))
-		final int[][] lcs = new int[m + 1][n + 1];
-		for (int i = 0; i < m; i++) {
-			for (int j = 0; j < n; j++) {
-				lcs[i + 1][j + 1] = oldList.get(i).equals(newList.get(j)) ? lcs[i][j] + 1 : Math.max(lcs[i][j + 1], lcs[i + 1][j]);
-			}
-		}
-
-		// Backtrack to produce diff hunks
-		final StringBuilder stringBuilder = new StringBuilder();
-		int i = m, j = n;
-		while (i > 0 || j > 0) {
-			if (i > 0 && j > 0 && oldList.get(i - 1).equals(newList.get(j - 1))) {
-				stringBuilder.insert(0, " " + oldList.get(i - 1) + "\n");
-				i--;
-				j--;
-			} else if (j > 0 && (i == 0 || lcs[i][j - 1] >= lcs[i - 1][j])) {
-				stringBuilder.insert(0, "+" + newList.get(j - 1) + "\n");
-				j--;
-			} else if (i > 0 && (j == 0 || lcs[i][j - 1] < lcs[i - 1][j])) {
-				stringBuilder.insert(0, "-" + oldList.get(i - 1) + "\n");
-				i--;
-			}
-		}
-
-		return stringBuilder.toString();
 	}
 
 	private static boolean isDarkColor(final Color color) {
