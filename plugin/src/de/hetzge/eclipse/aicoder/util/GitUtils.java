@@ -86,6 +86,9 @@ public final class GitUtils {
 		}
 
 		public boolean isIgnored(IResource resource) {
+			if (this.repository == null) {
+				return false;
+			}
 			return this.ignoredPaths.contains(this.repository.getWorkTree().toPath().relativize(resource.getLocation().toFile().toPath()).toString());
 		}
 	}
