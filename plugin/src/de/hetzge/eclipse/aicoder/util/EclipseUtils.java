@@ -275,4 +275,9 @@ public class EclipseUtils {
 		final IFile file = editor.getEditorInput().getAdapter(IFile.class);
 		return Optional.ofNullable(file).map(IFile::getLocation).map(IPath::toFile).map(File::toPath);
 	}
+
+	public static Optional<IPath> getEclipsePath(ITextEditor editor) {
+		final IFile file = editor.getEditorInput().getAdapter(IFile.class);
+		return Optional.ofNullable(file).map(IFile::getFullPath);
+	}
 }

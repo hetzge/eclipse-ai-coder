@@ -25,4 +25,8 @@ public record LlmOption(
 	public static LlmOption createQuickFixModelOptionFromPreferences() {
 		return new LlmOption(AiCoderPreferences.getQuickFixProvider(), AiCoderPreferences.getQuickFixModel());
 	}
+
+	public static LlmOption createNextEditModelOptionFromPreferences() {
+		return new LlmOption(AiCoderPreferences.getNextEditProvider(), AiCoderPreferences.getNextEditModel());
+	}
 }

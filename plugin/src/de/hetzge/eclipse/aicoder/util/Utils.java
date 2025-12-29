@@ -96,15 +96,13 @@ public final class Utils {
 	}
 
 	public static String stripCodeMarkdownTags(final String content) {
-		final int firstIndex = content.indexOf("```");
-		final int lastIndex = content.lastIndexOf("```");
-		if (firstIndex == -1) {
-			return content;
-		}
-		if (firstIndex == lastIndex) {
-			return content;
-		}
-		final List<String> lines = content.substring(firstIndex, lastIndex + 3).trim().lines().toList();
-		return lines.subList(1, lines.size() - 1).stream().collect(Collectors.joining("\n"));
+		return content.replaceAll("^```.*\n", "").replaceAll("\n```$", "").replaceAll("```$", "");
+	}
+
+	public static String joinUriParts(List<String> parts) {
+		return parts.stream()
+				.map(part -> part.replaceAll("^/+", "").replaceAll("/+$", ""))
+				.filter(part -> !part.isEmpty())
+				.collect(Collectors.joining("/"));
 	}
 }

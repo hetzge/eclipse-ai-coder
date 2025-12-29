@@ -5,6 +5,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -12,11 +13,16 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.next.NextEditRequest;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.util.JinjaUtils;
+import de.hetzge.eclipse.aicoder.util.Utils;
 import mjson.Json;
 
 public final class LlmUtils {
+
+	private static final String CODESTRAL_BASE_URL = "https://codestral.mistral.ai";
+	private static final String INCEPTIONLABS_BASE_URL = "https://api.inceptionlabs.ai";
 
 	private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
 
@@ -84,7 +90,7 @@ public final class LlmUtils {
 			json.set("prompt", prompt);
 			json.set("system", systemPrompt);
 		}
-		final URI uri = URI.create(urlString).resolve("/api/generate");
+		final URI uri = URI.create(Utils.joinUriParts(List.of(urlString, "/api/generate")));
 		final long beforeTimestamp = System.currentTimeMillis();
 		final HttpRequest request = HttpRequest.newBuilder()
 				.uri(uri)
@@ -113,7 +119,7 @@ public final class LlmUtils {
 	private static CompletableFuture<LlmResponse> executeMistral(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) {
 		final boolean isFillInTheMiddle = suffix != null;
 		final boolean isPseudoFim = isFillInTheMiddle && AiCoderPreferences.isEnablePseduoFim();
-		final String urlString = "https://codestral.mistral.ai";
+		final String urlString = CODESTRAL_BASE_URL;
 		final String codestralApiKey = AiCoderPreferences.getCodestralApiKey();
 		final boolean multilineEnabled = AiCoderPreferences.isMultilineEnabled();
 		final Json json = Json.object();
@@ -137,7 +143,7 @@ public final class LlmUtils {
 			json.set("messages", createMessages(systemPrompt, prompt));
 		}
 		final String path = isFillInTheMiddle && !isPseudoFim ? "/v1/fim/completions" : "/v1/chat/completions";
-		final URI uri = URI.create(urlString).resolve(path);
+		final URI uri = URI.create(Utils.joinUriParts(List.of(urlString, path)));
 		final long beforeTimestamp = System.currentTimeMillis();
 		final HttpRequest request = HttpRequest.newBuilder()
 				.uri(uri)
@@ -190,8 +196,8 @@ public final class LlmUtils {
 		} else {
 			json.set("messages", createMessages(systemPrompt, prompt));
 		}
-		final String path = isFillInTheMiddle && !isPseudoFim ? "./v1/completions" : "./v1/chat/completions";
-		final URI uri = URI.create(urlString).resolve(path);
+		final String path = isFillInTheMiddle && !isPseudoFim ? "/v1/completions" : "/v1/chat/completions";
+		final URI uri = URI.create(Utils.joinUriParts(List.of(urlString, path)));
 		final long beforeTimestamp = System.currentTimeMillis();
 		final HttpRequest request = HttpRequest.newBuilder()
 				.uri(uri)
@@ -223,7 +229,7 @@ public final class LlmUtils {
 	private static CompletableFuture<LlmResponse> executeInceptionLabs(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) {
 		final boolean isFillInTheMiddle = suffix != null;
 		final boolean isPseudoFim = isFillInTheMiddle && AiCoderPreferences.isEnablePseduoFim();
-		final String urlString = "https://api.inceptionlabs.ai";
+		final String urlString = INCEPTIONLABS_BASE_URL;
 		final String inceptionApiKey = AiCoderPreferences.getInceptionLabsApiKey();
 		final boolean multilineEnabled = AiCoderPreferences.isMultilineEnabled();
 		final Json json = Json.object();
@@ -246,7 +252,7 @@ public final class LlmUtils {
 			json.set("messages", createMessages(systemPrompt, prompt));
 		}
 		final String path = isFillInTheMiddle && !isPseudoFim ? "/v1/fim/completions" : "/v1/chat/completions";
-		final URI uri = URI.create(urlString).resolve(path);
+		final URI uri = URI.create(Utils.joinUriParts(List.of(urlString, path)));
 		final long beforeTimestamp = System.currentTimeMillis();
 		final HttpRequest request = HttpRequest.newBuilder()
 				.uri(uri)
@@ -265,6 +271,47 @@ public final class LlmUtils {
 						final String content = isFillInTheMiddle && !isPseudoFim
 								? responseJson.at("choices").at(0).at("text").asString()
 								: responseJson.at("choices").at(0).at("message").at("content").asString();
+						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
+						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
+						return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration, false);
+					} else {
+						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
+						return new LlmResponse(llmModelOption, "", response.body(), 0, 0, duration, true);
+					}
+				});
+	}
+
+	public static CompletableFuture<LlmResponse> executeNextEdit(NextEditRequest request) {
+		final LlmOption llmModelOption = LlmOption.createNextEditModelOptionFromPreferences();
+		if (llmModelOption.provider() != LlmProvider.INCEPTIONLABS) {
+			throw new IllegalArgumentException("Only InceptionLabs is currently supported for next edit.");
+		}
+		final String urlString = INCEPTIONLABS_BASE_URL;
+		final String inceptionApiKey = AiCoderPreferences.getInceptionLabsApiKey();
+		final Json json = Json.object();
+		json.set("model", llmModelOption.modelKey());
+		json.set("messages", Json.array()
+				.add(Json.object()
+						.set("role", "user")
+						.set("content", request.toInceptionLabsNextEditPrompt())));
+
+		final URI uri = URI.create(Utils.joinUriParts(List.of(urlString, "/v1/edit/completions")));
+		final long beforeTimestamp = System.currentTimeMillis();
+		final HttpRequest httpRequest = HttpRequest.newBuilder()
+				.uri(uri)
+				.header("Content-Type", "application/json")
+				.header("Accept", "application/json")
+				.header("Authorization", "Bearer " + inceptionApiKey)
+				.timeout(AiCoderPreferences.getTimeout())
+				.POST(HttpRequest.BodyPublishers.ofString(json.toString()))
+				.build();
+		return HTTP_CLIENT.sendAsync(httpRequest, HttpResponse.BodyHandlers.ofString())
+				.thenApply(response -> {
+					final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
+					if (response.statusCode() == 200) {
+						final String responseBody = response.body();
+						final Json responseJson = Json.read(responseBody);
+						final String content = responseJson.at("choices").at(0).at("message").at("content").asString();
 						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
 						return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration, false);

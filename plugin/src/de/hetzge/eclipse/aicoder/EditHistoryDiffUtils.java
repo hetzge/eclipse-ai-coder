@@ -5,7 +5,6 @@ import java.io.UnsupportedEncodingException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFileState;
@@ -26,11 +25,11 @@ public final class EditHistoryDiffUtils {
 	private EditHistoryDiffUtils() {
 	}
 
-	public static String getDiff(Duration duration) throws Exception {
+	public static List<String> getDiffs(Duration duration) throws Exception {
 		return getLastEditedFiles().stream()
 				.filter(it -> it.getLocalTimeStamp() > System.currentTimeMillis() - duration.toMillis())
 				.map(LambdaExceptionUtils.rethrowFunction(it -> createDiff(it, duration)))
-				.collect(Collectors.joining("\n"));
+				.toList();
 	}
 
 	private static String createDiff(IFile file, Duration duration) throws CoreException, UnsupportedEncodingException, IOException {

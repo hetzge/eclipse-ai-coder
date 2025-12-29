@@ -1,5 +1,7 @@
 package de.hetzge.eclipse.aicoder.util;
 
+import java.util.Map;
+
 import com.hubspot.jinjava.Jinjava;
 import com.hubspot.jinjava.JinjavaConfig;
 
@@ -11,7 +13,7 @@ public final class JinjaUtils {
 	private JinjaUtils() {
 	}
 
-	public static String applyTemplate(String template, java.util.Map<String, ?> bindings) {
+	public static String applyTemplate(String template, Map<String, ?> bindings) {
 		return JINJAVA.render(template, bindings);
 	}
 }

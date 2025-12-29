@@ -27,6 +27,8 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String GENERATE_MODEL_KEY = "de.hetzge.eclipse.aicoder.generate_model";
 	public static final String EDIT_PROVIDER_KEY = "de.hetzge.eclipse.aicoder.edit_provider";
 	public static final String EDIT_MODEL_KEY = "de.hetzge.eclipse.aicoder.edit_model";
+	public static final String NEXT_EDIT_PROVIDER_KEY = "de.hetzge.eclipse.aicoder.next_edit_provider";
+	public static final String NEXT_EDIT_MODEL_KEY = "de.hetzge.eclipse.aicoder.next_edit_model";
 	public static final String ENABLE_MULTILINE_KEY = "de.hetzge.eclipse.aicoder.enable_multiline";
 	public static final String ENABLE_AUTOCOMPLETE_KEY = "de.hetzge.eclipse.aicoder.enable_autocomplete";
 	public static final String ONLY_ON_CHANGE_AUTOCOMPLETE_KEY = "de.hetzge.eclipse.aicoder.only_on_change_autocomplete";
@@ -62,6 +64,8 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(GENERATE_MODEL_KEY, "");
 		store.setDefault(EDIT_PROVIDER_KEY, LlmProvider.NONE.name());
 		store.setDefault(EDIT_MODEL_KEY, "");
+		store.setDefault(NEXT_EDIT_PROVIDER_KEY, LlmProvider.NONE.name());
+		store.setDefault(NEXT_EDIT_MODEL_KEY, "");
 		store.setDefault(ENABLE_MULTILINE_KEY, true);
 		store.setDefault(ENABLE_AUTOCOMPLETE_KEY, true);
 		store.setDefault(ONLY_ON_CHANGE_AUTOCOMPLETE_KEY, true);
@@ -133,6 +137,19 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static void setEditLlmModelOption(LlmOption llmModelOption) {
 		getStore().setValue(EDIT_PROVIDER_KEY, llmModelOption.provider().name());
 		getStore().setValue(EDIT_MODEL_KEY, llmModelOption.modelKey());
+	}
+
+	public static LlmProvider getNextEditProvider() {
+		return LlmProvider.valueOf(getStore().getString(NEXT_EDIT_PROVIDER_KEY));
+	}
+
+	public static String getNextEditModel() {
+		return getStore().getString(NEXT_EDIT_MODEL_KEY);
+	}
+
+	public static void setNextEditLlmModelOption(LlmOption llmModelOption) {
+		getStore().setValue(NEXT_EDIT_PROVIDER_KEY, llmModelOption.provider().name());
+		getStore().setValue(NEXT_EDIT_MODEL_KEY, llmModelOption.modelKey());
 	}
 
 	public static boolean isMultilineEnabled() {

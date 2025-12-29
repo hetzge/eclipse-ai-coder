@@ -167,6 +167,39 @@ public class LlmPreferencePage extends FieldEditorPreferencePage implements IWor
 				editModelEditor.setStringValue(llmOption.modelKey());
 			}
 		}));
+
+		final Group nextEditModelGroup = new Group(getFieldEditorParent(), SWT.NONE);
+		nextEditModelGroup.setText("Next edit LLM");
+		nextEditModelGroup.setLayout(new GridLayout(1, false));
+		nextEditModelGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
+		final ComboFieldEditor nextEditProviderEditor = new ComboFieldEditor(
+				AiCoderPreferences.NEXT_EDIT_PROVIDER_KEY,
+				"Provider:",
+				getProviderEntryNamesAndValues(),
+				nextEditModelGroup);
+		nextEditProviderEditor.getLabelControl(nextEditModelGroup).setLayoutData(GridDataFactory.fillDefaults().hint(LABEL_WIDTH, SWT.DEFAULT).create());
+		addField(nextEditProviderEditor);
+		final StringFieldEditor nextEditModelEditor = new StringFieldEditor(
+				AiCoderPreferences.NEXT_EDIT_MODEL_KEY,
+				"Model:",
+				nextEditModelGroup);
+		nextEditModelEditor.getLabelControl(nextEditModelGroup).setLayoutData(GridDataFactory.fillDefaults().hint(LABEL_WIDTH, SWT.DEFAULT).create());
+		addField(nextEditModelEditor);
+		final Button nextEditModelButton = new Button(nextEditModelGroup, SWT.PUSH);
+		nextEditModelButton.setText("Select LLM...");
+		nextEditModelButton.setLayoutData(new GridData(SWT.END, SWT.CENTER, true, false, 2, 1));
+		nextEditModelButton.addSelectionListener(SelectionListener.widgetSelectedAdapter(event -> {
+			final LlmSelectorDialog dialog = new LlmSelectorDialog(getShell());
+			if (dialog.open() == Dialog.OK) {
+				final Optional<LlmOption> optionOptional = dialog.getResultOption();
+				if (optionOptional.isEmpty()) {
+					return;
+				}
+				final LlmOption llmOption = optionOptional.get();
+				setComboProvider(nextEditModelGroup, nextEditProviderEditor, llmOption);
+				nextEditModelEditor.setStringValue(llmOption.modelKey());
+			}
+		}));
 	}
 
 	private void setComboProvider(final Group parent, final ComboFieldEditor editor, final LlmOption llmOption) {

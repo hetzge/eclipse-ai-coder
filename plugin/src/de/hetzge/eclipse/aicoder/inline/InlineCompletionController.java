@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.OperationCanceledException;
@@ -351,6 +352,16 @@ public final class InlineCompletionController {
 		};
 		this.job.setRule(COMPLETION_JOB_RULE);
 		this.job.schedule();
+	}
+
+	public void triggerNextEdit() throws BadLocationException {
+		final IPath currentPath = EclipseUtils.getEclipsePath(this.textEditor).orElseThrow();
+		final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(this.textEditor);
+		final String prefix = this.textViewer.getDocument().get(0, Math.min(modelOffset, AiCoderPreferences.getMaxPrefixSize()));
+		final String editable = this.textViewer.getDocument().get(Math.max(0, modelOffset - AiCoderPreferences.getMaxPrefixSize()), Math.min(AiCoderPreferences.getMaxPrefixSize() + AiCoderPreferences.getMaxSuffixSize(), this.textViewer.getDocument().getLength() - Math.max(0, modelOffset - AiCoderPreferences.getMaxPrefixSize())));
+		final String suffix = this.textViewer.getDocument().get(Math.min(modelOffset + AiCoderPreferences.getMaxSuffixSize(), this.textViewer.getDocument().getLength()), Math.min(AiCoderPreferences.getMaxSuffixSize(), this.textViewer.getDocument().getLength() - Math.min(modelOffset + AiCoderPreferences.getMaxSuffixSize(), this.textViewer.getDocument().getLength())));
+//		final NextEditRequest request = new NextEditRequest(currentPath, prefix, editable, suffix, List.of(), EditHistoryDiffUtils.getDiffs(Duration.ofMinutes(1)));
+//		this.llmResponseFuture = LlmUtils.executeNextEdit(request);
 	}
 
 	private void cancelHttpRequest() {
