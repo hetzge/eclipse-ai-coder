@@ -24,7 +24,9 @@ public final class LlmUtils {
 	private static final String CODESTRAL_BASE_URL = "https://codestral.mistral.ai";
 	private static final String INCEPTIONLABS_BASE_URL = "https://api.inceptionlabs.ai";
 
-	private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
+	private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+			.version(HttpClient.Version.HTTP_1_1) // force http 1.1, otherwise lm studio does not work (no response)
+			.build();
 
 	private LlmUtils() {
 	}
@@ -179,19 +181,16 @@ public final class LlmUtils {
 		json.set("model", llmModelOption.modelKey());
 		json.set("temperature", 0);
 		if (isFillInTheMiddle) {
+			final String fimTemplatePrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getOpenAiFimTemplate(), Map.ofEntries(
+					Map.entry("prefix", prompt),
+					Map.entry("suffix", suffix)));
 			if (!isPseudoFim) {
-				final String fimTemplatePrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getOpenAiFimTemplate(), Map.ofEntries(
-						Map.entry("prefix", prompt),
-						Map.entry("suffix", suffix)));
 				json.set("prompt", fimTemplatePrompt);
 				json.set("max_tokens", AiCoderPreferences.getMaxTokens());
 				json.set("stop", createStop(AiCoderPreferences.isMultilineEnabled()));
 			} else {
 				final String pseudoFimSystemPrompt = getPseduoFIMSystemPrompt();
-				final String pseudoFimUserPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getOpenAiFimTemplate(), Map.ofEntries(
-						Map.entry("prefix", prompt),
-						Map.entry("suffix", suffix)));
-				json.set("messages", createMessages(pseudoFimSystemPrompt, pseudoFimUserPrompt));
+				json.set("messages", createMessages(pseudoFimSystemPrompt, fimTemplatePrompt));
 			}
 		} else {
 			json.set("messages", createMessages(systemPrompt, prompt));
