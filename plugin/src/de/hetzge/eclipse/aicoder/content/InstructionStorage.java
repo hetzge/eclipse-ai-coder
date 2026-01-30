@@ -17,7 +17,13 @@ import mjson.Json;
 
 public final class InstructionStorage {
 
+	/**
+	 * History of the last executed instructions.
+	 */
 	private static final String INSTRUCTIONS_JSON_FILENAME = "editInstructions.json";
+	/**
+	 * Persist the last active instruction in a file so it is available after a restart or dialog close. This is the instruction the user last edited (can be work in progress)
+	 */
 	private static final String LAST_INSTRUCTION_JSON_FILENAME = "lastInstruction.json";
 	private static final int MAX_INSTRUCTIONS = 10;
 

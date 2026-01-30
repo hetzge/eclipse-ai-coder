@@ -1,14 +1,17 @@
 package de.hetzge.eclipse.aicoder.inline;
 
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
@@ -55,6 +58,7 @@ import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.CompletionMode;
 import de.hetzge.eclipse.aicoder.ContextView;
 import de.hetzge.eclipse.aicoder.Debouncer;
+import de.hetzge.eclipse.aicoder.EditHistoryDiffUtils;
 import de.hetzge.eclipse.aicoder.context.ContextContext;
 import de.hetzge.eclipse.aicoder.context.ContextEntry;
 import de.hetzge.eclipse.aicoder.context.FillInMiddleContextEntry;
@@ -65,6 +69,7 @@ import de.hetzge.eclipse.aicoder.history.HistoryStatus;
 import de.hetzge.eclipse.aicoder.llm.LlmPromptTemplates;
 import de.hetzge.eclipse.aicoder.llm.LlmResponse;
 import de.hetzge.eclipse.aicoder.llm.LlmUtils;
+import de.hetzge.eclipse.aicoder.next.NextEditRequest;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils.Runnable_WithExceptions;
@@ -299,8 +304,7 @@ public final class InlineCompletionController {
 									selectionText.length(),
 									EclipseUtils.getWidgetLine(this.textViewer, modelOffset) + oldLineCount - 1,
 									newLineCount,
-									oldLineCount,
-									Math.max(newLineCount - oldLineCount, 0)));
+									oldLineCount));
 						} else if (mode == CompletionMode.INLINE || mode == CompletionMode.GENERATE) {
 							setup(InlineCompletion.create(
 									historyEntry,
@@ -354,14 +358,70 @@ public final class InlineCompletionController {
 		this.job.schedule();
 	}
 
-	public void triggerNextEdit() throws BadLocationException {
+	public void triggerNextEdit() throws Exception {
+		abort("Trigger next edit");
 		final IPath currentPath = EclipseUtils.getEclipsePath(this.textEditor).orElseThrow();
 		final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(this.textEditor);
-		final String prefix = this.textViewer.getDocument().get(0, Math.min(modelOffset, AiCoderPreferences.getMaxPrefixSize()));
-		final String editable = this.textViewer.getDocument().get(Math.max(0, modelOffset - AiCoderPreferences.getMaxPrefixSize()), Math.min(AiCoderPreferences.getMaxPrefixSize() + AiCoderPreferences.getMaxSuffixSize(), this.textViewer.getDocument().getLength() - Math.max(0, modelOffset - AiCoderPreferences.getMaxPrefixSize())));
-		final String suffix = this.textViewer.getDocument().get(Math.min(modelOffset + AiCoderPreferences.getMaxSuffixSize(), this.textViewer.getDocument().getLength()), Math.min(AiCoderPreferences.getMaxSuffixSize(), this.textViewer.getDocument().getLength() - Math.min(modelOffset + AiCoderPreferences.getMaxSuffixSize(), this.textViewer.getDocument().getLength())));
-//		final NextEditRequest request = new NextEditRequest(currentPath, prefix, editable, suffix, List.of(), EditHistoryDiffUtils.getDiffs(Duration.ofMinutes(1)));
-//		this.llmResponseFuture = LlmUtils.executeNextEdit(request);
+		final IDocument document = this.textViewer.getDocument();
+		final int modelLine = document.getLineOfOffset(modelOffset);
+		final int firstLine = document.getLineOffset(Math.max(0, modelLine - AiCoderPreferences.getMaxPrefixSize()));
+		final int lastLine = document.getLineOffset(Math.min(document.getNumberOfLines() - 1, modelLine + AiCoderPreferences.getMaxSuffixSize()));
+		final String prefix = document.get(0, firstLine);
+		final String editable = document.get(firstLine, lastLine - firstLine);
+		final String suffix = document.get(lastLine, document.getLength() - lastLine);
+		final int cursorOffset = modelOffset - document.getLineOffset(firstLine);
+		final List<String> diffs = EditHistoryDiffUtils.getDiffs(Duration.ofMinutes(1));
+		for (int i = 0; i < diffs.size(); i++) {
+			System.out.println("diff " + i + ":\n" + diffs.get(i));
+		}
+		final NextEditRequest request = new NextEditRequest(currentPath, prefix, editable, suffix, cursorOffset, List.of(), diffs);
+		final LlmResponse response = LlmUtils.executeNextEdit(request).get(); // TODO
+		final String content = Utils.stripCodeMarkdownTags(response.getContent());
+		System.out.println("content:\n " + content);
+		System.out.println("editable:\n " + editable);
+		final List<String> contentLines = content.lines().toList();
+		final List<String> editableLines = editable.lines().toList();
+
+		int prefixLineOffset = 0;
+		for (int i = 0; i < Math.min(editableLines.size(), contentLines.size()); i++) {
+			final String editableLine = editableLines.size() > i ? editableLines.get(i) : "";
+			final String contentLine = contentLines.size() > i ? contentLines.get(i) : "";
+			if (!Objects.equals(editableLine.trim(), contentLine.trim())) {
+				break;
+			}
+			prefixLineOffset++;
+		}
+		int suffixLineOffset = 0;
+		for (int i = 0; i < Math.min(editableLines.size(), contentLines.size()); i++) {
+			final String editableLine = editableLines.size() > i ? editableLines.get(editableLines.size() - 1 - i) : "";
+			final String contentLine = contentLines.size() > i ? contentLines.get(contentLines.size() - 1 - i) : "";
+			if (!Objects.equals(editableLine.trim(), contentLine.trim())) {
+				break;
+			}
+			suffixLineOffset++;
+		}
+
+		if (prefixLineOffset == editableLines.size() && prefixLineOffset == contentLines.size() && prefixLineOffset == suffixLineOffset) {
+			throw new Exception("No changes detected"); // TODO
+		}
+
+		System.out.println("editableLines: " + editableLines.size());
+		System.out.println("contentLines: " + contentLines.size());
+		System.out.println("prefixLineOffset: " + prefixLineOffset);
+		System.out.println("suffixLineOffset: " + suffixLineOffset);
+
+		final String newEditable = editableLines.subList(prefixLineOffset, editableLines.size() - suffixLineOffset).stream().collect(Collectors.joining("\n"));
+		final String newContent = contentLines.subList(prefixLineOffset, contentLines.size() - suffixLineOffset).stream().collect(Collectors.joining("\n"));
+		System.out.println("newEditable:\n " + newEditable);
+		System.out.println("newContent:\n " + newContent);
+		setup(new Suggestion(
+				new AiCoderHistoryEntry(CompletionMode.NEXT_EDIT, currentPath.toString(), document.get()),
+				newContent,
+				document.getLineOffset(firstLine + prefixLineOffset),
+				newEditable.length(),
+				EclipseUtils.getWidgetLine(this.textViewer, firstLine) + (int) newEditable.lines().count() - 1,
+				(int) newContent.lines().count(),
+				(int) newEditable.lines().count()));
 	}
 
 	private void cancelHttpRequest() {

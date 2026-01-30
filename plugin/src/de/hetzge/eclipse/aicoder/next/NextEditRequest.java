@@ -9,28 +9,33 @@ public record NextEditRequest(
 		String prefix,
 		String editable,
 		String suffix,
+		int cursorOffset,
 		List<LastLocation> locations,
 		List<String> diffs) {
 
 	public String toInceptionLabsNextEditPrompt() {
 		final StringBuilder prompt = new StringBuilder();
 		// Recently Viewed Snippets
-		prompt.append("<|recently_viewed_code_snippets|>\n");
-		if (this.locations != null && !this.locations.isEmpty()) {
-			for (final LastLocation location : this.locations) {
-				prompt.append("<|recently_viewed_code_snippet|>\n");
-				prompt.append("code_snippet_file_path: ").append(location.path().toOSString()).append("\n");
-				prompt.append(location.content()).append("\n");
-				prompt.append("<|/recently_viewed_code_snippet|>\n\n");
+		if (this.locations == null || this.locations.isEmpty()) {
+			prompt.append("<|recently_viewed_code_snippets|>\n\n<|/recently_viewed_code_snippets|>");
+		} else {
+			prompt.append("<|recently_viewed_code_snippets|>\n");
+			if (this.locations != null && !this.locations.isEmpty()) {
+				for (final LastLocation location : this.locations) {
+					prompt.append("<|recently_viewed_code_snippet|>\n");
+					prompt.append("code_snippet_file_path: ").append(location.path().toOSString()).append("\n");
+					prompt.append(location.content()).append("\n");
+					prompt.append("<|/recently_viewed_code_snippet|>\n\n");
+				}
 			}
+			prompt.append("<|/recently_viewed_code_snippets|>\n\n");
 		}
-		prompt.append("<|/recently_viewed_code_snippets|>\n\n");
 		// Current File Content
 		prompt.append("<|current_file_content|>\n");
 		prompt.append("current_file_path: ").append(this.currentLocation.toOSString()).append("\n");
 		prompt.append(this.prefix).append("\n");
 		prompt.append("<|code_to_edit|>\n");
-		prompt.append(this.editable).append("\n");
+		prompt.append(this.editable.substring(0, Math.min(this.cursorOffset, this.editable.length()))).append("<|cursor|>").append(this.editable.substring(Math.min(this.cursorOffset, this.editable.length()))).append("\n");
 		prompt.append("<|/code_to_edit|>\n");
 		prompt.append(this.suffix).append("\n");
 		prompt.append("<|/current_file_content|>\n\n");

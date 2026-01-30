@@ -55,7 +55,7 @@ public final class SuggestionPopupDialog extends PopupDialog {
 		layout.marginHeight = 0;
 		container.setLayout(layout);
 
-		this.styledTextViewer = new SuggestionStyledTextViewer(container, this.parentTextViewer, this.suggestion.content());
+		this.styledTextViewer = new SuggestionStyledTextViewer(container, this.parentTextViewer, this.suggestion);
 		final DiffMode diffMode = AiCoderPreferences.getDiffMode();
 		if (diffMode == DiffMode.LINE) {
 			this.styledTextViewer.setupLineDiff();

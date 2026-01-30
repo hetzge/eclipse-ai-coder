@@ -2,6 +2,7 @@ package de.hetzge.eclipse.aicoder.util;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Optional;
 import java.util.Set;
 
 import org.eclipse.core.resources.IProject;
@@ -52,28 +53,16 @@ public final class GitUtils {
 		final File projectDir = projectLocation.toFile();
 		// Use FileRepositoryBuilder to find and open the repository
 		final FileRepositoryBuilder builder = new FileRepositoryBuilder();
-		final File gitDir = findGitDir(projectDir);
-		if (gitDir == null) {
-			return null;
-		}
+		final File gitDir = findGitDir(projectDir).orElseThrow(() -> new IOException("No git repository found for project " + project.getName()));
 		return builder
-				.setGitDir(findGitDir(projectDir))
+				.setGitDir(gitDir)
 				.readEnvironment() // scan environment GIT_* variables
 				.findGitDir(projectDir) // scan up the file system tree
 				.build();
 	}
 
-	private static File findGitDir(File projectDir) {
-		// Start from project directory and go up until we find .git
-		File currentDir = projectDir;
-		while (currentDir != null) {
-			final File gitDir = new File(currentDir, ".git");
-			if (gitDir.exists() && gitDir.isDirectory()) {
-				return gitDir;
-			}
-			currentDir = currentDir.getParentFile();
-		}
-		return null;
+	private static Optional<File> findGitDir(File projectDir) {
+		return Optional.ofNullable(new FileRepositoryBuilder().findGitDir(projectDir).getGitDir());
 	}
 
 	public static class GitState {
