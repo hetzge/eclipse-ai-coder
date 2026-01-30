@@ -3,7 +3,6 @@ package de.hetzge.eclipse.aicoder.handler;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
-import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
@@ -18,7 +17,7 @@ public class TriggerNextEditHandler extends AbstractHandler {
 		final ITextEditor textEditor = EclipseUtils.getActiveTextEditor().orElseThrow(() -> new ExecutionException("No active text editor"));
 		try {
 			InlineCompletionController.setup(textEditor).triggerNextEdit();
-		} catch (final BadLocationException e) {
+		} catch (final Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}

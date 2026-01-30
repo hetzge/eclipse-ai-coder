@@ -12,8 +12,11 @@ public record Suggestion(
 		int originalLength,
 		int widgetLastLine,
 		int newLines,
-		int oldLines,
-		int additionalLines) {
+		int oldLines) {
+
+	public int getAdditionalLineCount() {
+		return Math.max(this.newLines - this.oldLines, 0);
+	}
 
 	public void applyTo(final IDocument document) throws BadLocationException {
 		final int offset = this.modelOffset();

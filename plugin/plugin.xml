@@ -41,6 +41,10 @@
         id="de.hetzge.eclipse.codestral.commands.triggerInstruction"
         name="Trigger Instruction">
   </command>
+  <command
+        id="de.hetzge.eclipse.codestral.commands.triggerNextEdit"
+        name="Trigger Next Edit">
+  </command>
 	</extension>
 
 	<extension point="org.eclipse.ui.handlers">

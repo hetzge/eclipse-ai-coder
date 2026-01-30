@@ -20,14 +20,17 @@ import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 
 public final class SuggestionStyledTextViewer {
 
+	private final Suggestion suggestion;
+	private final ITextViewer parentTextViewer;
 	private final StyledText parentStyledText;
 	private final String originalContent;
 	private final StyledText styledText;
-	private final String newContent;
 	private final Color addedColor;
 	private final Color removedColor;
 
-	public SuggestionStyledTextViewer(Composite parent, ITextViewer parentTextViewer, String newContent) {
+	public SuggestionStyledTextViewer(Composite parent, ITextViewer parentTextViewer, Suggestion suggestion) {
+		this.suggestion = suggestion;
+		this.parentTextViewer = parentTextViewer;
 		this.parentStyledText = parentTextViewer.getTextWidget();
 		if (isDarkColor(parentTextViewer.getTextWidget().getForeground())) {
 			this.addedColor = new Color(200, 255, 200);
@@ -36,7 +39,7 @@ public final class SuggestionStyledTextViewer {
 			this.addedColor = new Color(50, 100, 50);
 			this.removedColor = new Color(100, 50, 50);
 		}
-		this.originalContent = EclipseUtils.getSelectionText(parentTextViewer);
+		this.originalContent = parentTextViewer.getDocument().get().substring(suggestion.modelOffset(), suggestion.modelOffset() + suggestion.originalLength());
 		this.styledText = new StyledText(parent, SWT.BORDER);
 		this.styledText.setEditable(false);
 		this.styledText.setTabs(this.parentStyledText.getTabs());
@@ -46,7 +49,6 @@ public final class SuggestionStyledTextViewer {
 		this.styledText.setBackground(this.parentStyledText.getBackground());
 		this.styledText.setLineSpacing(this.parentStyledText.getLineSpacing());
 		this.styledText.setLayoutData(GridDataFactory.fillDefaults().grab(true, true).create());
-		this.newContent = newContent;
 	}
 
 	public int getLineCount() {
@@ -55,8 +57,8 @@ public final class SuggestionStyledTextViewer {
 
 	public void setupLineDiff() {
 		this.styledText.setText("");
-		final List<String> diffLines = DiffUtils.diff(this.originalContent, this.newContent).lines().toList();
-		int originalOffset = this.parentStyledText.getSelectionRange().x;
+		final List<String> diffLines = DiffUtils.diff(this.originalContent, this.suggestion.content()).lines().toList();
+		int originalOffset = EclipseUtils.getWidgetOffset(this.parentTextViewer, this.suggestion.modelOffset());
 		for (int i = 0; i < diffLines.size(); i++) {
 			final String diffLine = diffLines.get(i);
 			final String line = diffLine.substring(1);
@@ -100,9 +102,9 @@ public final class SuggestionStyledTextViewer {
 
 	public void setupCharDiff() {
 		this.styledText.setText("");
-		final List<Diff> diffs = new DiffMatchPatch().diffMain(this.originalContent, this.newContent);
+		final List<Diff> diffs = new DiffMatchPatch().diffMain(this.originalContent, this.suggestion.content());
 		this.styledText.setText(diffs.stream().map(it -> it.text).collect(Collectors.joining()));
-		int originalOffset = this.parentStyledText.getSelectionRange().x; // TODO handle collapsed
+		int originalOffset = this.suggestion.modelOffset(); // TODO handle collapsed
 		int suggestionOffset = 0;
 		for (final Diff diff : diffs) {
 			if (diff.operation == Operation.DELETE) {
@@ -152,7 +154,7 @@ public final class SuggestionStyledTextViewer {
 	public void setupOriginalDiff() {
 		this.styledText.setText("");
 		this.styledText.setText(this.originalContent);
-		final int originalOffset = this.parentStyledText.getSelectionRange().x; // TODO handle collapsed
+		final int originalOffset = this.suggestion.modelOffset(); // TODO handle collapsed
 		int i = 0;
 		while (i < this.originalContent.length()) {
 			final StyleRange originalStyleRange = this.parentStyledText.getStyleRangeAtOffset(originalOffset + i);
@@ -170,10 +172,10 @@ public final class SuggestionStyledTextViewer {
 
 	public void setupNewDiff() {
 		this.styledText.setText("");
-		this.styledText.setText(this.newContent);
+		this.styledText.setText(this.suggestion.content());
 
 		// add empty lines for each additional old line content
-		final int additionalLines = (int) (this.originalContent.lines().count() - this.newContent.lines().count());
+		final int additionalLines = (int) (this.originalContent.lines().count() - this.suggestion.content().lines().count());
 		for (int i = 0; i < additionalLines; i++) {
 			this.styledText.append("\n");
 		}

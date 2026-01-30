@@ -16,7 +16,7 @@ public class ContentPreviewDialog extends Dialog {
 	public ContentPreviewDialog(Shell parentShell, String title, String content) {
 		super(parentShell);
 		this.title = title;
-		this.content = content;
+		this.content = content != null ? content : "";
 	}
 
 	@Override
@@ -24,7 +24,7 @@ public class ContentPreviewDialog extends Dialog {
 		final Composite container = (Composite) super.createDialogArea(parent);
 		final Text textArea = new Text(container, SWT.MULTI | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL | SWT.READ_ONLY);
 		textArea.setLayoutData(new GridData(GridData.FILL_BOTH));
-		textArea.setText(this.content.toString());
+		textArea.setText(this.content);
 		textArea.setEditable(false);
 		final GridData gridData = (GridData) textArea.getLayoutData();
 		gridData.widthHint = 600;
@@ -35,7 +35,7 @@ public class ContentPreviewDialog extends Dialog {
 	@Override
 	protected void configureShell(Shell newShell) {
 		super.configureShell(newShell);
-		newShell.setText(title);
+		newShell.setText(this.title);
 	}
 
 	@Override
