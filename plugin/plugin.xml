@@ -45,6 +45,10 @@
         id="de.hetzge.eclipse.codestral.commands.triggerNextEdit"
         name="Trigger Next Edit">
   </command>
+  <command
+        id="de.hetzge.eclipse.codestral.commands.dumpOutline"
+        name="Dump Outline">
+  </command>
 	</extension>
 
 	<extension point="org.eclipse.ui.handlers">
@@ -71,6 +75,10 @@
   	<handler
         class="de.hetzge.eclipse.aicoder.handler.TriggerNextEditHandler"
         commandId="de.hetzge.eclipse.codestral.commands.triggerNextEdit">
+  </handler>
+  <handler
+        class="de.hetzge.eclipse.aicoder.handler.DumpOutlineHandler"
+        commandId="de.hetzge.eclipse.codestral.commands.dumpOutline">
   </handler>
 	</extension>
 

@@ -34,7 +34,7 @@ public class PackageContextEntry extends ContextEntry {
 
 	@Override
 	public String getLabel() {
-		return this.name;
+		return "Package: " + this.name;
 	}
 
 	@Override
@@ -53,7 +53,7 @@ public class PackageContextEntry extends ContextEntry {
 	}
 
 	public static ContextEntryFactory factory(ICompilationUnit unit) {
-		return new ContextEntryFactory(PREFIX, () -> create(unit));
+		return new ContextEntryFactory(PREFIX, () -> create(unit), () -> new EmptyContextEntry(PREFIX, "Package", AiCoderImageKey.PACKAGE_ICON));
 	}
 
 	public static PackageContextEntry create(ICompilationUnit unit) throws CoreException {

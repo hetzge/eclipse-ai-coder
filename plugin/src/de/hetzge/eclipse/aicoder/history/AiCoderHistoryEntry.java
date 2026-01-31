@@ -2,12 +2,13 @@ package de.hetzge.eclipse.aicoder.history;
 
 import java.time.LocalDateTime;
 
-import de.hetzge.eclipse.aicoder.CompletionMode;
+import de.hetzge.eclipse.aicoder.llm.LlmResponse;
 
-public class AiCoderHistoryEntry {
+public final class AiCoderHistoryEntry {
+
 	private final LocalDateTime timestamp;
 	private final String file;
-	private final CompletionMode mode;
+	private final HistoryType type;
 	private String modelLabel;
 	private HistoryStatus status;
 	// Input stats
@@ -30,16 +31,16 @@ public class AiCoderHistoryEntry {
 	private String content;
 	private final String previousContent;
 
-	public AiCoderHistoryEntry(CompletionMode mode, String file, String previousContent) {
-		this.mode = mode;
+	public AiCoderHistoryEntry(HistoryType type, String file, String previousContent) {
+		this.type = type;
 		this.timestamp = LocalDateTime.now();
 		this.file = file;
 		this.previousContent = previousContent;
 		this.status = HistoryStatus.STARTED;
 	}
 
-	public CompletionMode getMode() {
-		return this.mode;
+	public HistoryType getMode() {
+		return this.type;
 	}
 
 	public String getModelLabel() {
@@ -52,6 +53,17 @@ public class AiCoderHistoryEntry {
 
 	public HistoryStatus getStatus() {
 		return this.status;
+	}
+
+	public void setupLlmResponse(LlmResponse llmResponse) {
+		this.setStatus(llmResponse.isError() ? HistoryStatus.ERROR : HistoryStatus.ACCEPTED);
+		this.setDurationMs(llmResponse.getDuration().toMillis());
+		this.setLlmDurationMs(llmResponse.getDuration().toMillis());
+		this.setInputTokenCount(llmResponse.getInputTokens());
+		this.setOutputTokenCount(llmResponse.getOutputTokens());
+		this.setPlainLlmResponse(llmResponse.getPlainResponse());
+		this.setContent(llmResponse.getContent());
+		this.setOutput(llmResponse.getContent());
 	}
 
 	public void setStatus(HistoryStatus status) {

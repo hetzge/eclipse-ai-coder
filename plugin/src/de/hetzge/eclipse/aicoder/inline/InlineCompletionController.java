@@ -66,6 +66,7 @@ import de.hetzge.eclipse.aicoder.context.RootContextEntry;
 import de.hetzge.eclipse.aicoder.history.AiCoderHistoryEntry;
 import de.hetzge.eclipse.aicoder.history.AiCoderHistoryView;
 import de.hetzge.eclipse.aicoder.history.HistoryStatus;
+import de.hetzge.eclipse.aicoder.history.HistoryType;
 import de.hetzge.eclipse.aicoder.llm.LlmPromptTemplates;
 import de.hetzge.eclipse.aicoder.llm.LlmResponse;
 import de.hetzge.eclipse.aicoder.llm.LlmUtils;
@@ -205,7 +206,7 @@ public final class InlineCompletionController {
 				mode = CompletionMode.GENERATE;
 			}
 		}
-		final AiCoderHistoryEntry historyEntry = new AiCoderHistoryEntry(mode, filePath, this.textViewer.getDocument().get());
+		final AiCoderHistoryEntry historyEntry = new AiCoderHistoryEntry(HistoryType.fromCompletionMode(mode), filePath, this.textViewer.getDocument().get());
 		this.job = new Job("AI completion") {
 
 			ITextViewer textViewer = InlineCompletionController.this.textViewer;
@@ -225,7 +226,13 @@ public final class InlineCompletionController {
 						return Status.CANCEL_STATUS;
 					}
 					AiCoderActivator.log().info("Calculate context");
-					final RootContextEntry rootContextEntry = RootContextEntry.create(document, this.textEditor.getEditorInput(), modelOffset);
+					String originalInstructions;
+					if (instruction == null) {
+						originalInstructions = "Complete/Edit the following code";
+					} else {
+						originalInstructions = instruction;
+					}
+					final RootContextEntry rootContextEntry = RootContextEntry.create(document, this.textEditor.getEditorInput(), modelOffset, originalInstructions);
 					final String contextString = ContextEntry.apply(rootContextEntry, new ContextContext());
 					// IMPORTANT: DO this after ContextEntry.apply(...)
 					updateContextView(rootContextEntry);
@@ -415,7 +422,7 @@ public final class InlineCompletionController {
 		System.out.println("newEditable:\n " + newEditable);
 		System.out.println("newContent:\n " + newContent);
 		setup(new Suggestion(
-				new AiCoderHistoryEntry(CompletionMode.NEXT_EDIT, currentPath.toString(), document.get()),
+				new AiCoderHistoryEntry(HistoryType.fromCompletionMode(CompletionMode.NEXT_EDIT), currentPath.toString(), document.get()),
 				newContent,
 				document.getLineOffset(firstLine + prefixLineOffset),
 				newEditable.length(),

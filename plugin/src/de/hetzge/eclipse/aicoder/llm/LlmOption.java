@@ -29,4 +29,8 @@ public record LlmOption(
 	public static LlmOption createNextEditModelOptionFromPreferences() {
 		return new LlmOption(AiCoderPreferences.getNextEditProvider(), AiCoderPreferences.getNextEditModel());
 	}
+
+	public static LlmOption createRerankModelOptionFromPreferences() {
+		return new LlmOption(AiCoderPreferences.getRerankProvider(), AiCoderPreferences.getRerankModel());
+	}
 }

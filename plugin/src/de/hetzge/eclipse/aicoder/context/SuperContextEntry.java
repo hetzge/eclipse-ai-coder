@@ -15,6 +15,8 @@ import de.hetzge.eclipse.aicoder.util.ContextUtils;
 import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
 
 public class SuperContextEntry extends ContextEntry {
+
+	public static final String LABEL = "Super types";
 	public static final String PREFIX = "SUPER";
 
 	private SuperContextEntry(List<? extends ContextEntry> childContextEntries, Duration creationDuration) {
@@ -28,7 +30,7 @@ public class SuperContextEntry extends ContextEntry {
 
 	@Override
 	public String getLabel() {
-		return "Super types";
+		return LABEL;
 	}
 
 	@Override
@@ -37,7 +39,7 @@ public class SuperContextEntry extends ContextEntry {
 	}
 
 	public static ContextEntryFactory factory(ICompilationUnit unit, int offset) {
-		return new ContextEntryFactory(PREFIX, () -> create(unit, offset));
+		return new ContextEntryFactory(PREFIX, () -> create(unit, offset), () -> new EmptyContextEntry(PREFIX, LABEL, null));
 	}
 
 	public static SuperContextEntry create(ICompilationUnit unit, int offset) throws JavaModelException, CoreException {

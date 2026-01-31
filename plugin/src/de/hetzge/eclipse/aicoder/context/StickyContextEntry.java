@@ -15,6 +15,8 @@ import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
 
 public class StickyContextEntry extends ContextEntry {
 
+	public static final String LABEL = "Sticky";
+
 	private StickyContextEntry(List<? extends ContextEntry> childContextEntries, Duration creationDuration) {
 		super(childContextEntries, creationDuration);
 	}
@@ -28,12 +30,12 @@ public class StickyContextEntry extends ContextEntry {
 
 	@Override
 	public String getLabel() {
-		return "Sticky";
+		return LABEL;
 	}
 
 	@Override
 	public String getContent(ContextContext context) {
-		return ContextUtils.contentTemplate("Sticky", super.getContent(context));
+		return ContextUtils.contentTemplate(LABEL, super.getContent(context));
 	}
 
 	@Override
@@ -42,7 +44,7 @@ public class StickyContextEntry extends ContextEntry {
 	}
 
 	public static ContextEntryFactory factory() {
-		return new ContextEntryFactory(PREFIX, () -> create());
+		return new ContextEntryFactory(PREFIX, () -> create(), () -> new EmptyContextEntry(PREFIX, LABEL, AiCoderImageKey.PIN_ICON));
 	}
 
 	public static StickyContextEntry create() throws CoreException {

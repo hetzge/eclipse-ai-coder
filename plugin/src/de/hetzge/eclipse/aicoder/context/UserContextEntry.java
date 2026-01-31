@@ -7,6 +7,8 @@ import java.util.List;
 import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
 
 public class UserContextEntry extends ContextEntry {
+
+	public static final String LABEL = "Custom";
 	public static final String PREFIX = "USER";
 
 	private UserContextEntry(List<CustomContextEntry> childContextEntries, Duration creationDuration) {
@@ -20,11 +22,11 @@ public class UserContextEntry extends ContextEntry {
 
 	@Override
 	public String getLabel() {
-		return "Custom";
+		return LABEL;
 	}
 
 	public static ContextEntryFactory factory(Path path) {
-		return new ContextEntryFactory(PREFIX, () -> create(path));
+		return new ContextEntryFactory(PREFIX, () -> create(path), () -> new EmptyContextEntry(PREFIX, LABEL, null));
 	}
 
 	public static UserContextEntry create(Path path) {

@@ -47,8 +47,8 @@ public class CustomContextEntryData {
 	}
 
 	public boolean matches(Path path) {
-		if (this.glob == null) {
-			return false;
+		if (this.glob == null || this.glob.isBlank()) {
+			return true;
 		}
 		return FileSystems.getDefault().getPathMatcher("glob:" + this.glob).matches(path);
 	}

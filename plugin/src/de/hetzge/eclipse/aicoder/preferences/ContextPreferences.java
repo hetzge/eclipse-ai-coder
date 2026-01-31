@@ -15,6 +15,7 @@ import org.osgi.service.prefs.Preferences;
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.context.ContextEntryKey;
 import de.hetzge.eclipse.aicoder.context.CustomContextEntryData;
+import de.hetzge.eclipse.aicoder.context.FillInMiddleContextEntry;
 import mjson.Json;
 
 public final class ContextPreferences {
@@ -26,6 +27,7 @@ public final class ContextPreferences {
 
 	private static final Set<ContextEntryKey> BLACKLIST = new HashSet<>();
 	private static final Set<ContextEntryKey> STICKYLIST = new HashSet<>();
+	private static final Set<ContextEntryKey> TEMPORARY_DISABLED = new HashSet<>();
 	private static final List<CustomContextEntryData> CUSTOM_CONTEXT_ENTRY_DATAS = new ArrayList<>();
 	private static final List<ContextTypePositionItem> CONTEXT_TYPE_POSITIONS = new ArrayList<>();
 
@@ -144,6 +146,22 @@ public final class ContextPreferences {
 		return CUSTOM_CONTEXT_ENTRY_DATAS;
 	}
 
+	public static void addToTemporaryDisabled(ContextEntryKey entry) {
+		TEMPORARY_DISABLED.add(entry);
+	}
+
+	public static void removeFromTemporaryDisabled(ContextEntryKey entry) {
+		TEMPORARY_DISABLED.remove(entry);
+	}
+
+	public static boolean isTemporaryDisabled(ContextEntryKey entry) {
+		return TEMPORARY_DISABLED.contains(entry);
+	}
+
+	public static Set<ContextEntryKey> getTemporaryDisabled() {
+		return new HashSet<>(TEMPORARY_DISABLED);
+	}
+
 	public static void setCustomContextEntries(List<CustomContextEntryData> datas) {
 		CUSTOM_CONTEXT_ENTRY_DATAS.clear();
 		CUSTOM_CONTEXT_ENTRY_DATAS.addAll(datas);
@@ -162,6 +180,18 @@ public final class ContextPreferences {
 		CONTEXT_TYPE_POSITIONS.clear();
 		CONTEXT_TYPE_POSITIONS.addAll(newPositions);
 		savePreferences();
+	}
+
+	public static void setContextTypeEnabled(String contextKey, boolean enabled) {
+		if (contextKey.startsWith(FillInMiddleContextEntry.PREFIX)) {
+			return; // FIM must be always enabled
+		}
+		CONTEXT_TYPE_POSITIONS.replaceAll(item -> contextKey.startsWith(item.prefix()) ? item.withEnabled(enabled) : item);
+		savePreferences();
+	}
+
+	public static boolean isContextTypeEnabled(String contextKey) {
+		return CONTEXT_TYPE_POSITIONS.stream().anyMatch(item -> contextKey.startsWith(item.prefix()) && item.enabled());
 	}
 
 	public record ContextTypePositionItem(String prefix, boolean enabled, int position) {

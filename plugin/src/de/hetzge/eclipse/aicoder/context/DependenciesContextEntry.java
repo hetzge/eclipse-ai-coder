@@ -17,6 +17,7 @@ import de.hetzge.eclipse.aicoder.util.ContextUtils;
 
 public class DependenciesContextEntry extends ContextEntry {
 
+	public static final String LABEL = "Dependencies";
 	public static final String PREFIX = "DEPENDENCIES";
 
 	private DependenciesContextEntry(List<DependencyContextEntry> entries, Duration creationDuration) {
@@ -30,7 +31,7 @@ public class DependenciesContextEntry extends ContextEntry {
 
 	@Override
 	public String getLabel() {
-		return "Dependencies";
+		return LABEL;
 	}
 
 	@Override
@@ -40,11 +41,11 @@ public class DependenciesContextEntry extends ContextEntry {
 
 	@Override
 	public String getContent(ContextContext context) {
-		return ContextUtils.contentTemplate("Dependencies", super.getContent(context));
+		return ContextUtils.contentTemplate(LABEL, super.getContent(context));
 	}
 
 	public static ContextEntryFactory factory(IProject project) {
-		return new ContextEntryFactory(PREFIX, () -> create(project));
+		return new ContextEntryFactory(PREFIX, () -> create(project), () -> new EmptyContextEntry(PREFIX, LABEL, AiCoderImageKey.DEPENDENCIES_ICON));
 	}
 
 	public static DependenciesContextEntry create(IProject project) throws JavaModelException {

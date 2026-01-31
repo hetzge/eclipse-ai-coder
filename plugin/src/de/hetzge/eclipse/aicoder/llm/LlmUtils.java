@@ -39,6 +39,10 @@ public final class LlmUtils {
 		return execute(LlmOption.createEditModelOptionFromPreferences(), systemPrompt, prompt, null);
 	}
 
+	public static CompletableFuture<LlmResponse> executeRerank(String systemPrompt, String prompt) {
+		return execute(LlmOption.createRerankModelOptionFromPreferences(), systemPrompt, prompt, null); // TODO
+	}
+
 	public static CompletableFuture<LlmResponse> executeQuickFix(String systemPrompt, String prompt) {
 		return execute(LlmOption.createQuickFixModelOptionFromPreferences(), systemPrompt, prompt, null);
 	}
