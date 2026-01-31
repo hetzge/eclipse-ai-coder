@@ -27,6 +27,7 @@ import de.hetzge.eclipse.aicoder.util.Utils;
 
 public class ScopeContextEntry extends ContextEntry {
 
+	public static final String LABEL = "Scope";
 	public static final String PREFIX = "SCOPE";
 
 	public ScopeContextEntry(List<? extends ContextEntry> childContextEntries, Duration creationDuration) {
@@ -35,7 +36,7 @@ public class ScopeContextEntry extends ContextEntry {
 
 	@Override
 	public String getLabel() {
-		return "Scope";
+		return LABEL;
 	}
 
 	@Override
@@ -54,7 +55,7 @@ public class ScopeContextEntry extends ContextEntry {
 	}
 
 	public static ContextEntryFactory factory(ICompilationUnit unit, int offset) {
-		return new ContextEntryFactory(PREFIX, () -> create(unit, offset));
+		return new ContextEntryFactory(PREFIX, () -> create(unit, offset), () -> new EmptyContextEntry(PREFIX, LABEL, AiCoderImageKey.SCOPE_ICON));
 	}
 
 	public static ScopeContextEntry create(ICompilationUnit unit, int offset) throws CoreException {

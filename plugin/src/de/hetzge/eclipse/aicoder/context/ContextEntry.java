@@ -53,7 +53,7 @@ public abstract class ContextEntry {
 	}
 
 	public static String apply(final ContextEntry entry, ContextContext context) {
-		if (ContextPreferences.isBlacklisted(entry.getKey()) || context.isDone(entry)) {
+		if (ContextPreferences.isBlacklisted(entry.getKey()) || context.isDone(entry) || ContextPreferences.isTemporaryDisabled(entry.getKey())) {
 			entry.setTokenCount(0);
 			return "";
 		}

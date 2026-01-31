@@ -28,6 +28,7 @@ import de.hetzge.eclipse.aicoder.util.Utils;
 
 public class OpenEditorsContextEntry extends ContextEntry {
 
+	public static final String LABEL = "Open editors";
 	public static final String PREFIX = "OPEN_EDITORS";
 
 	private OpenEditorsContextEntry(List<? extends ContextEntry> childContextEntries, Duration creationDuration) {
@@ -41,7 +42,7 @@ public class OpenEditorsContextEntry extends ContextEntry {
 
 	@Override
 	public String getLabel() {
-		return "Open editors";
+		return LABEL;
 	}
 
 	@Override
@@ -51,11 +52,11 @@ public class OpenEditorsContextEntry extends ContextEntry {
 
 	@Override
 	public String getContent(ContextContext context) {
-		return ContextUtils.contentTemplate("Open editors", super.getContent(context));
+		return ContextUtils.contentTemplate(LABEL, super.getContent(context));
 	}
 
 	public static ContextEntryFactory factory() {
-		return new ContextEntryFactory(PREFIX, () -> create());
+		return new ContextEntryFactory(PREFIX, () -> create(), () -> new EmptyContextEntry(PREFIX, LABEL, AiCoderImageKey.EDITOR_ICON));
 	}
 
 	public static OpenEditorsContextEntry create() throws CoreException {
@@ -90,7 +91,7 @@ public class OpenEditorsContextEntry extends ContextEntry {
 				.toList();
 	}
 
-	private static Stream<? extends ContextEntry> createTypeContextEntry(ICompilationUnit unit) throws CoreException {
+	public static Stream<? extends ContextEntry> createTypeContextEntry(ICompilationUnit unit) throws CoreException {
 		if (!unit.exists()) {
 			return Stream.empty();
 		}
@@ -103,11 +104,9 @@ public class OpenEditorsContextEntry extends ContextEntry {
 	}
 
 	private static Stream<? extends ContextEntry> createFileContextEntry(IEditorInput input, IWorkbenchPart part) throws CoreException {
-		if (part == null) {
-			return Stream.empty();
-		}
 		try {
-			return EclipseUtils.stringFromInput(input, part).map(LambdaExceptionUtils.rethrowFunction(content -> FileContentContextEntry.create(part.getTitle(), content))).stream();
+			final String title = part != null ? part.getTitle() : input.getName();
+			return EclipseUtils.stringFromInput(input, part).map(LambdaExceptionUtils.rethrowFunction(content -> FileContentContextEntry.create(title, content))).stream();
 		} catch (final IOException exception) {
 			throw new CoreException(Status.error("Failed to read file content", exception));
 		}

@@ -65,7 +65,7 @@ public final class GitUtils {
 		return Optional.ofNullable(new FileRepositoryBuilder().findGitDir(projectDir).getGitDir());
 	}
 
-	public static class GitState {
+	public static class GitState implements AutoCloseable {
 		private final Repository repository;
 		private final Set<String> ignoredPaths;
 
@@ -79,6 +79,13 @@ public final class GitUtils {
 				return false;
 			}
 			return this.ignoredPaths.contains(this.repository.getWorkTree().toPath().relativize(resource.getLocation().toFile().toPath()).toString());
+		}
+
+		@Override
+		public void close() {
+			if (this.repository != null) {
+				this.repository.close();
+			}
 		}
 	}
 }

@@ -218,7 +218,9 @@ public class EclipseUtils {
 	public static Optional<String> stringFromInput(IEditorInput input, IWorkbenchPart part) throws IOException, CoreException {
 		if (part instanceof ITextEditor) {
 			final IDocument doc = ((ITextEditor) part).getDocumentProvider().getDocument(input);
-			return doc != null ? Optional.of(doc.get()) : Optional.empty();
+			if (doc != null) {
+				return Optional.of(doc.get());
+			}
 		}
 		if (input instanceof IFileEditorInput) {
 			final IFile file = ((IFileEditorInput) input).getFile();

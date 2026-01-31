@@ -171,4 +171,51 @@ public final class LlmPromptTemplates {
 				"""
 				.trim().formatted(prefix, suffix, instructions);
 	}
+
+	public static String rerankSystemPrompt(int maxLocations) {
+		return """
+				You are a software developer assistant
+				Your task is to rank provided locations for relevance to the given instructions
+				INFORMATIONS PROVIDED TO YOU:
+				- Locations: A list of locations provided inside <locations></locations> tags
+				- Instructions: What the locations should be ranked for provided inside <instructions></instructions> tags
+				- Prefix: The code before the current edit location provided inside <prefix></prefix> tags
+				- Suffix: The code after the current edit location provided inside <suffix></suffix> tags
+				OUTPUT FORMAT:
+				- Provide only a list of locations in order of relevance to the instructions
+				- The top location should be the most relevant one
+				- Start each line with "-" (a dash) followed by the location name
+				- Do not provide any explanations or comments
+				- Provide maximum %s locations
+				- Provide the whole path (from the provided root) of each location (not only the file name)
+				EXAMPLE OUTPUT:
+				<EXAMPLE>
+				- path/to/location1
+				- path/to/location2
+				- path/to/location3
+				</EXAMPLE>
+				""".trim().formatted(maxLocations);
+	}
+
+	public static String rerankPrompt(String locations, String instructions, String prefix, String suffix, String currentFileName) {
+		return """
+				Rerank the following locations for relevance to the given instructions.
+				<locations>
+				%s
+				</locations>
+				Here are the instructions:
+				<instructions>
+				%s
+				</instructions>
+				The current file is: %s
+				Here is the code before the current edit location:
+				<prefix>
+				%s
+				</prefix>
+				Here is the code after the current edit location:
+				<suffix>
+				%s
+				</suffix>
+				""".trim().formatted(locations, instructions, prefix, suffix, currentFileName);
+	}
 }
