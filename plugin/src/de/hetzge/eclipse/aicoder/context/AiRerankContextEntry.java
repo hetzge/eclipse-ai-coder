@@ -122,8 +122,7 @@ public class AiRerankContextEntry extends ContextEntry {
 
 	private static List<Path> parseRerankOutput(String output, int maxRerankResultPaths) {
 		final List<Path> locations = new ArrayList<>();
-		final String[] lines = output.split("\n");
-		for (String line : lines) {
+		for (String line : output.lines().toList()) {
 			line = line.trim();
 			if (line.startsWith("-")) {
 				final String pathString = line.substring(1).trim();
