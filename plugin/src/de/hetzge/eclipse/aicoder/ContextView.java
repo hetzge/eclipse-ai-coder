@@ -57,7 +57,6 @@ import de.hetzge.eclipse.aicoder.context.ContextEntryKey;
 import de.hetzge.eclipse.aicoder.context.CustomContextEntry;
 import de.hetzge.eclipse.aicoder.context.CustomContextEntryData;
 import de.hetzge.eclipse.aicoder.context.EmptyContextEntry;
-import de.hetzge.eclipse.aicoder.context.FillInMiddleContextEntry;
 import de.hetzge.eclipse.aicoder.context.UserContextEntry;
 import de.hetzge.eclipse.aicoder.handler.ToggleMultilineHandler;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
@@ -113,15 +112,11 @@ public class ContextView extends ViewPart {
 		final Object element = event.getElement();
 		final boolean checked = event.getChecked();
 		updateParentCheckState(element);
-		updateChildCheckState(element, checked);
 		if (element instanceof final ContextEntry contextEntry) {
-			if (this.viewer.getChecked(element)) {
-				ContextPreferences.removeFromTemporaryDisabled(contextEntry.getKey());
-			} else {
-				ContextPreferences.addToTemporaryDisabled(contextEntry.getKey());
-			}
 			if (isRootItem(contextEntry)) {
 				ContextPreferences.setContextTypeEnabled(contextEntry.getKey().prefix(), checked);
+			} else {
+				ContextPreferences.setTemporaryDisabled(contextEntry.getKey(), this.viewer.getChecked(element));
 			}
 		}
 	}
@@ -130,37 +125,41 @@ public class ContextView extends ViewPart {
 		return this.rootContextEntry.getChildContextEntries().contains(entry);
 	}
 
-	private void updateChildCheckState(Object element, boolean checked) {
-		if (element instanceof FillInMiddleContextEntry) {
-			return; // FillInMiddleContextEntry is not allowed to be disabled
-		}
-		if (element instanceof final ContextEntry contextEntry) {
-			for (final ContextEntry child : contextEntry.getChildContextEntries()) {
-				this.viewer.setChecked(child, checked);
-				this.viewer.setGrayed(child, false);
-				updateChildCheckState(child, checked);
-			}
-			if (ContextPreferences.isBlacklisted(contextEntry.getKey())) {
-				this.viewer.setChecked(element, false);
-			}
-		}
-	}
-
 	private void updateParentCheckState(Object element) {
 		if (element instanceof final ContextEntry contextEntry) {
 			final ContextEntry parent = findParent(contextEntry);
 			if (parent != null) {
 				final boolean allChecked = parent.getChildContextEntries().stream().allMatch(it -> this.viewer.getChecked(it));
-				final boolean anyChecked = parent.getChildContextEntries().stream().anyMatch(it -> this.viewer.getChecked(it));
-				this.viewer.setChecked(parent, allChecked);
-				this.viewer.setGrayed(parent, !allChecked && anyChecked);
+				this.viewer.setGrayed(parent, !allChecked);
 				updateParentCheckState(parent);
 			}
 		}
 	}
 
 	private ContextEntry findParent(ContextEntry contextEntry) {
-		return this.rootContextEntry.getChildContextEntries().stream().filter(it -> it.getChildContextEntries().contains(contextEntry)).findFirst().orElse(null);
+		for (final ContextEntry child : this.rootContextEntry.getChildContextEntries()) {
+			if (child.getChildContextEntries().contains(contextEntry)) {
+				return child;
+			}
+			final ContextEntry parent = findParent(child, contextEntry);
+			if (parent != null) {
+				return parent;
+			}
+		}
+		return null;
+	}
+
+	private ContextEntry findParent(ContextEntry parent, ContextEntry contextEntry) {
+		for (final ContextEntry child : parent.getChildContextEntries()) {
+			if (child.getChildContextEntries().contains(contextEntry)) {
+				return child;
+			}
+			final ContextEntry foundParent = findParent(child, contextEntry);
+			if (foundParent != null) {
+				return foundParent;
+			}
+		}
+		return null;
 	}
 
 	private void hookContextMenu() {
@@ -388,18 +387,20 @@ public class ContextView extends ViewPart {
 		@Override
 		public boolean isChecked(Object element) {
 			if (element instanceof final ContextEntry contextEntry) {
-				final ContextEntryKey key = contextEntry.getKey();
-				if (isRootItem(contextEntry) && !ContextPreferences.isContextTypeEnabled(key.getKeyString())) {
-					return false;
-				}
-				return !ContextPreferences.isBlacklisted(key)
-						&& !ContextPreferences.isTemporaryDisabled(contextEntry.getKey());
+				return !ContextPreferences.isBlacklisted(contextEntry.getKey())
+						&& (isRootItem(contextEntry) || !ContextPreferences.isTemporaryDisabled(contextEntry.getKey()))
+						&& (!isRootItem(contextEntry) || ContextPreferences.isContextTypeEnabled(contextEntry.getKey().getKeyString()));
 			}
 			return true;
 		}
 
 		@Override
 		public boolean isGrayed(Object element) {
+			if (element instanceof final ContextEntry contextEntry) {
+				if (!contextEntry.getChildContextEntries().isEmpty()) {
+					return !contextEntry.getChildContextEntries().stream().allMatch(this::isChecked);
+				}
+			}
 			return false;
 		}
 	}
