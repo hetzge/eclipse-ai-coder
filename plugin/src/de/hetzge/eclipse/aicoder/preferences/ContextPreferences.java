@@ -150,6 +150,14 @@ public final class ContextPreferences {
 		TEMPORARY_DISABLED.add(entry);
 	}
 
+	public static void setTemporaryDisabled(ContextEntryKey entry, boolean enabled) {
+		if (enabled) {
+			removeFromTemporaryDisabled(entry);
+		} else {
+			addToTemporaryDisabled(entry);
+		}
+	}
+
 	public static void removeFromTemporaryDisabled(ContextEntryKey entry) {
 		TEMPORARY_DISABLED.remove(entry);
 	}
