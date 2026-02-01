@@ -172,7 +172,7 @@ public final class LlmPromptTemplates {
 				.trim().formatted(prefix, suffix, instructions);
 	}
 
-	public static String rerankSystemPrompt(int maxLocations) {
+	public static String rerankSystemPrompt(int maxResultCount) {
 		return """
 				You are a software developer assistant
 				Your task is to rank provided locations for relevance to the given instructions
@@ -187,14 +187,14 @@ public final class LlmPromptTemplates {
 				- Start each line with "-" (a dash) followed by the location name
 				- Do not provide any explanations or comments
 				- Provide maximum %s locations
-				- Provide the whole path (from the provided root) of each location (not only the file name)
+				- Provide the whole path (relative to the provided project root) of each location (not only the file name)
 				EXAMPLE OUTPUT:
 				<EXAMPLE>
 				- path/to/location1
 				- path/to/location2
 				- path/to/location3
 				</EXAMPLE>
-				""".trim().formatted(maxLocations);
+				""".trim().formatted(maxResultCount);
 	}
 
 	public static String rerankPrompt(String locations, String instructions, String prefix, String suffix, String currentFileName) {
