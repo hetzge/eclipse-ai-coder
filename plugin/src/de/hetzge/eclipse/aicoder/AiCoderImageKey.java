@@ -34,7 +34,8 @@ public enum AiCoderImageKey {
 	DIFF_CHAR_ICON,
 	EXPAND_ICON,
 	COLLAPSE_ICON,
-	RERANK_ICON;
+	RERANK_ICON,
+	MULTILINE_ICON;
 
 	static void initializeImages(ImageRegistry registry) {
 		try {
@@ -66,6 +67,7 @@ public enum AiCoderImageKey {
 			registerImage(registry, AiCoderImageKey.EXPAND_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/elcl16/expandall.svg").toURL()));
 			registerImage(registry, AiCoderImageKey.COLLAPSE_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/elcl16/collapseall.svg").toURL()));
 			registerImage(registry, AiCoderImageKey.RERANK_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.search/icons/full/elcl16/search_sortmatch.svg").toURL()));
+			registerImage(registry, AiCoderImageKey.MULTILINE_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui.workbench.texteditor/icons/full/etool16/wordwrap.svg").toURL()));
 		} catch (final MalformedURLException exception) {
 			throw new RuntimeException(exception);
 		}

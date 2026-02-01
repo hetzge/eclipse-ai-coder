@@ -1,5 +1,6 @@
 package de.hetzge.eclipse.aicoder;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -9,6 +10,7 @@ import java.util.stream.Stream;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.action.Action;
+import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.action.MenuManager;
@@ -58,6 +60,7 @@ import de.hetzge.eclipse.aicoder.context.EmptyContextEntry;
 import de.hetzge.eclipse.aicoder.context.FillInMiddleContextEntry;
 import de.hetzge.eclipse.aicoder.context.UserContextEntry;
 import de.hetzge.eclipse.aicoder.handler.ToggleMultilineHandler;
+import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.preferences.ContextPreferencePage;
 import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
 import jakarta.inject.Inject;
@@ -320,6 +323,18 @@ public class ContextView extends ViewPart {
 		};
 		collapseAllAction.setImageDescriptor(AiCoderActivator.getImageDescriptor(AiCoderImageKey.COLLAPSE_ICON));
 		manager.add(collapseAllAction);
+		final Action toggleAction = new Action("Toggle Multiline", IAction.AS_CHECK_BOX) {
+			@Override
+			public void run() {
+				final boolean enabled = isChecked();
+				AiCoderPreferences.setMultilineEnabled(enabled);
+				setChecked(enabled);
+			}
+		};
+		toggleAction.setToolTipText("Toggle Multiline");
+		toggleAction.setImageDescriptor(AiCoderActivator.getImageDescriptor(AiCoderImageKey.MULTILINE_ICON));
+		toggleAction.setChecked(AiCoderPreferences.isMultilineEnabled());
+		manager.add(toggleAction);
 	}
 
 	private void showContentPreview(ContextEntry entry) {
@@ -553,9 +568,28 @@ public class ContextView extends ViewPart {
 				if (ContextPreferences.isSticky(key)) {
 					tag += " [Sticky]";
 				}
-				return String.format("%s%s (%s) [%s]", text, tag, contextEntry.getTokenCount(), contextEntry.getCreationDuration().toMillis());
+				final Duration duration = contextEntry.getCreationDuration();
+				final long seconds = duration.getSeconds();
+				final long absSeconds = Math.abs(seconds);
+				final String formattedDuration = formatDuration(absSeconds);
+				return String.format("%s%s (chars: %s, duration: %s, children: %s)", text, tag, contextEntry.getTokenCount(), formattedDuration, contextEntry.getChildContextEntries().size());
 			}
 			return null;
+		}
+
+		private String formatDuration(final long absSeconds) {
+			if (absSeconds < 60) {
+				return String.format("%ds", absSeconds);
+			} else if (absSeconds < 3600) {
+				final long minutes = absSeconds / 60;
+				final long remainingSeconds = absSeconds % 60;
+				return String.format("%dmin %ds", minutes, remainingSeconds);
+			} else {
+				final long hours = absSeconds / 3600;
+				final long remainingMinutes = (absSeconds % 3600) / 60;
+				final long remainingSeconds = absSeconds % 60;
+				return String.format("%dh %dmin %ds", hours, remainingMinutes, remainingSeconds);
+			}
 		}
 
 		@Override
