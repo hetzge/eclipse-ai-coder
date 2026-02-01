@@ -68,6 +68,7 @@ public class RootContextEntry extends ContextEntry {
 		factories.add(AiRerankContextEntry.factory(document, editorInput, originalInstructions, offset));
 		final List<String> orderedPrefixes = ContextPreferences.getContextTypePositions().stream()
 				.map(item -> item.prefix())
+
 				.toList();
 		final List<ContextEntry> filteredAndSortedEntries = factories.parallelStream()
 				.sorted(Comparator.comparingInt(factory -> orderedPrefixes.indexOf(factory.prefix())))

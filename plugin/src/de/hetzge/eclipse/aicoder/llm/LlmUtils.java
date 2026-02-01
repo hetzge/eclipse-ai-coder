@@ -21,6 +21,8 @@ import mjson.Json;
 
 public final class LlmUtils {
 
+	public static final List<String> OPENAI_REASONING_SUFFIXES = List.of(":minimal", ":low", ":medium", ":high", ":xhigh");
+
 	public static final String OPENROUTER_BASE_URL = "https://openrouter.ai/api";
 	private static final String CODESTRAL_BASE_URL = "https://codestral.mistral.ai";
 	private static final String INCEPTIONLABS_BASE_URL = "https://api.inceptionlabs.ai";
@@ -186,9 +188,19 @@ public final class LlmUtils {
 	private static CompletableFuture<LlmResponse> executeOpenAi(String urlString, String openAiApiKey, LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) {
 		final boolean isFillInTheMiddle = suffix != null;
 		final boolean isPseudoFim = isFillInTheMiddle && AiCoderPreferences.isEnablePseduoFim();
+		final String reasoningSuffix = OPENAI_REASONING_SUFFIXES.stream()
+				.filter(it -> llmModelOption.modelKey().endsWith(it))
+				.findFirst()
+				.orElse(null);
+		final String model = reasoningSuffix != null
+				? llmModelOption.modelKey().substring(0, llmModelOption.modelKey().length() - reasoningSuffix.length())
+				: llmModelOption.modelKey();
 		final Json json = Json.object();
-		json.set("model", llmModelOption.modelKey());
+		json.set("model", model);
 		json.set("temperature", 0);
+		if (reasoningSuffix != null) {
+			json.set("reasoning_effort", reasoningSuffix.substring(1));
+		}
 		if (isFillInTheMiddle) {
 			final String fimTemplatePrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getOpenAiFimTemplate(), Map.ofEntries(
 					Map.entry("prefix", prompt),

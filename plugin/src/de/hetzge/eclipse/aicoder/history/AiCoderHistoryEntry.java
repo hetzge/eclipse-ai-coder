@@ -57,6 +57,7 @@ public final class AiCoderHistoryEntry {
 
 	public void setupLlmResponse(LlmResponse llmResponse) {
 		this.setStatus(llmResponse.isError() ? HistoryStatus.ERROR : HistoryStatus.ACCEPTED);
+		this.setModelLabel(llmResponse.getLlmModelOption().getLabel());
 		this.setDurationMs(llmResponse.getDuration().toMillis());
 		this.setLlmDurationMs(llmResponse.getDuration().toMillis());
 		this.setInputTokenCount(llmResponse.getInputTokens());

@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
@@ -72,10 +73,19 @@ public enum LlmModels {
 	private List<LlmOption> loadOpenAiModels() {
 		final String openAiBaseUrl = AiCoderPreferences.getOpenAiBaseUrl();
 		final String openAiApiKey = AiCoderPreferences.getOpenAiApiKey();
-		return loadOpenAiModels(openAiBaseUrl, openAiApiKey);
+		return loadOpenAiApiModels(openAiBaseUrl, openAiApiKey).stream()
+				.flatMap(model -> {
+					if (model.modelKey().startsWith("gpt-") || model.modelKey().startsWith("openai/gpt-")) {
+						return Stream.concat(Stream.of(model), LlmUtils.OPENAI_REASONING_SUFFIXES.stream()
+								.map(suffix -> new LlmOption(model.provider(), model.modelKey() + suffix)));
+					} else {
+						return List.of(model).stream();
+					}
+				})
+				.toList();
 	}
 
-	private List<LlmOption> loadOpenAiModels(String openAiBaseUrl, String openAiApiKey) {
+	private List<LlmOption> loadOpenAiApiModels(String openAiBaseUrl, String openAiApiKey) {
 		try {
 			final URL url = URI.create(Utils.joinUriParts(List.of(openAiBaseUrl, "/v1/models"))).toURL();
 			final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -150,7 +160,7 @@ public enum LlmModels {
 			if (openRouterApiKey == null || openRouterApiKey.isBlank()) {
 				return List.of();
 			}
-			return loadOpenAiModels(LlmUtils.OPENROUTER_BASE_URL, openRouterApiKey).stream()
+			return loadOpenAiApiModels(LlmUtils.OPENROUTER_BASE_URL, openRouterApiKey).stream()
 					.flatMap(model -> List.of(
 							new LlmOption(LlmProvider.OPENROUTER, model.modelKey()),
 							new LlmOption(LlmProvider.OPENROUTER, model.modelKey() + ":free"),
