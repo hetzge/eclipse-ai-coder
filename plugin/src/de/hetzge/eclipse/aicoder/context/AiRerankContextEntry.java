@@ -72,8 +72,8 @@ public class AiRerankContextEntry extends ContextEntry {
 		if (editorInput instanceof final IFileEditorInput fileEditorInput) {
 			final IFile file = fileEditorInput.getFile();
 			final IProject project = file.getProject();
-			final int maxRerankResultPaths = 20;
-			final String systemPrompt = LlmPromptTemplates.rerankSystemPrompt(maxRerankResultPaths);
+			final int maxRerankResultCount = 20;
+			final String systemPrompt = LlmPromptTemplates.rerankSystemPrompt(maxRerankResultCount);
 			final String prefix = FillInMiddleContextEntry.getPrefix(document, modelOffset);
 			final String suffix = FillInMiddleContextEntry.getSuffix(document, modelOffset);
 			final String currentFileName = EclipseUtils.getFilename(editorInput).orElse("Unknown file");
@@ -92,7 +92,7 @@ public class AiRerankContextEntry extends ContextEntry {
 					final Duration creationDuration = Duration.ofMillis(System.currentTimeMillis() - before);
 					return new AiRerankContextEntry(List.of(), creationDuration);
 				}
-				final List<Path> paths = parseRerankOutput(llmResponse.getContent(), maxRerankResultPaths);
+				final List<Path> paths = parseRerankOutput(project, llmResponse.getContent(), maxRerankResultCount);
 				final List<IFile> files = paths.stream()
 						.map(path -> project.getFile(path.toString()))
 						.filter(IFile::exists)
@@ -120,18 +120,27 @@ public class AiRerankContextEntry extends ContextEntry {
 		}
 	}
 
-	private static List<Path> parseRerankOutput(String output, int maxRerankResultPaths) {
+	private static List<Path> parseRerankOutput(IProject project, String output, int maxRerankResultCount) {
+		final String projectName = project.getName();
+		final String absoluteProjectPath = project.getLocation().toString();
 		final List<Path> locations = new ArrayList<>();
 		for (String line : output.lines().toList()) {
 			line = line.trim();
 			if (line.startsWith("-")) {
-				final String pathString = line.substring(1).trim();
-				locations.add(Path.of(pathString.startsWith("/") ? pathString.substring(1) : pathString));
-				if (locations.size() >= maxRerankResultPaths) {
+				String pathString = line.substring(1).trim();
+				// remove absolute project path
+				pathString = pathString.startsWith(absoluteProjectPath) ? pathString.replace(absoluteProjectPath + "/", "") : pathString;
+				// remove leading slash
+				pathString = pathString.startsWith("/") ? pathString.substring(1) : pathString;
+				// remove project name from path
+				pathString = pathString.startsWith(projectName) ? pathString.replace(projectName + "/", "") : pathString;
+				locations.add(Path.of(pathString));
+				if (locations.size() >= maxRerankResultCount) {
 					break;
 				}
 			}
 		}
 		return locations;
 	}
+
 }
