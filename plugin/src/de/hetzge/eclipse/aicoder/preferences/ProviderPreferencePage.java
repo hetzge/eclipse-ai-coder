@@ -74,6 +74,17 @@ public class ProviderPreferencePage extends FieldEditorPreferencePage implements
 				inceptionlabsGroup);
 		inceptionlabsApiKeyFieldEditor.getTextControl(inceptionlabsGroup).setEchoChar('*');
 		addField(inceptionlabsApiKeyFieldEditor);
+
+		// OpenRouter
+		final Group openRouterGroup = new Group(getFieldEditorParent(), SWT.NONE);
+		openRouterGroup.setText("OpenRouter");
+		openRouterGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
+		final StringFieldEditor openRouterApiKeyFieldEditor = new StringFieldEditor(
+				AiCoderPreferences.OPENROUTER_API_KEY_KEY,
+				"API key:",
+				openRouterGroup);
+		openRouterApiKeyFieldEditor.getTextControl(openRouterGroup).setEchoChar('*');
+		addField(openRouterApiKeyFieldEditor);
 	}
 
 	@Override

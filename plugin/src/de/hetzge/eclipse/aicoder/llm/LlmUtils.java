@@ -21,6 +21,7 @@ import mjson.Json;
 
 public final class LlmUtils {
 
+	public static final String OPENROUTER_BASE_URL = "https://openrouter.ai/api";
 	private static final String CODESTRAL_BASE_URL = "https://codestral.mistral.ai";
 	private static final String INCEPTIONLABS_BASE_URL = "https://api.inceptionlabs.ai";
 
@@ -62,7 +63,13 @@ public final class LlmUtils {
 		case MISTRAL:
 			return executeMistral(llmModelOption, systemPrompt, prompt, suffix);
 		case OPENAI:
-			return executeOpenAi(llmModelOption, systemPrompt, prompt, suffix);
+			final String urlString = AiCoderPreferences.getOpenAiBaseUrl();
+			final String openAiApiKey = AiCoderPreferences.getOpenAiApiKey();
+			return executeOpenAi(urlString, openAiApiKey, llmModelOption, systemPrompt, prompt, suffix);
+		case OPENROUTER:
+			final String openRouterUrlString = OPENROUTER_BASE_URL;
+			final String openRouterApiKey = AiCoderPreferences.getOpenRouterApiKey();
+			return executeOpenAi(openRouterUrlString, openRouterApiKey, llmModelOption, systemPrompt, prompt, suffix);
 		case INCEPTIONLABS:
 			return executeInceptionLabs(llmModelOption, systemPrompt, prompt, suffix);
 		default:
@@ -176,11 +183,9 @@ public final class LlmUtils {
 				});
 	}
 
-	private static CompletableFuture<LlmResponse> executeOpenAi(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) {
+	private static CompletableFuture<LlmResponse> executeOpenAi(String urlString, String openAiApiKey, LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) {
 		final boolean isFillInTheMiddle = suffix != null;
 		final boolean isPseudoFim = isFillInTheMiddle && AiCoderPreferences.isEnablePseduoFim();
-		final String urlString = AiCoderPreferences.getOpenAiBaseUrl();
-		final String openAiApiKey = AiCoderPreferences.getOpenAiApiKey();
 		final Json json = Json.object();
 		json.set("model", llmModelOption.modelKey());
 		json.set("temperature", 0);
