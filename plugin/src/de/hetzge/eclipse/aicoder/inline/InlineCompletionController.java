@@ -111,6 +111,9 @@ public final class InlineCompletionController {
 				textViewer.getSelectionProvider().addSelectionChangedListener(controller.selectionListener);
 				textViewer.getTextWidget().addCaretListener(controller.caretListener);
 				textEditor.getDocumentProvider().getDocument(textEditor.getEditorInput()).addDocumentListener(controller.documentListener);
+				textViewer.addViewportListener(verticalOffset -> {
+					AiCoderActivator.getDefault().getEditorViewMemory().update(textViewer);
+				});
 			});
 			return controller;
 		});
@@ -131,6 +134,7 @@ public final class InlineCompletionController {
 	private long changeCounter;
 	private long lastChangeCounter;
 	private final Debouncer debouncer;
+	private final Debouncer editDebouncer;
 	private boolean abortDisabled;
 	private SuggestionPopupDialog suggestionPopupDialog;
 	private Suggestion suggestion;
@@ -152,6 +156,7 @@ public final class InlineCompletionController {
 		this.changeCounter = 0;
 		this.lastChangeCounter = 0;
 		this.debouncer = new Debouncer(Display.getDefault(), AiCoderPreferences::getDebounceDuration);
+		this.editDebouncer = new Debouncer(Display.getDefault(), () -> Duration.ofMillis(1000));
 		this.abortDisabled = false;
 		this.suggestionPopupDialog = null;
 		this.suggestion = null;
@@ -639,6 +644,9 @@ public final class InlineCompletionController {
 		public void documentChanged(DocumentEvent event) {
 			InlineCompletionController.this.changeCounter++;
 			abort("Document changed");
+			InlineCompletionController.this.editDebouncer.debounce(() -> {
+				AiCoderActivator.getDefault().getEditorViewMemory().update(InlineCompletionController.this.textViewer);
+			});
 		}
 	}
 
