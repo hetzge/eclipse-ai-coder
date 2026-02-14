@@ -62,7 +62,8 @@ public final class Context {
 			Map.entry(RootContextEntry.PREFIX, "Root"),
 			Map.entry(TypeMemberContextEntry.PREFIX, "Type member (Java)"),
 			Map.entry(PackageContextEntry.PREFIX, "Package (Java)"),
-			Map.entry(AiRerankContextEntry.PREFIX, "AI rerank"));
+			Map.entry(AiRerankContextEntry.PREFIX, "AI rerank"),
+			Map.entry(CodeViewportMemoryContextEntry.PREFIX, "Code Viewport Memory"));
 
 	public static final List<String> DEFAULT_PREFIX_ORDER = List.of(
 			ProjectInformationsContextEntry.PREFIX,
@@ -78,6 +79,7 @@ public final class Context {
 			LastEditsContextEntry.PREFIX,
 			ClipboardContextEntry.PREFIX,
 			AiRerankContextEntry.PREFIX,
+			CodeViewportMemoryContextEntry.PREFIX,
 			FillInMiddleContextEntry.PREFIX);
 
 	public static final Set<String> DEFAULT_ACTIVE_PREFIXES = Set.of(FillInMiddleContextEntry.PREFIX);
@@ -87,7 +89,8 @@ public final class Context {
 				LambdaExceptionUtils.rethrowFunction(TypeMemberContextEntry::create),
 				LambdaExceptionUtils.rethrowFunction(PackageContextEntry::create),
 				LambdaExceptionUtils.rethrowFunction(TypeContextEntry::create),
-				LambdaExceptionUtils.rethrowFunction(CustomContextEntryData::create));
+				LambdaExceptionUtils.rethrowFunction(CustomContextEntryData::create),
+				LambdaExceptionUtils.rethrowFunction(CodeViewportMemoryContextEntry::create));
 		return factories.stream().flatMap(factory -> factory.apply(key).stream()).findFirst();
 	}
 }

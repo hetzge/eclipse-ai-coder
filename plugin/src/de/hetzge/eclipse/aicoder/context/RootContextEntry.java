@@ -66,6 +66,7 @@ public class RootContextEntry extends ContextEntry {
 		factories.add(ClipboardContextEntry.factory());
 		factories.add(FillInMiddleContextEntry.factory(filename, document, offset));
 		factories.add(AiRerankContextEntry.factory(document, editorInput, originalInstructions, offset));
+		factories.add(CodeViewportMemoryContextEntry.factory());
 		final List<String> orderedPrefixes = ContextPreferences.getContextTypePositions().stream()
 				.map(item -> item.prefix())
 

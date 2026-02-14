@@ -7,6 +7,10 @@ import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.ui.IWorkbench;
+import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.IWorkbenchWindow;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
@@ -19,6 +23,7 @@ public class AiCoderActivator extends AbstractUIPlugin {
 
 	private static AiCoderActivator plugin;
 	private InstructionStorage instructionStorage;
+	private EditorViewMemory editorViewMemory;
 
 	public AiCoderActivator() {
 	}
@@ -28,9 +33,19 @@ public class AiCoderActivator extends AbstractUIPlugin {
 		super.start(context);
 		plugin = this;
 		this.instructionStorage = InstructionStorage.load(getStateLocation());
+		this.editorViewMemory = new EditorViewMemory(1000);
 		McpClients.INSTANCE.reload(() -> {
 			log().info("MCP clients loaded: " + McpClients.INSTANCE.getMcpStatusCountsString());
 		});
+		final IWorkbench workbench = PlatformUI.getWorkbench();
+		final IWorkbenchWindow[] windows = workbench.getWorkbenchWindows();
+		for (final IWorkbenchWindow window : windows) {
+			final IWorkbenchPage page = window.getActivePage();
+			if (page != null) {
+				page.addPartListener(new AiCoderPartListener());
+			}
+		}
+		workbench.addWindowListener(new AiCoderWindowListener());
 	}
 
 	@Override
@@ -41,6 +56,10 @@ public class AiCoderActivator extends AbstractUIPlugin {
 
 	public InstructionStorage getInstructionStorage() {
 		return this.instructionStorage;
+	}
+
+	public EditorViewMemory getEditorViewMemory() {
+		return this.editorViewMemory;
 	}
 
 	public static AiCoderActivator getDefault() {

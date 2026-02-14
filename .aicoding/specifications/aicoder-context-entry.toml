@@ -1,0 +1,70 @@
+title = "AI Coder Context Entry"
+glob = "**/context/*ContextEntry.java"
+content = """
+This specification defines how to implement Eclipse AI Coder Context Entry classes. A Context Entry is a class that provides context information about a Java element (such as imports, type members, super types, etc.) to an AI coding assistant within an Eclipse plugin. Context entries are used to build a context tree that the AI can use to understand the codebase.
+
+## Rules
+
+- Each context entry class must extend the base `ContextEntry` class
+- Each context entry class must define a `PREFIX` constant of type `String` that uniquely identifies the type of context entry
+- Each context entry class must implement the following methods:
+  - `getKey()`: Returns a `ContextEntryKey` with the PREFIX and a unique value
+  - `getLabel()`: Returns a human-readable label for the context entry
+  - `getContent(ContextContext context)`: Returns the string content that represents this context entry
+  - `getChildContextEntries()`: Returns a list of child context entries (can be empty)
+- Each context entry class should have a static `factory` method that returns a `ContextEntryFactory`
+- Each context entry class should have a static `create` method that creates an instance from an Eclipse JDT element
+- Each context entry class should have a static `create(ContextEntryKey key)` method that recreates an instance from a key
+- The `create` method should measure and store the creation duration using `System.currentTimeMillis()` and `Duration.ofMillis()`
+- Use `LambdaExceptionUtils.rethrowFunction` and `LambdaExceptionUtils.rethrowPredicate` for lambda exception handling
+- Use parallel streams when processing collections of imports or types for better performance
+- Use `ContextUtils.contentTemplate` to wrap content with a title when implementing `getContent`
+- Optionally override `getImage()` to return an icon for the context entry
+- The constructor should be private and accept `List<? extends ContextEntry> childContextEntries` and `Duration creationDuration`
+
+## Pattern
+
+```java
+public class ExampleContextEntry extends ContextEntry {
+
+    public static final String LABEL = "Example Label";
+    public static final String PREFIX = "EXAMPLE";
+
+    private ExampleContextEntry(List<? extends ContextEntry> childContextEntries, Duration creationDuration) {
+        super(childContextEntries, creationDuration);
+    }
+
+    @Override
+    public ContextEntryKey getKey() {
+        return new ContextEntryKey(PREFIX, PREFIX);
+    }
+
+    @Override
+    public String getLabel() {
+        return LABEL;
+    }
+
+    @Override
+    public String getContent(ContextContext context) {
+        return ContextUtils.contentTemplate("Example title", super.getContent(context));
+    }
+
+    public static ContextEntryFactory factory(IJavaElement element) { // element is a dependency of the context, only pass required dependencies
+        return new ContextEntryFactory(PREFIX, () -> create(element), () -> new EmptyContextEntry(PREFIX, LABEL, null));
+    }
+
+    public static ExampleContextEntry create(IJavaElement element) throws CoreException {
+        final long before = System.currentTimeMillis();
+        // ... implementation
+        return new ExampleContextEntry(entries, Duration.ofMillis(System.currentTimeMillis() - before));
+    }
+
+    public static Optional<ExampleContextEntry> create(ContextEntryKey key) throws CoreException {
+        if (!key.prefix().equals(PREFIX)) {
+            return Optional.empty();
+        }
+        // ... recreate from key
+    }
+}
+```
+"""
