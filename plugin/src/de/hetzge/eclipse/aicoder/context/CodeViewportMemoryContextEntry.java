@@ -6,8 +6,10 @@ import java.util.List;
 import java.util.Optional;
 
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.swt.graphics.Image;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.AiCoderImageKey;
 import de.hetzge.eclipse.aicoder.util.ContextUtils;
 
 // TODO exclude fill in middle context
@@ -30,6 +32,11 @@ public final class CodeViewportMemoryContextEntry extends ContextEntry {
 	@Override
 	public String getLabel() {
 		return "Code Viewport Memory";
+	}
+
+	@Override
+	public Image getImage() {
+		return AiCoderActivator.getImage(AiCoderImageKey.VIEWPORT_ICON);
 	}
 
 	@Override
