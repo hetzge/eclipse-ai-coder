@@ -121,8 +121,8 @@ public final class LlmUtils {
 						final String responseBody = response.body();
 						final Json responseJson = Json.read(responseBody);
 						final String content = responseJson.at("response").asString();
-						final int inputTokens = responseJson.at("prompt_eval_count").asInteger();
-						final int outputTokens = responseJson.at("eval_count").asInteger();
+						final int inputTokens = responseJson.at("prompt_eval_count", 0).asInteger();
+						final int outputTokens = responseJson.at("eval_count", 0).asInteger();
 						return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration, false);
 					} else {
 						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
