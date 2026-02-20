@@ -77,8 +77,8 @@ public class FillInMiddleContextEntry extends ContextEntry {
 		try {
 			final int modelLine = document.getLineOfOffset(modelOffset);
 			final int maxLines = AiCoderPreferences.getMaxSuffixSize();
-			final int lastLine = Math.max(document.getNumberOfLines() - 1, modelLine + maxLines);
-			return document.get(modelOffset, lastLine >= document.getNumberOfLines() ? document.getLength() - modelOffset : document.getLineOffset(lastLine) - modelOffset);
+			final int lastLineOffset = document.getLineOffset(Math.min(document.getNumberOfLines() - 1, modelLine + maxLines + 1));
+			return document.get(modelOffset, lastLineOffset - modelOffset);
 		} catch (final BadLocationException exception) {
 			throw new CoreException(Status.error("Failed to get suffix", exception));
 		}
