@@ -34,8 +34,13 @@ public record EditorView(String path, int lineIndex, List<String> lines) {
 				throw new IllegalStateException(String.format("Failed to get line information from document. Line: %s, End line: %s, Document length: %s", i, endLine, document.getLength()), exception);
 			}
 		}
+		final String pathString = getPathString(document);
+		return Optional.of(new EditorView(pathString, startLine, lines));
+	}
+
+	public static String getPathString(final IDocument document) {
 		String pathString = ITextFileBufferManager.DEFAULT.getTextFileBuffer(document).getLocation().toOSString();
 		pathString = pathString.startsWith("/") ? pathString.substring(1) : pathString;
-		return Optional.of(new EditorView(pathString, startLine, lines));
+		return pathString;
 	}
 }

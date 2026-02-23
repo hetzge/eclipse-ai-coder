@@ -7,6 +7,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -83,28 +84,28 @@ public final class EditorViewMemory {
 	/**
 	 * Updates the memory with a viewport record
 	 *
-	 * @param record the viewport record containing path, lineIndex, and lines
+	 * @param view the viewport record containing path, lineIndex, and lines
 	 */
-	public void update(EditorView record) {
-		if (record.lines().isEmpty()) {
+	public void update(EditorView view) {
+		if (view.lines().isEmpty()) {
 			return;
 		}
 
-		AiCoderActivator.log().info("Updating editor view memory for file: %s with %d lines".formatted(record.path(), record.lines().size()));
+		AiCoderActivator.log().info("Updating editor view memory for file: %s with %d lines".formatted(view.path(), view.lines().size()));
 
 		// Add the viewport to insertion order for tracking
-		this.insertionOrder.addLast(record);
+		this.insertionOrder.addLast(view);
 
 		// Get or create the sorted map for this file
 		final SortedMap<Integer, String> linesMap = this.fileToLines
-				.computeIfAbsent(record.path(), k -> new TreeMap<>());
+				.computeIfAbsent(view.path(), k -> new TreeMap<>());
 
 		// Add all lines from the new viewport ( TreeMap automatically handles merging)
 		int newLinesAdded = 0;
-		for (int i = 0; i < record.lines().size(); i++) {
-			final int lineNum = record.lineIndex() + i;
+		for (int i = 0; i < view.lines().size(); i++) {
+			final int lineNum = view.lineIndex() + i;
 			final String existingLine = linesMap.get(lineNum);
-			final String newLine = record.lines().get(i);
+			final String newLine = view.lines().get(i);
 
 			if (existingLine == null) {
 				linesMap.put(lineNum, newLine);
@@ -171,7 +172,7 @@ public final class EditorViewMemory {
 	 *
 	 * @return formatted string showing all remembered code
 	 */
-	public String getReport() {
+	public String getReport(String excludePathString, int excludeFirstLine, int excludeLastLine) {
 		final StringBuilder stringBuilder = new StringBuilder();
 		final List<String> sortedFiles = new ArrayList<>(this.fileToLines.keySet());
 		Collections.sort(sortedFiles);
@@ -179,8 +180,16 @@ public final class EditorViewMemory {
 			final String filePath = sortedFiles.get(i);
 			stringBuilder.append("File: ").append(filePath).append("\n");
 			final SortedMap<Integer, String> linesMap = this.fileToLines.get(filePath);
-			for (final String line : linesMap.values()) {
-				stringBuilder.append(line);
+			for (final Entry<Integer, String> lineEntry : linesMap.entrySet()) {
+				// Exclude the specified range (this is typically the fill in middle context to prevent duplication and confusion)
+				final boolean isExcludePath = filePath.equals(excludePathString);
+				if (isExcludePath && lineEntry.getKey() == excludeFirstLine) {
+					stringBuilder.append("...\n");
+				}
+				if (isExcludePath && lineEntry.getKey() >= excludeFirstLine && lineEntry.getKey() < excludeLastLine) {
+					continue;
+				}
+				stringBuilder.append(lineEntry.getValue());
 			}
 			if (i < sortedFiles.size() - 1) {
 				stringBuilder.append("\n---\n");
