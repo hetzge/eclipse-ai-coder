@@ -83,6 +83,9 @@ public class LastEditsContextEntry extends ContextEntry {
 				if (document == null) {
 					continue;
 				}
+				if (offset >= document.getLength()) {
+					continue;
+				}
 				final int line = document.getLineOfOffset(offset);
 				final int startLine = Math.max(0, line - CONTEXT_PADDING_LINE_COUNT);
 				final int endLine = Math.min(document.getNumberOfLines() - 1, line + CONTEXT_PADDING_LINE_COUNT);

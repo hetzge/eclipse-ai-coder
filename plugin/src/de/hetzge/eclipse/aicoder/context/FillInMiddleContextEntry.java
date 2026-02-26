@@ -17,7 +17,7 @@ import de.hetzge.eclipse.aicoder.util.ContextUtils;
 public class FillInMiddleContextEntry extends ContextEntry {
 
 	public static final String LABEL = "Fill in the middle";
-	public static final String FILL_HERE_PLACEHOLDER = "<<<<FILL_HERE>>>>";
+	public static final String FILL_HERE_PLACEHOLDER = "<<<<%s_%s>>>>".formatted("FILL", "HERE"); // formatted to avoid confusing ai coder in this file ;)
 	public static final String PREFIX = "FILL_IN_MIDDLE";
 
 	private final String filename;
@@ -64,10 +64,10 @@ public class FillInMiddleContextEntry extends ContextEntry {
 
 	public static String getPrefix(IDocument document, int modelOffset) throws CoreException {
 		try {
-			final int modelLine = document.getLineOfOffset(modelOffset);
-			final int maxLines = AiCoderPreferences.getMaxPrefixSize();
-			final int firstLine = Math.max(0, modelLine - maxLines);
-			return document.get(document.getLineOffset(firstLine), modelOffset - document.getLineOffset(firstLine));
+			final int firstLine = calculateFirstLine(document, modelOffset);
+			final int lineOffset = document.getLineOffset(firstLine);
+			final int length = modelOffset - document.getLineOffset(firstLine);
+			return document.get(lineOffset, length);
 		} catch (final BadLocationException exception) {
 			throw new CoreException(Status.error("Failed to get prefix", exception));
 		}
@@ -75,12 +75,24 @@ public class FillInMiddleContextEntry extends ContextEntry {
 
 	public static String getSuffix(IDocument document, int modelOffset) throws CoreException {
 		try {
-			final int modelLine = document.getLineOfOffset(modelOffset);
-			final int maxLines = AiCoderPreferences.getMaxSuffixSize();
-			final int lastLine = Math.max(document.getNumberOfLines() - 1, modelLine + maxLines);
-			return document.get(modelOffset, lastLine >= document.getNumberOfLines() ? document.getLength() - modelOffset : document.getLineOffset(lastLine) - modelOffset);
+			final int lastLine = calculateLastLine(document, modelOffset);
+			final int lineOffset = modelOffset;
+			final int length = document.getLineOffset(lastLine) - modelOffset;
+			return document.get(lineOffset, length);
 		} catch (final BadLocationException exception) {
 			throw new CoreException(Status.error("Failed to get suffix", exception));
 		}
+	}
+
+	public static int calculateFirstLine(IDocument document, int modelOffset) throws BadLocationException {
+		final int modelLine = document.getLineOfOffset(modelOffset);
+		final int maxLines = AiCoderPreferences.getMaxPrefixSize();
+		return Math.max(0, modelLine - maxLines);
+	}
+
+	public static int calculateLastLine(IDocument document, int modelOffset) throws BadLocationException {
+		final int modelLine = document.getLineOfOffset(modelOffset);
+		final int maxLines = AiCoderPreferences.getMaxSuffixSize();
+		return Math.min(document.getNumberOfLines() - 1, modelLine + maxLines + 1);
 	}
 }
