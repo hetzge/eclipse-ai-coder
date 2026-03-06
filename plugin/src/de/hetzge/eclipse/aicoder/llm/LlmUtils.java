@@ -87,7 +87,9 @@ public final class LlmUtils {
 		final Json json = Json.object();
 		json.set("model", llmModelOption.modelKey());
 		json.set("stream", false);
-		json.set("options", Json.object().set("temperature", 0));
+		json.set("options", Json.object()
+				.set("temperature", 0)
+				.set("num_ctx", 128000));
 		if (isFillInTheMiddle) {
 			if (!isPseudoFim) {
 				json.set("suffix", suffix);
@@ -197,7 +199,8 @@ public final class LlmUtils {
 				: llmModelOption.modelKey();
 		final Json json = Json.object();
 		json.set("model", model);
-		json.set("temperature", 0);
+		// TODO temperature is not allowed for all openai apis
+		// json.set("temperature", 0);
 		if (reasoningSuffix != null) {
 			json.set("reasoning_effort", reasoningSuffix.substring(1));
 		}

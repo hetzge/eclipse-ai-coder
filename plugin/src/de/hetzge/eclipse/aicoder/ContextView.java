@@ -460,7 +460,7 @@ public class ContextView extends ViewPart {
 		private static final Color BLACKLISTED_FOREGROUND_COLOR = new Color(100, 100, 100);
 		private static final Color STICKY_BACKGROUND_COLOR = new Color(240, 255, 240);
 		private static final Color STICKY_FOREGROUND_COLOR = new Color(0, 0, 0);
-		private static final Color SKIPPED_BACKGROUND_COLOR = new Color(0, 0, 0, 0);
+		private static final Color SKIPPED_BACKGROUND_COLOR = null;
 		private static final Color SKIPPED_FOREGROUND_COLOR = new Color(200, 200, 200);
 
 		@Override
