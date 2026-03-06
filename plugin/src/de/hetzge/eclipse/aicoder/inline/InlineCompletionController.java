@@ -112,7 +112,7 @@ public final class InlineCompletionController {
 				textViewer.getTextWidget().addCaretListener(controller.caretListener);
 				textEditor.getDocumentProvider().getDocument(textEditor.getEditorInput()).addDocumentListener(controller.documentListener);
 				textViewer.addViewportListener(verticalOffset -> {
-					AiCoderActivator.getDefault().getEditorViewMemory().update(textViewer);
+					AiCoderActivator.getDefault().getEditorViewMemory().update(textEditor);
 				});
 			});
 			return controller;
@@ -645,7 +645,7 @@ public final class InlineCompletionController {
 			InlineCompletionController.this.changeCounter++;
 			abort("Document changed");
 			InlineCompletionController.this.editDebouncer.debounce(() -> {
-				AiCoderActivator.getDefault().getEditorViewMemory().update(InlineCompletionController.this.textViewer);
+				AiCoderActivator.getDefault().getEditorViewMemory().update(InlineCompletionController.this.textEditor);
 			});
 		}
 	}

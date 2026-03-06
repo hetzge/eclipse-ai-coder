@@ -23,15 +23,11 @@ public final class CodeViewportMemoryContextEntry extends ContextEntry {
 	public static final String LABEL = "Code Viewport Memory";
 	public static final String PREFIX = "CODE_VIEWPORT_MEMORY";
 
-	private final String pathString;
-	private final int firstLine;
-	private final int lastLine;
+	private final String report;
 
-	private CodeViewportMemoryContextEntry(List<? extends ContextEntry> childContextEntries, Duration creationDuration, String pathString, int firstLine, int lastLine) {
+	private CodeViewportMemoryContextEntry(List<? extends ContextEntry> childContextEntries, Duration creationDuration, String report) {
 		super(childContextEntries, creationDuration);
-		this.pathString = pathString;
-		this.firstLine = firstLine;
-		this.lastLine = lastLine;
+		this.report = report;
 	}
 
 	@Override
@@ -51,8 +47,8 @@ public final class CodeViewportMemoryContextEntry extends ContextEntry {
 
 	@Override
 	public String getContent(ContextContext context) {
-		final String report = AiCoderActivator.getDefault().getEditorViewMemory().getReport(this.pathString, this.firstLine, this.lastLine);
-		return ContextUtils.contentTemplate("Code Viewport Memory", report != null ? report : "No report available");
+
+		return ContextUtils.contentTemplate("Code Viewport Memory", this.report != null ? this.report : "No report available");
 	}
 
 	@Override
@@ -70,14 +66,14 @@ public final class CodeViewportMemoryContextEntry extends ContextEntry {
 		try {
 			final long before = System.currentTimeMillis();
 			final String pathString = EditorView.getPathString(document);
+
 			final int firstLine = FillInMiddleContextEntry.calculateFirstLine(document, modelOffset);
 			final int lastLine = FillInMiddleContextEntry.calculateLastLine(document, modelOffset);
+			final String report = AiCoderActivator.getDefault().getEditorViewMemory().getReport(pathString, firstLine, lastLine);
 			return new CodeViewportMemoryContextEntry(
 					Collections.emptyList(),
 					Duration.ofMillis(System.currentTimeMillis() - before),
-					pathString,
-					firstLine,
-					lastLine);
+					report);
 		} catch (final BadLocationException exception) {
 			throw new CoreException(Status.error("Failed to create CodeViewportMemoryContextEntry", exception));
 		}

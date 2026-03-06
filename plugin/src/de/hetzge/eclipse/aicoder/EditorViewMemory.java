@@ -12,8 +12,13 @@ import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import org.eclipse.jface.text.ITextViewer;
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IWorkspaceRoot;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.Path;
 import org.eclipse.ui.texteditor.AbstractTextEditor;
+import org.eclipse.ui.texteditor.ITextEditor;
 
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 
@@ -63,18 +68,18 @@ public final class EditorViewMemory {
 		if (!activeTextEditorOptional.isPresent()) {
 			return;
 		}
-		final ITextViewer textViewer = EclipseUtils.getTextViewer(activeTextEditorOptional.get());
-		update(textViewer);
+		final AbstractTextEditor textEditor = activeTextEditorOptional.get();
+		update(textEditor);
 	}
 
 	/**
 	 * Updates the memory with the current editor viewport
 	 */
-	public void update(ITextViewer textViewer) {
-		if (textViewer == null) {
+	public void update(ITextEditor textEditor) {
+		if (textEditor == null) {
 			return;
 		}
-		final Optional<EditorView> editorViewOptional = EditorView.createFromTextEditor(textViewer);
+		final Optional<EditorView> editorViewOptional = EditorView.createFromTextEditor(textEditor);
 		if (!editorViewOptional.isPresent()) {
 			return;
 		}
@@ -173,6 +178,17 @@ public final class EditorViewMemory {
 	 * @return formatted string showing all remembered code
 	 */
 	public String getReport(String excludePathString, int excludeFirstLine, int excludeLastLine) {
+
+		// Remove files that no longer exist
+		for (final String path : this.fileToLines.keySet()) {
+			final IPath eclipsePath = new Path(path);
+			final IWorkspaceRoot workspaceRoot = ResourcesPlugin.getWorkspace().getRoot();
+			final IFile file = workspaceRoot.getFile(eclipsePath);
+			if (!file.exists()) {
+				this.fileToLines.remove(path);
+			}
+		}
+
 		final StringBuilder stringBuilder = new StringBuilder();
 		final List<String> sortedFiles = new ArrayList<>(this.fileToLines.keySet());
 		Collections.sort(sortedFiles);

@@ -5,10 +5,14 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.core.filebuffers.ITextFileBuffer;
 import org.eclipse.core.filebuffers.ITextFileBufferManager;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextViewer;
+import org.eclipse.ui.texteditor.ITextEditor;
+
+import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 
 public record EditorView(String path, int lineIndex, List<String> lines) {
 	public EditorView {
@@ -20,11 +24,12 @@ public record EditorView(String path, int lineIndex, List<String> lines) {
 		return this.lineIndex + this.lines.size();
 	}
 
-	public static Optional<EditorView> createFromTextEditor(ITextViewer textViewer) {
+	public static Optional<EditorView> createFromTextEditor(ITextEditor textEditor) {
+		final ITextViewer textViewer = EclipseUtils.getTextViewer(textEditor);
 		final IDocument document = textViewer.getDocument();
 		final int startLine = textViewer.getTopIndex();
 		final int endLine = textViewer.getBottomIndex();
-		final List<String> lines = new ArrayList<String>();
+		final List<String> lines = new ArrayList<>();
 		for (int i = startLine; i <= endLine && i < document.getNumberOfLines(); i++) {
 			try {
 				final int lineOffset = document.getLineOffset(i);
@@ -39,7 +44,8 @@ public record EditorView(String path, int lineIndex, List<String> lines) {
 	}
 
 	public static String getPathString(final IDocument document) {
-		String pathString = ITextFileBufferManager.DEFAULT.getTextFileBuffer(document).getLocation().toOSString();
+		final ITextFileBuffer textFileBuffer = ITextFileBufferManager.DEFAULT.getTextFileBuffer(document);
+		String pathString = textFileBuffer.getLocation().toOSString();
 		pathString = pathString.startsWith("/") ? pathString.substring(1) : pathString;
 		return pathString;
 	}
