@@ -180,7 +180,7 @@ public final class EditorViewMemory {
 	public String getReport(String excludePathString, int excludeFirstLine, int excludeLastLine) {
 
 		// Remove files that no longer exist
-		for (final String path : this.fileToLines.keySet()) {
+		for (final String path : new ArrayList<>(this.fileToLines.keySet())) {
 			final IPath eclipsePath = new Path(path);
 			final IWorkspaceRoot workspaceRoot = ResourcesPlugin.getWorkspace().getRoot();
 			final IFile file = workspaceRoot.getFile(eclipsePath);
