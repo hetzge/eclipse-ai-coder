@@ -23,6 +23,8 @@ import org.eclipse.ui.IFileEditorInput;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
+import de.hetzge.eclipse.aicoder.config.ContextConfig.AiRerankConfig;
+import de.hetzge.eclipse.aicoder.config.TaskConfig;
 import de.hetzge.eclipse.aicoder.history.AiCoderHistoryEntry;
 import de.hetzge.eclipse.aicoder.history.AiCoderHistoryView;
 import de.hetzge.eclipse.aicoder.history.HistoryType;
@@ -63,21 +65,23 @@ public class AiRerankContextEntry extends ContextEntry {
 		return ContextUtils.contentTemplate("Relevant files", super.getContent(context));
 	}
 
-	public static ContextEntryFactory factory(IDocument document, IEditorInput editorInput, String originalInstructions, int modelOffset) {
-		return new ContextEntryFactory(PREFIX, () -> create(document, editorInput, originalInstructions, modelOffset), () -> new EmptyContextEntry(PREFIX, LABEL, AiCoderImageKey.RERANK_ICON));
+	public static ContextEntryFactory factory(IDocument document, IEditorInput editorInput, String originalInstructions, int modelOffset, TaskConfig config) {
+		return new ContextEntryFactory(PREFIX, () -> create(document, editorInput, originalInstructions, modelOffset, config), () -> new EmptyContextEntry(PREFIX, LABEL, AiCoderImageKey.RERANK_ICON));
 	}
 
-	public static AiRerankContextEntry create(IDocument document, IEditorInput editorInput, String originalInstructions, int modelOffset) throws CoreException {
+	public static AiRerankContextEntry create(IDocument document, IEditorInput editorInput, String originalInstructions, int modelOffset, TaskConfig config) throws CoreException {
 		final long before = System.currentTimeMillis();
 		if (editorInput instanceof final IFileEditorInput fileEditorInput) {
 			final IFile file = fileEditorInput.getFile();
 			final IProject project = file.getProject();
-			final int maxRerankResultCount = 20;
+			final int maxRerankResultCount = config.getContextConfig(PREFIX).map(AiRerankConfig.class::cast).map(AiRerankConfig::getLimit).orElse(20);
 			final String systemPrompt = LlmPromptTemplates.rerankSystemPrompt(maxRerankResultCount);
-			final String prefix = FillInMiddleContextEntry.getPrefix(document, modelOffset);
-			final String suffix = FillInMiddleContextEntry.getSuffix(document, modelOffset);
+			final String prefix = FillInMiddleContextEntry.getPrefix(document, modelOffset, config);
+			final String suffix = FillInMiddleContextEntry.getSuffix(document, modelOffset, config);
 			final String currentFileName = EclipseUtils.getFilename(editorInput).orElse("Unknown file");
-			final String instructions = LlmPromptTemplates.rerankPrompt(FileTreeUtils.createResourceTreeString(project), originalInstructions, prefix, suffix, currentFileName);
+			final List<String> whitelist = config.getContextConfig(AiRerankContextEntry.PREFIX).map(AiRerankConfig.class::cast).map(AiRerankConfig::getWhitelist).orElse(List.of());
+			final List<String> blacklist = config.getContextConfig(AiRerankContextEntry.PREFIX).map(AiRerankConfig.class::cast).map(AiRerankConfig::getBlacklist).orElse(List.of());
+			final String instructions = LlmPromptTemplates.rerankPrompt(FileTreeUtils.createResourceTreeString(project, whitelist, blacklist), originalInstructions, prefix, suffix, currentFileName);
 			try {
 				final LlmResponse llmResponse = LlmUtils.executeRerank(systemPrompt, instructions).get(1, TimeUnit.MINUTES);
 				AiCoderHistoryView.get().ifPresent(view -> {

@@ -217,7 +217,7 @@ public class ContextView extends ViewPart {
 							final List<CustomContextEntryData> newEntries = new ArrayList<>(currentEntries);
 							// Replace the existing entry with the edited one
 							for (int i = 0; i < newEntries.size(); i++) {
-								if (newEntries.get(i).getId().equals(editedEntry.getId())) {
+								if (newEntries.get(i).getKey().equals(editedEntry.getKey())) {
 									newEntries.set(i, editedEntry);
 									break;
 								}

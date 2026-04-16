@@ -13,6 +13,8 @@ import org.eclipse.swt.graphics.Image;
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
 import de.hetzge.eclipse.aicoder.EditorView;
+import de.hetzge.eclipse.aicoder.config.ContextConfig.CodeViewportMemoryConfig;
+import de.hetzge.eclipse.aicoder.config.TaskConfig;
 import de.hetzge.eclipse.aicoder.util.ContextUtils;
 
 // TODO exclude fill in middle context
@@ -56,20 +58,24 @@ public final class CodeViewportMemoryContextEntry extends ContextEntry {
 		return Collections.emptyList();
 	}
 
-	public static ContextEntryFactory factory(IDocument document, int modelOffset) {
+	public static ContextEntryFactory factory(IDocument document, int modelOffset, TaskConfig config) {
 		return new ContextEntryFactory(PREFIX,
-				() -> create(document, modelOffset),
+				() -> create(document, modelOffset, config),
 				() -> new EmptyContextEntry(PREFIX, LABEL, null));
 	}
 
-	public static CodeViewportMemoryContextEntry create(IDocument document, int modelOffset) throws CoreException {
+	public static CodeViewportMemoryContextEntry create(IDocument document, int modelOffset, TaskConfig config) throws CoreException {
 		try {
 			final long before = System.currentTimeMillis();
 			final String pathString = EditorView.getPathString(document);
-
-			final int firstLine = FillInMiddleContextEntry.calculateFirstLine(document, modelOffset);
-			final int lastLine = FillInMiddleContextEntry.calculateLastLine(document, modelOffset);
-			final String report = AiCoderActivator.getDefault().getEditorViewMemory().getReport(pathString, firstLine, lastLine);
+			final int firstLine = FillInMiddleContextEntry.calculateFirstLine(document, modelOffset, config);
+			final int lastLine = FillInMiddleContextEntry.calculateLastLine(document, modelOffset, config);
+			final int maxLines = config.getContextConfig(pathString)
+					.map(CodeViewportMemoryConfig.class::cast)
+					.map(CodeViewportMemoryConfig::getMaxLines)
+					.orElse(1000L)
+					.intValue();
+			final String report = AiCoderActivator.getDefault().getEditorViewMemory().getReport(pathString, firstLine, lastLine, maxLines);
 			return new CodeViewportMemoryContextEntry(
 					Collections.emptyList(),
 					Duration.ofMillis(System.currentTimeMillis() - before),

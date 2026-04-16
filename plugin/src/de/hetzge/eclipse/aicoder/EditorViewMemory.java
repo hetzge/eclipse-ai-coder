@@ -27,7 +27,7 @@ import de.hetzge.eclipse.aicoder.util.EclipseUtils;
  */
 public final class EditorViewMemory {
 
-	private static final int DEFAULT_MAX_LINES = 1000;
+	private static final int DEFAULT_MAX_LINES = 10000;
 
 	// Stores lines for each file, indexed by line number
 	private final Map<String, SortedMap<Integer, String>> fileToLines;
@@ -177,7 +177,7 @@ public final class EditorViewMemory {
 	 *
 	 * @return formatted string showing all remembered code
 	 */
-	public String getReport(String excludePathString, int excludeFirstLine, int excludeLastLine) {
+	public String getReport(String excludePathString, int excludeFirstLine, int excludeLastLine, int maxLines) {
 
 		// Remove files that no longer exist
 		for (final String path : new ArrayList<>(this.fileToLines.keySet())) {
@@ -192,23 +192,40 @@ public final class EditorViewMemory {
 		final StringBuilder stringBuilder = new StringBuilder();
 		final List<String> sortedFiles = new ArrayList<>(this.fileToLines.keySet());
 		Collections.sort(sortedFiles);
+		int writtenLines = 0;
 		for (int i = 0; i < sortedFiles.size(); i++) {
+			if (writtenLines >= maxLines) {
+				break;
+			}
 			final String filePath = sortedFiles.get(i);
 			stringBuilder.append("File: ").append(filePath).append("\n");
+			writtenLines++;
+			if (writtenLines >= maxLines) {
+				break;
+			}
 			final SortedMap<Integer, String> linesMap = this.fileToLines.get(filePath);
 			for (final Entry<Integer, String> lineEntry : linesMap.entrySet()) {
+				if (writtenLines >= maxLines) {
+					break;
+				}
 				// Exclude the specified range (this is typically the fill in middle context to prevent duplication and confusion)
 				final boolean isExcludePath = filePath.equals(excludePathString);
 				if (isExcludePath && lineEntry.getKey() == excludeFirstLine) {
 					stringBuilder.append("...\n");
+					writtenLines++;
+					if (writtenLines >= maxLines) {
+						break;
+					}
 				}
 				if (isExcludePath && lineEntry.getKey() >= excludeFirstLine && lineEntry.getKey() < excludeLastLine) {
 					continue;
 				}
 				stringBuilder.append(lineEntry.getValue());
+				writtenLines++;
 			}
-			if (i < sortedFiles.size() - 1) {
+			if (i < sortedFiles.size() - 1 && writtenLines < maxLines) {
 				stringBuilder.append("\n---\n");
+				writtenLines++;
 			}
 		}
 		return stringBuilder.toString();

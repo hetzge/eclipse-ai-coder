@@ -17,7 +17,7 @@ public class CustomContextEntry extends ContextEntry {
 
 	@Override
 	public ContextEntryKey getKey() {
-		return new ContextEntryKey(PREFIX, this.data.getId().toString());
+		return new ContextEntryKey(PREFIX, this.data.getKey());
 	}
 
 	@Override

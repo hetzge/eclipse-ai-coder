@@ -1,25 +1,24 @@
 package de.hetzge.eclipse.aicoder.context;
 
-import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 
 import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
+import de.hetzge.eclipse.aicoder.util.Utils;
 import mjson.Json;
 
 public class CustomContextEntryData {
 
-	private final UUID id;
+	private final String key;
 	private final List<CustomContextEntryData> children;
 	private final String title;
 	private final String content;
 	private final String glob;
 
-	public CustomContextEntryData(UUID id, List<CustomContextEntryData> children, String title, String content, String glob) {
-		this.id = id;
+	public CustomContextEntryData(String key, List<CustomContextEntryData> children, String title, String content, String glob) {
+		this.key = key;
 		this.children = children;
 		this.title = title;
 		this.content = content;
@@ -34,8 +33,8 @@ public class CustomContextEntryData {
 		return this.content;
 	}
 
-	public UUID getId() {
-		return this.id;
+	public String getKey() {
+		return this.key;
 	}
 
 	public String getTitle() {
@@ -47,16 +46,13 @@ public class CustomContextEntryData {
 	}
 
 	public boolean matches(Path path) {
-		if (this.glob == null || this.glob.isBlank()) {
-			return true;
-		}
-		return FileSystems.getDefault().getPathMatcher("glob:" + this.glob).matches(path);
+		return Utils.matches(this.glob, path);
 	}
 
 	public Json toJson() {
 		return Json.object()
 				.set("children", this.children.stream().map(CustomContextEntryData::toJson).toList())
-				.set("id", this.id.toString())
+				.set("key", this.key)
 				.set("title", this.title)
 				.set("content", this.content)
 				.set("glob", this.glob);
@@ -64,17 +60,17 @@ public class CustomContextEntryData {
 
 	public static Optional<CustomContextEntry> create(ContextEntryKey key) {
 		return ContextPreferences.getCustomContextEntryDatas().stream()
-				.filter(it -> Objects.equals(it.getId().toString(), key.value()))
+				.filter(it -> Objects.equals(it.getKey(), key.value()))
 				.findFirst()
 				.map(data -> new CustomContextEntry(data, true));
 	}
 
 	public static CustomContextEntryData createFromJson(Json json) {
 		final List<CustomContextEntryData> children = json.at("children").asJsonList().stream().map(CustomContextEntryData::createFromJson).toList();
-		final UUID id = UUID.fromString(json.at("id").asString());
+		final String key = json.at("key", json.at("id")).asString(); // TODO id is deprecated
 		final String title = json.at("title").asString();
 		final String content = json.at("content").asString();
 		final String glob = json.at("glob").asString();
-		return new CustomContextEntryData(id, children, title, content, glob);
+		return new CustomContextEntryData(key, children, title, content, glob);
 	}
 }

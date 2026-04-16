@@ -44,7 +44,6 @@ public final class Context {
 
 	public static final Map<String, String> CONTEXT_TYPE_NAME_BY_CONTEXT_PREFIX = Map.ofEntries(
 			Map.entry(ProjectInformationsContextEntry.PREFIX, "Project informations"),
-			Map.entry(DependenciesContextEntry.PREFIX, "Dependencies"),
 			Map.entry(OpenEditorsContextEntry.PREFIX, "Open editors"),
 			Map.entry(ImportsContextEntry.PREFIX, "Imports (Java)"),
 			Map.entry(SuperContextEntry.PREFIX, "Super (Java)"),
@@ -68,7 +67,6 @@ public final class Context {
 	public static final List<String> DEFAULT_PREFIX_ORDER = List.of(
 			ProjectInformationsContextEntry.PREFIX,
 			FileTreeContextEntry.PREFIX,
-			DependenciesContextEntry.PREFIX,
 			OpenEditorsContextEntry.PREFIX,
 			SuperContextEntry.PREFIX,
 			ScopeContextEntry.PREFIX,

@@ -52,6 +52,7 @@ import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.contexts.IContextActivation;
+import org.eclipse.ui.part.FileEditorInput;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
@@ -59,6 +60,7 @@ import de.hetzge.eclipse.aicoder.CompletionMode;
 import de.hetzge.eclipse.aicoder.ContextView;
 import de.hetzge.eclipse.aicoder.Debouncer;
 import de.hetzge.eclipse.aicoder.EditHistoryDiffUtils;
+import de.hetzge.eclipse.aicoder.config.TaskConfig;
 import de.hetzge.eclipse.aicoder.context.ContextContext;
 import de.hetzge.eclipse.aicoder.context.ContextEntry;
 import de.hetzge.eclipse.aicoder.context.FillInMiddleContextEntry;
@@ -237,7 +239,15 @@ public final class InlineCompletionController {
 					} else {
 						originalInstructions = instruction;
 					}
-					final RootContextEntry rootContextEntry = RootContextEntry.create(document, this.textEditor.getEditorInput(), modelOffset, originalInstructions);
+					TaskConfig config;
+					if (this.textEditor.getEditorInput() instanceof final FileEditorInput fileEditorInput) {
+						config = AiCoderActivator.getDefault().getConfigManager().getConfig(fileEditorInput.getFile().getProject())
+								.map(rootConfig -> rootConfig.getTaskConfig(mode).orElseGet(() -> TaskConfig.createDefault()))
+								.orElseGet(() -> TaskConfig.createDefault());
+					} else {
+						config = TaskConfig.createDefault();
+					}
+					final RootContextEntry rootContextEntry = RootContextEntry.create(document, this.textEditor.getEditorInput(), modelOffset, originalInstructions, config);
 					final String contextString = ContextEntry.apply(rootContextEntry, new ContextContext());
 					// IMPORTANT: DO this after ContextEntry.apply(...)
 					updateContextView(rootContextEntry);

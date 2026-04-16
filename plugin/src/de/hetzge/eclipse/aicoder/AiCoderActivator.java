@@ -14,6 +14,7 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
+import de.hetzge.eclipse.aicoder.config.ConfigManager;
 import de.hetzge.eclipse.aicoder.content.InstructionStorage;
 import de.hetzge.eclipse.aicoder.mcp.McpClients;
 
@@ -24,6 +25,7 @@ public class AiCoderActivator extends AbstractUIPlugin {
 	private static AiCoderActivator plugin;
 	private InstructionStorage instructionStorage;
 	private EditorViewMemory editorViewMemory;
+	private ConfigManager configManager;
 
 	public AiCoderActivator() {
 	}
@@ -34,6 +36,7 @@ public class AiCoderActivator extends AbstractUIPlugin {
 		plugin = this;
 		this.instructionStorage = InstructionStorage.load(getStateLocation());
 		this.editorViewMemory = new EditorViewMemory(1000);
+		this.configManager = new ConfigManager();
 		McpClients.INSTANCE.reload(() -> {
 			log().info("MCP clients loaded: " + McpClients.INSTANCE.getMcpStatusCountsString());
 		});
@@ -50,6 +53,9 @@ public class AiCoderActivator extends AbstractUIPlugin {
 
 	@Override
 	public void stop(BundleContext context) throws Exception {
+		if (this.configManager != null) {
+			this.configManager.dispose();
+		}
 		plugin = null;
 		super.stop(context);
 	}
@@ -60,6 +66,10 @@ public class AiCoderActivator extends AbstractUIPlugin {
 
 	public EditorViewMemory getEditorViewMemory() {
 		return this.editorViewMemory;
+	}
+
+	public ConfigManager getConfigManager() {
+		return this.configManager;
 	}
 
 	public static AiCoderActivator getDefault() {
