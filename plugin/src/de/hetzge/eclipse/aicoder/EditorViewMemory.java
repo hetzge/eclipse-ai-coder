@@ -175,6 +175,10 @@ public final class EditorViewMemory {
 	/**
 	 * Generates a report of all stored content organized by file
 	 *
+	 * @param excludePathString path to exclude from report
+	 * @param excludeFirstLine  first line to exclude (starts with 0)
+	 * @param excludeLastLine   last line to exclude (starts with 0)
+	 * @param maxLines          maximum number of lines to include
 	 * @return formatted string showing all remembered code
 	 */
 	public String getReport(String excludePathString, int excludeFirstLine, int excludeLastLine, int maxLines) {
@@ -198,12 +202,21 @@ public final class EditorViewMemory {
 				break;
 			}
 			final String filePath = sortedFiles.get(i);
+			final SortedMap<Integer, String> linesMap = this.fileToLines.get(filePath);
+			if (linesMap.isEmpty()) {
+				continue;
+			}
+			final int minLineNumber = linesMap.keySet().stream().min(Integer::compare).orElse(0);
+			final int maxLineNumber = linesMap.keySet().stream().max(Integer::compare).orElse(0);
+			if (filePath.equals(excludePathString) && minLineNumber >= excludeFirstLine && maxLineNumber <= excludeLastLine) {
+				AiCoderActivator.log().info("Skipping file: %s because all lines are excluded".formatted(filePath));
+				continue;
+			}
 			stringBuilder.append("File: ").append(filePath).append("\n");
 			writtenLines++;
 			if (writtenLines >= maxLines) {
 				break;
 			}
-			final SortedMap<Integer, String> linesMap = this.fileToLines.get(filePath);
 			for (final Entry<Integer, String> lineEntry : linesMap.entrySet()) {
 				if (writtenLines >= maxLines) {
 					break;
@@ -217,7 +230,7 @@ public final class EditorViewMemory {
 						break;
 					}
 				}
-				if (isExcludePath && lineEntry.getKey() >= excludeFirstLine && lineEntry.getKey() < excludeLastLine) {
+				if (isExcludePath && lineEntry.getKey() >= excludeFirstLine && lineEntry.getKey() <= excludeLastLine) {
 					continue;
 				}
 				stringBuilder.append(lineEntry.getValue());

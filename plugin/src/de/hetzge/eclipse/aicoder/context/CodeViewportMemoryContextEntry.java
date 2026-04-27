@@ -17,7 +17,6 @@ import de.hetzge.eclipse.aicoder.config.ContextConfig.CodeViewportMemoryConfig;
 import de.hetzge.eclipse.aicoder.config.TaskConfig;
 import de.hetzge.eclipse.aicoder.util.ContextUtils;
 
-// TODO exclude fill in middle context
 // TODO filter by current file ending
 
 public final class CodeViewportMemoryContextEntry extends ContextEntry {
@@ -49,7 +48,6 @@ public final class CodeViewportMemoryContextEntry extends ContextEntry {
 
 	@Override
 	public String getContent(ContextContext context) {
-
 		return ContextUtils.contentTemplate("Code Viewport Memory", this.report != null ? this.report : "No report available");
 	}
 
