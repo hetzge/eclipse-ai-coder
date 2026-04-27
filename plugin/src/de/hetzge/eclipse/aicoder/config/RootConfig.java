@@ -14,19 +14,21 @@ import de.hetzge.eclipse.aicoder.CompletionMode;
 public record RootConfig(TomlTable table) {
 
 	public Optional<TaskConfig> getTaskConfig(CompletionMode mode) {
+		final TomlTable taskConfigTable;
 		if (mode == CompletionMode.EDIT) {
-			return Optional.of(new TaskConfig(this.table.getTable("edit")));
+			taskConfigTable = this.table.getTable("edit");
 		} else if (mode == CompletionMode.QUICK_FIX) {
-			return Optional.of(new TaskConfig(this.table.getTable("quickfix")));
+			taskConfigTable = this.table.getTable("quickfix");
 		} else if (mode == CompletionMode.GENERATE) {
-			return Optional.of(new TaskConfig(this.table.getTable("generate")));
+			taskConfigTable = this.table.getTable("generate");
 		} else if (mode == CompletionMode.INLINE) {
-			return Optional.of(new TaskConfig(this.table.getTable("fim")));
+			taskConfigTable = this.table.getTable("fim");
 		} else if (mode == CompletionMode.NEXT_EDIT) {
-			return Optional.of(new TaskConfig(this.table.getTable("next_edit")));
+			taskConfigTable = this.table.getTable("next_edit");
 		} else {
-			return Optional.empty();
+			throw new IllegalArgumentException("Unknown completion mode: " + mode);
 		}
+		return Optional.ofNullable(taskConfigTable).map(TaskConfig::new);
 	}
 
 	public TaskConfig getFimConfig() {
