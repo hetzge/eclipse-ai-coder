@@ -259,23 +259,24 @@ public final class InlineCompletionController {
 					final String[] contextParts = contextString.split(FillInMiddleContextEntry.FILL_HERE_PLACEHOLDER);
 					final String prefix = contextParts[0];
 					final String suffix = contextParts.length > 1 ? contextParts[1] : "";
+					final boolean hasSelection = EclipseUtils.hasSelection(this.textViewer);
 					final String selectionText = EclipseUtils.getSelectionText(this.textViewer);
-					if (mode == CompletionMode.EDIT || mode == CompletionMode.GENERATE || mode == CompletionMode.QUICK_FIX) {
-						final String fileType = EclipseUtils.getFileExtension(this.textEditor.getEditorInput());
-						final String systemPrompt = hasSelection
-								? AiCoderPreferences.getChangeCodeSystemPrompt()
-								: AiCoderPreferences.getGenerateCodeSystemPrompt();
+					final String fileType = EclipseUtils.getFileExtension(this.textEditor.getEditorInput());
+					if (mode == CompletionMode.EDIT) {
+						final String systemPrompt = AiCoderPreferences.getChangeCodeSystemPrompt();
 						final String effectiveInstruction = instruction != null ? instruction : AiCoderPreferences.getQuickFixPrompt();
-						prompt = hasSelection
-								? LlmPromptTemplates.changeCodePrompt(fileType, selectionText, effectiveInstruction, prefix, suffix)
-								: LlmPromptTemplates.generateCodePrompt(effectiveInstruction, prefix, suffix);
-						if (mode == CompletionMode.EDIT) {
-							InlineCompletionController.this.llmResponseFuture = LlmUtils.executeEdit(systemPrompt, prompt);
-						} else if (mode == CompletionMode.QUICK_FIX) {
-							InlineCompletionController.this.llmResponseFuture = LlmUtils.executeQuickFix(systemPrompt, prompt);
-						} else {
-							InlineCompletionController.this.llmResponseFuture = LlmUtils.executeGenerate(systemPrompt, prompt);
-						}
+						prompt = LlmPromptTemplates.changeCodePrompt(fileType, selectionText, effectiveInstruction, prefix, suffix);
+						InlineCompletionController.this.llmResponseFuture = LlmUtils.executeEdit(systemPrompt, prompt);
+					} else if (mode == CompletionMode.QUICK_FIX) {
+						final String systemPrompt = AiCoderPreferences.getChangeCodeSystemPrompt();
+						final String effectiveInstruction = instruction != null ? instruction : AiCoderPreferences.getQuickFixPrompt();
+						prompt = LlmPromptTemplates.changeCodePrompt(fileType, selectionText, effectiveInstruction, prefix, suffix);
+						InlineCompletionController.this.llmResponseFuture = LlmUtils.executeQuickFix(systemPrompt, prompt);
+					} else if (mode == CompletionMode.GENERATE) {
+						final String systemPrompt = AiCoderPreferences.getGenerateCodeSystemPrompt();
+						final String effectiveInstruction = instruction != null ? instruction : AiCoderPreferences.getQuickFixPrompt();
+						prompt = LlmPromptTemplates.generateCodePrompt(effectiveInstruction, prefix, suffix);
+						InlineCompletionController.this.llmResponseFuture = LlmUtils.executeGenerate(systemPrompt, prompt);
 					} else if (mode == CompletionMode.INLINE) {
 						prompt = prefix + "<|cursor|>" + suffix;
 						InlineCompletionController.this.llmResponseFuture = LlmUtils.executeFillInTheMiddle(prefix, suffix);
