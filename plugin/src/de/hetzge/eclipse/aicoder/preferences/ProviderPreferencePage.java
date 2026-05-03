@@ -59,10 +59,6 @@ public class ProviderPreferencePage extends FieldEditorPreferencePage implements
 				openAiGroup);
 		openAiApiKeyFieldEditor.getTextControl(openAiGroup).setEchoChar('*');
 		addField(openAiApiKeyFieldEditor);
-		addField(new StringFieldEditor(
-				AiCoderPreferences.OPENAI_FIM_TEMPLATE_KEY,
-				"FIM Template:",
-				openAiGroup));
 
 		// Inceptionlabs
 		final Group inceptionlabsGroup = new Group(getFieldEditorParent(), SWT.NONE);

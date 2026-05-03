@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 
@@ -94,9 +95,16 @@ public final class LlmUtils {
 			if (!isPseudoFim) {
 				json.set("suffix", suffix);
 				json.at("options").set("stop", createStop(multilineEnabled));
+				final String fimTemplate = AiCoderPreferences.getFimTemplate();
+				if (StringUtils.isNotBlank(fimTemplate)) {
+					json.set("raw", true); // disable ollama's template engine
+					json.set("prompt", JinjaUtils.applyTemplate(AiCoderPreferences.getFimTemplate(), Map.ofEntries(
+							Map.entry("prefix", prompt),
+							Map.entry("suffix", suffix))));
+				}
 			} else {
 				final String pseudoFimSystemPrompt = getPseduoFIMSystemPrompt();
-				final String pseudoFimUserPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getOpenAiFimTemplate(), Map.ofEntries(
+				final String pseudoFimUserPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getFimTemplate(), Map.ofEntries(
 						Map.entry("prefix", prompt),
 						Map.entry("suffix", suffix)));
 				json.set("system", pseudoFimSystemPrompt);
@@ -150,7 +158,7 @@ public final class LlmUtils {
 				json.set("stop", createStop(multilineEnabled));
 			} else {
 				final String pseudoFimSystemPrompt = getPseduoFIMSystemPrompt();
-				final String pseudoFimUserPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getOpenAiFimTemplate(), Map.ofEntries(
+				final String pseudoFimUserPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getFimTemplate(), Map.ofEntries(
 						Map.entry("prefix", prompt),
 						Map.entry("suffix", suffix)));
 				json.set("max_tokens", AiCoderPreferences.getMaxTokens());
@@ -205,7 +213,7 @@ public final class LlmUtils {
 			json.set("reasoning_effort", reasoningSuffix.substring(1));
 		}
 		if (isFillInTheMiddle) {
-			final String fimTemplatePrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getOpenAiFimTemplate(), Map.ofEntries(
+			final String fimTemplatePrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getFimTemplate(), Map.ofEntries(
 					Map.entry("prefix", prompt),
 					Map.entry("suffix", suffix)));
 			if (!isPseudoFim) {
@@ -266,7 +274,7 @@ public final class LlmUtils {
 				json.set("stop", createStop(multilineEnabled));
 			} else {
 				final String pseudoFimSystemPrompt = getPseduoFIMSystemPrompt();
-				final String pseudoFimUserPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getOpenAiFimTemplate(), Map.ofEntries(
+				final String pseudoFimUserPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getFimTemplate(), Map.ofEntries(
 						Map.entry("prefix", prompt),
 						Map.entry("suffix", suffix)));
 				json.set("messages", createMessages(pseudoFimSystemPrompt, pseudoFimUserPrompt));
