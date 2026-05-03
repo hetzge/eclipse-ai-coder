@@ -26,10 +26,22 @@ public record InlineCompletion(
 		int lineSpacing,
 		int lineHeight) {
 
-	public void applyTo(final IDocument document) throws BadLocationException {
+	public int applyLineTo(IDocument document) throws BadLocationException {
+		final String firstLine = this.lines.get(0);
+		final String content = firstLine.isBlank() && this.lines.size() > 1
+				? firstLine + "\n" + this.lines.get(1)
+				: firstLine;
+		final int replaceOffset = this.modelRegion().getOffset();
+		final int replaceLength = this.firstLineSuffix.length();
+		document.replace(replaceOffset, replaceLength, content);
+		return replaceOffset + content.length();
+	}
+
+	public int applyTo(final IDocument document) throws BadLocationException {
 		final int replaceOffset = this.modelRegion().getOffset();
 		final int replaceLength = this.modelRegion().getLength();
 		document.replace(replaceOffset, replaceLength, this.content());
+		return replaceOffset + this.content().length();
 	}
 
 	public static InlineCompletion create(AiCoderHistoryEntry historyEntry, IDocument document, int modelOffset, int widgetOffset, int widgetLine, String content, int lineHeight, int defaultLineSpacing) throws BadLocationException {

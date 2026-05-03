@@ -581,9 +581,17 @@ public final class InlineCompletionController {
 		}
 	}
 
+	public void acceptLine() {
+		accept(true);
+	}
+
 	public void accept() {
+		accept(false);
+	}
+
+	private void accept(boolean line) {
 		if (this.completion != null) {
-			acceptInlineCompletion();
+			acceptInlineCompletion(line);
 		}
 		if (this.suggestion != null) {
 			acceptSuggestion();
@@ -603,11 +611,16 @@ public final class InlineCompletionController {
 		}
 	}
 
-	private void acceptInlineCompletion() {
+	private void acceptInlineCompletion(boolean line) {
 		try {
 			executeThenAbort(() -> { // prevent early abort by document change
-				this.completion.applyTo(this.textViewer.getDocument());
-				this.textViewer.setSelectedRange(this.completion.modelRegion().getOffset() + this.completion.content().length(), 0);
+				int offset;
+				if (line) {
+					offset = this.completion.applyLineTo(this.textViewer.getDocument());
+				} else {
+					offset = this.completion.applyTo(this.textViewer.getDocument());
+				}
+				this.textViewer.setSelectedRange(offset, 0);
 				this.completion.historyEntry().setStatus(HistoryStatus.ACCEPTED);
 				this.completion.historyEntry().setContent(this.textViewer.getDocument().get());
 				AiCoderHistoryView.get().ifPresent(AiCoderHistoryView::refresh);
@@ -778,4 +791,5 @@ public final class InlineCompletionController {
 		public void setPositionManager(IPaintPositionManager manager) {
 		}
 	}
+
 }
