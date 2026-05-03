@@ -1,0 +1,71 @@
+[[fim.context]]
+key = "PROJECT_INFORMATION"
+
+[[fim.context]]
+key = "FILE_TREE"
+whitelist = [
+    "**/*.java"
+]
+blacklist = [
+    "**/*.xml"
+]
+
+[[fim.context]]
+key = "OPEN_EDITORS"
+limit = 3
+
+[[fim.context]]
+key = "SUPER"
+
+[[fim.context]]
+key = "SCOPE"
+
+[[fim.context]]
+key = "IMPORTS"
+
+[[fim.context]]
+key = "PACKAGE"
+
+[[fim.context]]
+key = "STICKY"
+
+[[fim.context]]
+key = "USER"
+[[fim.context.entry]]
+key = "DEMO"
+title = "Demo"
+glob = "**/*.java"
+content = """
+Hello World
+"""
+
+[[fim.context]]
+key = "LAST_EDITS"
+limit = 10
+
+[[fim.context]]
+key = "CLIPBOARD"
+
+[[fim.context]]
+key = "AI_RERANK"
+limit = 5
+whitelist = [
+    "**/*.java"
+]
+blacklist = [
+    "**/*.xml"
+]
+
+[[fim.context]]
+key = "CODE_VIEWPORT_MEMORY"
+max_lines = 1000
+
+[[fim.context]]
+key = "FILL_IN_MIDDLE"
+prefix_length = 100
+suffix_length = 100
+
+
+
+
+

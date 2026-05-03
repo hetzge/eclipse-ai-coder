@@ -17,6 +17,8 @@ import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
 import de.hetzge.eclipse.aicoder.util.Utils;
 
 public class ImportsContextEntry extends ContextEntry {
+
+	public static final String LABEL = "Imports";
 	public static final String PREFIX = "IMPORTS";
 
 	public ImportsContextEntry(List<TypeContextEntry> childContextEntries, Duration creationDuration) {
@@ -25,7 +27,7 @@ public class ImportsContextEntry extends ContextEntry {
 
 	@Override
 	public String getLabel() {
-		return "Imports";
+		return LABEL;
 	}
 
 	@Override
@@ -44,7 +46,7 @@ public class ImportsContextEntry extends ContextEntry {
 	}
 
 	public static ContextEntryFactory factory(ICompilationUnit unit) {
-		return new ContextEntryFactory(PREFIX, () -> create(unit));
+		return new ContextEntryFactory(PREFIX, () -> create(unit), () -> new EmptyContextEntry(PREFIX, LABEL, AiCoderImageKey.IMPORT_ICON));
 	}
 
 	public static ImportsContextEntry create(ICompilationUnit unit) throws CoreException {

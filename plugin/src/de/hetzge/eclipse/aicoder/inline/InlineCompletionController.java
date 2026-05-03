@@ -1,14 +1,17 @@
 package de.hetzge.eclipse.aicoder.inline;
 
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
@@ -49,12 +52,15 @@ import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.contexts.IContextActivation;
+import org.eclipse.ui.part.FileEditorInput;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.CompletionMode;
 import de.hetzge.eclipse.aicoder.ContextView;
 import de.hetzge.eclipse.aicoder.Debouncer;
+import de.hetzge.eclipse.aicoder.EditHistoryDiffUtils;
+import de.hetzge.eclipse.aicoder.config.TaskConfig;
 import de.hetzge.eclipse.aicoder.context.ContextContext;
 import de.hetzge.eclipse.aicoder.context.ContextEntry;
 import de.hetzge.eclipse.aicoder.context.FillInMiddleContextEntry;
@@ -62,9 +68,11 @@ import de.hetzge.eclipse.aicoder.context.RootContextEntry;
 import de.hetzge.eclipse.aicoder.history.AiCoderHistoryEntry;
 import de.hetzge.eclipse.aicoder.history.AiCoderHistoryView;
 import de.hetzge.eclipse.aicoder.history.HistoryStatus;
+import de.hetzge.eclipse.aicoder.history.HistoryType;
 import de.hetzge.eclipse.aicoder.llm.LlmPromptTemplates;
 import de.hetzge.eclipse.aicoder.llm.LlmResponse;
 import de.hetzge.eclipse.aicoder.llm.LlmUtils;
+import de.hetzge.eclipse.aicoder.next.NextEditRequest;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils.Runnable_WithExceptions;
@@ -105,6 +113,9 @@ public final class InlineCompletionController {
 				textViewer.getSelectionProvider().addSelectionChangedListener(controller.selectionListener);
 				textViewer.getTextWidget().addCaretListener(controller.caretListener);
 				textEditor.getDocumentProvider().getDocument(textEditor.getEditorInput()).addDocumentListener(controller.documentListener);
+				textViewer.addViewportListener(verticalOffset -> {
+					AiCoderActivator.getDefault().getEditorViewMemory().update(textEditor);
+				});
 			});
 			return controller;
 		});
@@ -125,6 +136,7 @@ public final class InlineCompletionController {
 	private long changeCounter;
 	private long lastChangeCounter;
 	private final Debouncer debouncer;
+	private final Debouncer editDebouncer;
 	private boolean abortDisabled;
 	private SuggestionPopupDialog suggestionPopupDialog;
 	private Suggestion suggestion;
@@ -146,6 +158,7 @@ public final class InlineCompletionController {
 		this.changeCounter = 0;
 		this.lastChangeCounter = 0;
 		this.debouncer = new Debouncer(Display.getDefault(), AiCoderPreferences::getDebounceDuration);
+		this.editDebouncer = new Debouncer(Display.getDefault(), () -> Duration.ofMillis(1000));
 		this.abortDisabled = false;
 		this.suggestionPopupDialog = null;
 		this.suggestion = null;
@@ -200,7 +213,7 @@ public final class InlineCompletionController {
 				mode = CompletionMode.GENERATE;
 			}
 		}
-		final AiCoderHistoryEntry historyEntry = new AiCoderHistoryEntry(mode, filePath, this.textViewer.getDocument().get());
+		final AiCoderHistoryEntry historyEntry = new AiCoderHistoryEntry(HistoryType.fromCompletionMode(mode), filePath, this.textViewer.getDocument().get());
 		this.job = new Job("AI completion") {
 
 			ITextViewer textViewer = InlineCompletionController.this.textViewer;
@@ -220,7 +233,21 @@ public final class InlineCompletionController {
 						return Status.CANCEL_STATUS;
 					}
 					AiCoderActivator.log().info("Calculate context");
-					final RootContextEntry rootContextEntry = RootContextEntry.create(document, this.textEditor.getEditorInput(), modelOffset);
+					String originalInstructions;
+					if (instruction == null) {
+						originalInstructions = "Complete/Edit the following code";
+					} else {
+						originalInstructions = instruction;
+					}
+					TaskConfig config;
+					if (this.textEditor.getEditorInput() instanceof final FileEditorInput fileEditorInput) {
+						config = AiCoderActivator.getDefault().getConfigManager().getConfig(fileEditorInput.getFile().getProject())
+								.map(rootConfig -> rootConfig.getTaskConfig(mode).orElseGet(() -> TaskConfig.createDefault()))
+								.orElseGet(() -> TaskConfig.createDefault());
+					} else {
+						config = TaskConfig.createDefault();
+					}
+					final RootContextEntry rootContextEntry = RootContextEntry.create(document, this.textEditor.getEditorInput(), modelOffset, originalInstructions, config);
 					final String contextString = ContextEntry.apply(rootContextEntry, new ContextContext());
 					// IMPORTANT: DO this after ContextEntry.apply(...)
 					updateContextView(rootContextEntry);
@@ -232,23 +259,24 @@ public final class InlineCompletionController {
 					final String[] contextParts = contextString.split(FillInMiddleContextEntry.FILL_HERE_PLACEHOLDER);
 					final String prefix = contextParts[0];
 					final String suffix = contextParts.length > 1 ? contextParts[1] : "";
+					final boolean hasSelection = EclipseUtils.hasSelection(this.textViewer);
 					final String selectionText = EclipseUtils.getSelectionText(this.textViewer);
-					if (mode == CompletionMode.EDIT || mode == CompletionMode.GENERATE || mode == CompletionMode.QUICK_FIX) {
-						final String fileType = EclipseUtils.getFileExtension(this.textEditor.getEditorInput());
-						final String systemPrompt = hasSelection
-								? AiCoderPreferences.getChangeCodeSystemPrompt()
-								: AiCoderPreferences.getGenerateCodeSystemPrompt();
+					final String fileType = EclipseUtils.getFileExtension(this.textEditor.getEditorInput());
+					if (mode == CompletionMode.EDIT) {
+						final String systemPrompt = AiCoderPreferences.getChangeCodeSystemPrompt();
 						final String effectiveInstruction = instruction != null ? instruction : AiCoderPreferences.getQuickFixPrompt();
-						prompt = hasSelection
-								? LlmPromptTemplates.changeCodePrompt(fileType, selectionText, effectiveInstruction, prefix, suffix)
-								: LlmPromptTemplates.generateCodePrompt(effectiveInstruction, prefix, suffix);
-						if (mode == CompletionMode.EDIT) {
-							InlineCompletionController.this.llmResponseFuture = LlmUtils.executeEdit(systemPrompt, prompt);
-						} else if (mode == CompletionMode.QUICK_FIX) {
-							InlineCompletionController.this.llmResponseFuture = LlmUtils.executeQuickFix(systemPrompt, prompt);
-						} else {
-							InlineCompletionController.this.llmResponseFuture = LlmUtils.executeGenerate(systemPrompt, prompt);
-						}
+						prompt = LlmPromptTemplates.changeCodePrompt(fileType, selectionText, effectiveInstruction, prefix, suffix);
+						InlineCompletionController.this.llmResponseFuture = LlmUtils.executeEdit(systemPrompt, prompt);
+					} else if (mode == CompletionMode.QUICK_FIX) {
+						final String systemPrompt = AiCoderPreferences.getChangeCodeSystemPrompt();
+						final String effectiveInstruction = instruction != null ? instruction : AiCoderPreferences.getQuickFixPrompt();
+						prompt = LlmPromptTemplates.changeCodePrompt(fileType, selectionText, effectiveInstruction, prefix, suffix);
+						InlineCompletionController.this.llmResponseFuture = LlmUtils.executeQuickFix(systemPrompt, prompt);
+					} else if (mode == CompletionMode.GENERATE) {
+						final String systemPrompt = AiCoderPreferences.getGenerateCodeSystemPrompt();
+						final String effectiveInstruction = instruction != null ? instruction : AiCoderPreferences.getQuickFixPrompt();
+						prompt = LlmPromptTemplates.generateCodePrompt(effectiveInstruction, prefix, suffix);
+						InlineCompletionController.this.llmResponseFuture = LlmUtils.executeGenerate(systemPrompt, prompt);
 					} else if (mode == CompletionMode.INLINE) {
 						prompt = prefix + "<|cursor|>" + suffix;
 						InlineCompletionController.this.llmResponseFuture = LlmUtils.executeFillInTheMiddle(prefix, suffix);
@@ -299,8 +327,7 @@ public final class InlineCompletionController {
 									selectionText.length(),
 									EclipseUtils.getWidgetLine(this.textViewer, modelOffset) + oldLineCount - 1,
 									newLineCount,
-									oldLineCount,
-									Math.max(newLineCount - oldLineCount, 0)));
+									oldLineCount));
 						} else if (mode == CompletionMode.INLINE || mode == CompletionMode.GENERATE) {
 							setup(InlineCompletion.create(
 									historyEntry,
@@ -354,14 +381,70 @@ public final class InlineCompletionController {
 		this.job.schedule();
 	}
 
-	public void triggerNextEdit() throws BadLocationException {
+	public void triggerNextEdit() throws Exception {
+		abort("Trigger next edit");
 		final IPath currentPath = EclipseUtils.getEclipsePath(this.textEditor).orElseThrow();
 		final int modelOffset = EclipseUtils.getCurrentOffsetInDocument(this.textEditor);
-		final String prefix = this.textViewer.getDocument().get(0, Math.min(modelOffset, AiCoderPreferences.getMaxPrefixSize()));
-		final String editable = this.textViewer.getDocument().get(Math.max(0, modelOffset - AiCoderPreferences.getMaxPrefixSize()), Math.min(AiCoderPreferences.getMaxPrefixSize() + AiCoderPreferences.getMaxSuffixSize(), this.textViewer.getDocument().getLength() - Math.max(0, modelOffset - AiCoderPreferences.getMaxPrefixSize())));
-		final String suffix = this.textViewer.getDocument().get(Math.min(modelOffset + AiCoderPreferences.getMaxSuffixSize(), this.textViewer.getDocument().getLength()), Math.min(AiCoderPreferences.getMaxSuffixSize(), this.textViewer.getDocument().getLength() - Math.min(modelOffset + AiCoderPreferences.getMaxSuffixSize(), this.textViewer.getDocument().getLength())));
-//		final NextEditRequest request = new NextEditRequest(currentPath, prefix, editable, suffix, List.of(), EditHistoryDiffUtils.getDiffs(Duration.ofMinutes(1)));
-//		this.llmResponseFuture = LlmUtils.executeNextEdit(request);
+		final IDocument document = this.textViewer.getDocument();
+		final int modelLine = document.getLineOfOffset(modelOffset);
+		final int firstLine = document.getLineOffset(Math.max(0, modelLine - AiCoderPreferences.getMaxPrefixSize()));
+		final int lastLine = document.getLineOffset(Math.min(document.getNumberOfLines() - 1, modelLine + AiCoderPreferences.getMaxSuffixSize()));
+		final String prefix = document.get(0, firstLine);
+		final String editable = document.get(firstLine, lastLine - firstLine);
+		final String suffix = document.get(lastLine, document.getLength() - lastLine);
+		final int cursorOffset = modelOffset - document.getLineOffset(firstLine);
+		final List<String> diffs = EditHistoryDiffUtils.getDiffs(Duration.ofMinutes(1));
+		for (int i = 0; i < diffs.size(); i++) {
+			System.out.println("diff " + i + ":\n" + diffs.get(i));
+		}
+		final NextEditRequest request = new NextEditRequest(currentPath, prefix, editable, suffix, cursorOffset, List.of(), diffs);
+		final LlmResponse response = LlmUtils.executeNextEdit(request).get(); // TODO
+		final String content = Utils.stripCodeMarkdownTags(response.getContent());
+		System.out.println("content:\n " + content);
+		System.out.println("editable:\n " + editable);
+		final List<String> contentLines = content.lines().toList();
+		final List<String> editableLines = editable.lines().toList();
+
+		int prefixLineOffset = 0;
+		for (int i = 0; i < Math.min(editableLines.size(), contentLines.size()); i++) {
+			final String editableLine = editableLines.size() > i ? editableLines.get(i) : "";
+			final String contentLine = contentLines.size() > i ? contentLines.get(i) : "";
+			if (!Objects.equals(editableLine.trim(), contentLine.trim())) {
+				break;
+			}
+			prefixLineOffset++;
+		}
+		int suffixLineOffset = 0;
+		for (int i = 0; i < Math.min(editableLines.size(), contentLines.size()); i++) {
+			final String editableLine = editableLines.size() > i ? editableLines.get(editableLines.size() - 1 - i) : "";
+			final String contentLine = contentLines.size() > i ? contentLines.get(contentLines.size() - 1 - i) : "";
+			if (!Objects.equals(editableLine.trim(), contentLine.trim())) {
+				break;
+			}
+			suffixLineOffset++;
+		}
+
+		if (prefixLineOffset == editableLines.size() && prefixLineOffset == contentLines.size() && prefixLineOffset == suffixLineOffset) {
+			throw new Exception("No changes detected"); // TODO
+		}
+
+		System.out.println("editableLines: " + editableLines.size());
+		System.out.println("contentLines: " + contentLines.size());
+		System.out.println("prefixLineOffset: " + prefixLineOffset);
+		System.out.println("suffixLineOffset: " + suffixLineOffset);
+
+		final String newEditable = editableLines.subList(prefixLineOffset, editableLines.size() - suffixLineOffset).stream().collect(Collectors.joining("\n"));
+		final String newContent = contentLines.subList(prefixLineOffset, contentLines.size() - suffixLineOffset).stream().collect(Collectors.joining("\n"));
+		System.out.println("newEditable:\n " + newEditable);
+		System.out.println("newContent:\n " + newContent);
+		setup(new Suggestion(
+				new AiCoderHistoryEntry(HistoryType.fromCompletionMode(CompletionMode.NEXT_EDIT), currentPath.toString(), document.get()),
+				newContent,
+				document.getLineOffset(firstLine + prefixLineOffset),
+				newEditable.length(),
+				EclipseUtils.getWidgetLine(this.textViewer, firstLine) + (int) newEditable.lines().count() - 1,
+				(int) newContent.lines().count(),
+				(int) newEditable.lines().count()));
 	}
 
 	private void cancelHttpRequest() {
@@ -572,6 +655,9 @@ public final class InlineCompletionController {
 		public void documentChanged(DocumentEvent event) {
 			InlineCompletionController.this.changeCounter++;
 			abort("Document changed");
+			InlineCompletionController.this.editDebouncer.debounce(() -> {
+				AiCoderActivator.getDefault().getEditorViewMemory().update(InlineCompletionController.this.textEditor);
+			});
 		}
 	}
 

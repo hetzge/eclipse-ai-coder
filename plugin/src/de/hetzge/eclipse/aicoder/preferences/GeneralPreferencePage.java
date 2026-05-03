@@ -5,6 +5,7 @@ import java.time.Duration;
 import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.IntegerFieldEditor;
+import org.eclipse.jface.preference.StringFieldEditor;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Group;
@@ -104,5 +105,11 @@ public class GeneralPreferencePage extends FieldEditorPreferencePage implements 
 				generalGroup);
 		timeoutEditor.setValidRange(0, (int) Duration.ofHours(1).toMillis());
 		addField(timeoutEditor);
+
+		// FIM template setting
+		addField(new StringFieldEditor(
+				AiCoderPreferences.FIM_TEMPLATE_KEY,
+				"FIM Template:",
+				generalGroup));
 	}
 }

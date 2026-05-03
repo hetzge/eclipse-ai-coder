@@ -1,13 +1,16 @@
 package de.hetzge.eclipse.aicoder;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.action.Action;
+import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.action.MenuManager;
@@ -16,7 +19,10 @@ import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.preference.PreferenceDialog;
 import org.eclipse.jface.resource.JFaceResources;
+import org.eclipse.jface.viewers.CheckStateChangedEvent;
+import org.eclipse.jface.viewers.CheckboxTreeViewer;
 import org.eclipse.jface.viewers.DecoratingLabelProvider;
+import org.eclipse.jface.viewers.ICheckStateProvider;
 import org.eclipse.jface.viewers.IColorProvider;
 import org.eclipse.jface.viewers.IDecorationContext;
 import org.eclipse.jface.viewers.IFontProvider;
@@ -25,7 +31,6 @@ import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelDecorator;
 import org.eclipse.jface.viewers.LabelProvider;
-import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
@@ -54,6 +59,7 @@ import de.hetzge.eclipse.aicoder.context.CustomContextEntryData;
 import de.hetzge.eclipse.aicoder.context.EmptyContextEntry;
 import de.hetzge.eclipse.aicoder.context.UserContextEntry;
 import de.hetzge.eclipse.aicoder.handler.ToggleMultilineHandler;
+import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.preferences.ContextPreferencePage;
 import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
 import jakarta.inject.Inject;
@@ -64,26 +70,26 @@ public class ContextView extends ViewPart {
 	@Inject
 	IWorkbench workbench;
 
-	private TreeViewer viewer;
+	private CheckboxTreeViewer viewer;
 	private DrillDownAdapter drillDownAdapter;
 	private ContextEntry rootContextEntry;
 
 	public void setRootContextEntry(ContextEntry rootContextEntry) {
 		this.rootContextEntry = rootContextEntry;
 		this.viewer.refresh();
-		this.viewer.expandToLevel(2);
 	}
 
 	@Override
 	public void createPartControl(Composite parent) {
 		this.rootContextEntry = new EmptyContextEntry();
 
-		this.viewer = new TreeViewer(parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL);
-		this.drillDownAdapter = new DrillDownAdapter(this.viewer);
-
+		this.viewer = new CheckboxTreeViewer(parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL | SWT.CHECK);
 		this.viewer.setLabelProvider(new DecoratingLabelProvider(new ViewLabelProvider(), new ViewLabelDecorator()));
 		this.viewer.setContentProvider(new ViewContentProvider());
 		this.viewer.setInput(getViewSite());
+		this.viewer.addCheckStateListener(this::checkStateChanged);
+		this.viewer.setCheckStateProvider(new ViewCheckStateProvider());
+		this.drillDownAdapter = new DrillDownAdapter(this.viewer);
 
 		// Create the help context id for the viewer's control
 		this.workbench.getHelpSystem().setHelp(this.viewer.getControl(), "de.hetzge.eclipse.aicoder.viewer");
@@ -100,6 +106,60 @@ public class ContextView extends ViewPart {
 						ToggleMultilineHandler.COMMAND_ID,
 						CommandContributionItem.STYLE_CHECK)));
 		menuManager.add(new OpenContextPreferencesAction());
+	}
+
+	private void checkStateChanged(CheckStateChangedEvent event) {
+		final Object element = event.getElement();
+		final boolean checked = event.getChecked();
+		updateParentCheckState(element);
+		if (element instanceof final ContextEntry contextEntry) {
+			if (isRootItem(contextEntry)) {
+				ContextPreferences.setContextTypeEnabled(contextEntry.getKey().prefix(), checked);
+			} else {
+				ContextPreferences.setTemporaryDisabled(contextEntry.getKey(), this.viewer.getChecked(element));
+			}
+		}
+	}
+
+	private boolean isRootItem(ContextEntry entry) {
+		return this.rootContextEntry.getChildContextEntries().contains(entry);
+	}
+
+	private void updateParentCheckState(Object element) {
+		if (element instanceof final ContextEntry contextEntry) {
+			final ContextEntry parent = findParent(contextEntry);
+			if (parent != null) {
+				final boolean allChecked = parent.getChildContextEntries().stream().allMatch(it -> this.viewer.getChecked(it));
+				this.viewer.setGrayed(parent, !allChecked);
+				updateParentCheckState(parent);
+			}
+		}
+	}
+
+	private ContextEntry findParent(ContextEntry contextEntry) {
+		for (final ContextEntry child : this.rootContextEntry.getChildContextEntries()) {
+			if (child.getChildContextEntries().contains(contextEntry)) {
+				return child;
+			}
+			final ContextEntry parent = findParent(child, contextEntry);
+			if (parent != null) {
+				return parent;
+			}
+		}
+		return null;
+	}
+
+	private ContextEntry findParent(ContextEntry parent, ContextEntry contextEntry) {
+		for (final ContextEntry child : parent.getChildContextEntries()) {
+			if (child.getChildContextEntries().contains(contextEntry)) {
+				return child;
+			}
+			final ContextEntry foundParent = findParent(child, contextEntry);
+			if (foundParent != null) {
+				return foundParent;
+			}
+		}
+		return null;
 	}
 
 	private void hookContextMenu() {
@@ -157,7 +217,7 @@ public class ContextView extends ViewPart {
 							final List<CustomContextEntryData> newEntries = new ArrayList<>(currentEntries);
 							// Replace the existing entry with the edited one
 							for (int i = 0; i < newEntries.size(); i++) {
-								if (newEntries.get(i).getId().equals(editedEntry.getId())) {
+								if (newEntries.get(i).getKey().equals(editedEntry.getKey())) {
 									newEntries.set(i, editedEntry);
 									break;
 								}
@@ -246,6 +306,34 @@ public class ContextView extends ViewPart {
 
 	private void fillLocalToolBar(IToolBarManager manager) {
 		this.drillDownAdapter.addNavigationActions(manager);
+		final Action expandAllAction = new Action() {
+			@Override
+			public void run() {
+				ContextView.this.viewer.expandAll();
+			}
+		};
+		expandAllAction.setImageDescriptor(AiCoderActivator.getImageDescriptor(AiCoderImageKey.EXPAND_ICON));
+		manager.add(expandAllAction);
+		final Action collapseAllAction = new Action() {
+			@Override
+			public void run() {
+				ContextView.this.viewer.collapseAll();
+			}
+		};
+		collapseAllAction.setImageDescriptor(AiCoderActivator.getImageDescriptor(AiCoderImageKey.COLLAPSE_ICON));
+		manager.add(collapseAllAction);
+		final Action toggleAction = new Action("Toggle Multiline", IAction.AS_CHECK_BOX) {
+			@Override
+			public void run() {
+				final boolean enabled = isChecked();
+				AiCoderPreferences.setMultilineEnabled(enabled);
+				setChecked(enabled);
+			}
+		};
+		toggleAction.setToolTipText("Toggle Multiline");
+		toggleAction.setImageDescriptor(AiCoderActivator.getImageDescriptor(AiCoderImageKey.MULTILINE_ICON));
+		toggleAction.setChecked(AiCoderPreferences.isMultilineEnabled());
+		manager.add(toggleAction);
 	}
 
 	private void showContentPreview(ContextEntry entry) {
@@ -295,6 +383,28 @@ public class ContextView extends ViewPart {
 		});
 	}
 
+	private final class ViewCheckStateProvider implements ICheckStateProvider {
+		@Override
+		public boolean isChecked(Object element) {
+			if (element instanceof final ContextEntry contextEntry) {
+				return !ContextPreferences.isBlacklisted(contextEntry.getKey())
+						&& (isRootItem(contextEntry) || !ContextPreferences.isTemporaryDisabled(contextEntry.getKey()))
+						&& (!isRootItem(contextEntry) || ContextPreferences.isContextTypeEnabled(contextEntry.getKey().getKeyString()));
+			}
+			return true;
+		}
+
+		@Override
+		public boolean isGrayed(Object element) {
+			if (element instanceof final ContextEntry contextEntry) {
+				if (!contextEntry.getChildContextEntries().isEmpty()) {
+					return !contextEntry.getChildContextEntries().stream().allMatch(this::isChecked);
+				}
+			}
+			return false;
+		}
+	}
+
 	private static class OpenContextPreferencesAction extends Action {
 		private OpenContextPreferencesAction() {
 			super("Context preferences");
@@ -311,11 +421,13 @@ public class ContextView extends ViewPart {
 		@Override
 		public Object[] getElements(Object parent) {
 			if (parent.equals(getViewSite())) {
+				BlacklistedContextEntry blacklistedContextEntry = null;
 				try {
-					return new Object[] { ContextView.this.rootContextEntry, BlacklistedContextEntry.create() };
+					blacklistedContextEntry = BlacklistedContextEntry.create();
 				} catch (final CoreException exception) {
 					throw new RuntimeException("Failed to create blacklisted context entry", exception);
 				}
+				return Stream.concat(ContextView.this.rootContextEntry.getChildContextEntries().stream(), Stream.of(blacklistedContextEntry).filter(Objects::nonNull)).toArray();
 			}
 			return getChildren(parent);
 		}
@@ -348,7 +460,7 @@ public class ContextView extends ViewPart {
 		private static final Color BLACKLISTED_FOREGROUND_COLOR = new Color(100, 100, 100);
 		private static final Color STICKY_BACKGROUND_COLOR = new Color(240, 255, 240);
 		private static final Color STICKY_FOREGROUND_COLOR = new Color(0, 0, 0);
-		private static final Color SKIPPED_BACKGROUND_COLOR = new Color(0, 0, 0, 0);
+		private static final Color SKIPPED_BACKGROUND_COLOR = null;
 		private static final Color SKIPPED_FOREGROUND_COLOR = new Color(200, 200, 200);
 
 		@Override
@@ -457,9 +569,28 @@ public class ContextView extends ViewPart {
 				if (ContextPreferences.isSticky(key)) {
 					tag += " [Sticky]";
 				}
-				return String.format("%s%s (%s) [%s]", text, tag, contextEntry.getTokenCount(), contextEntry.getCreationDuration().toMillis());
+				final Duration duration = contextEntry.getCreationDuration();
+				final long seconds = duration.getSeconds();
+				final long absSeconds = Math.abs(seconds);
+				final String formattedDuration = formatDuration(absSeconds);
+				return String.format("%s%s (chars: %s, duration: %s, children: %s)", text, tag, contextEntry.getTokenCount(), formattedDuration, contextEntry.getChildContextEntries().size());
 			}
 			return null;
+		}
+
+		private String formatDuration(final long absSeconds) {
+			if (absSeconds < 60) {
+				return String.format("%ds", absSeconds);
+			} else if (absSeconds < 3600) {
+				final long minutes = absSeconds / 60;
+				final long remainingSeconds = absSeconds % 60;
+				return String.format("%dmin %ds", minutes, remainingSeconds);
+			} else {
+				final long hours = absSeconds / 3600;
+				final long remainingMinutes = (absSeconds % 3600) / 60;
+				final long remainingSeconds = absSeconds % 60;
+				return String.format("%dh %dmin %ds", hours, remainingMinutes, remainingSeconds);
+			}
 		}
 
 		@Override

@@ -106,9 +106,9 @@ public class CustomContextEntryDialog extends Dialog {
 	}
 
 	public CustomContextEntryData createEntry() {
-		final UUID id = this.existingEntry != null ? this.existingEntry.getData().getId() : UUID.randomUUID();
+		final String key = this.existingEntry != null ? this.existingEntry.getData().getKey() : UUID.randomUUID().toString();
 		return new CustomContextEntryData(
-				id,
+				key,
 				this.existingEntry != null ? this.existingEntry.getData().getChildren() : List.of(),
 				this.title,
 				this.content,

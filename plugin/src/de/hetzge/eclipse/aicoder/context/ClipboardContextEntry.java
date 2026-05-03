@@ -14,6 +14,7 @@ import de.hetzge.eclipse.aicoder.util.ContextUtils;
 
 public class ClipboardContextEntry extends ContextEntry {
 
+	public static final String LABEL = "Clipboard";
 	public static final String PREFIX = "CLIPBOARD";
 
 	private final String content;
@@ -30,7 +31,7 @@ public class ClipboardContextEntry extends ContextEntry {
 
 	@Override
 	public String getLabel() {
-		return "Clipboard";
+		return LABEL;
 	}
 
 	@Override
@@ -49,7 +50,7 @@ public class ClipboardContextEntry extends ContextEntry {
 	}
 
 	public static ContextEntryFactory factory() {
-		return new ContextEntryFactory(PREFIX, () -> create());
+		return new ContextEntryFactory(PREFIX, () -> create(), () -> new EmptyContextEntry(PREFIX, LABEL, AiCoderImageKey.COPY_ICON));
 	}
 
 	public static ClipboardContextEntry create() {

@@ -44,7 +44,6 @@ public final class Context {
 
 	public static final Map<String, String> CONTEXT_TYPE_NAME_BY_CONTEXT_PREFIX = Map.ofEntries(
 			Map.entry(ProjectInformationsContextEntry.PREFIX, "Project informations"),
-			Map.entry(DependenciesContextEntry.PREFIX, "Dependencies"),
 			Map.entry(OpenEditorsContextEntry.PREFIX, "Open editors"),
 			Map.entry(ImportsContextEntry.PREFIX, "Imports (Java)"),
 			Map.entry(SuperContextEntry.PREFIX, "Super (Java)"),
@@ -61,12 +60,13 @@ public final class Context {
 			Map.entry(UserContextEntry.PREFIX, "User"),
 			Map.entry(RootContextEntry.PREFIX, "Root"),
 			Map.entry(TypeMemberContextEntry.PREFIX, "Type member (Java)"),
-			Map.entry(PackageContextEntry.PREFIX, "Package (Java)"));
+			Map.entry(PackageContextEntry.PREFIX, "Package (Java)"),
+			Map.entry(AiRerankContextEntry.PREFIX, "AI rerank"),
+			Map.entry(CodeViewportMemoryContextEntry.PREFIX, "Code Viewport Memory"));
 
 	public static final List<String> DEFAULT_PREFIX_ORDER = List.of(
 			ProjectInformationsContextEntry.PREFIX,
 			FileTreeContextEntry.PREFIX,
-			DependenciesContextEntry.PREFIX,
 			OpenEditorsContextEntry.PREFIX,
 			SuperContextEntry.PREFIX,
 			ScopeContextEntry.PREFIX,
@@ -76,6 +76,8 @@ public final class Context {
 			UserContextEntry.PREFIX,
 			LastEditsContextEntry.PREFIX,
 			ClipboardContextEntry.PREFIX,
+			AiRerankContextEntry.PREFIX,
+			CodeViewportMemoryContextEntry.PREFIX,
 			FillInMiddleContextEntry.PREFIX);
 
 	public static final Set<String> DEFAULT_ACTIVE_PREFIXES = Set.of(FillInMiddleContextEntry.PREFIX);

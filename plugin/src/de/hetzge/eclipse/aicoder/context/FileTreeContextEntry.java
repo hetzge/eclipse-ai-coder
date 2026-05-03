@@ -1,13 +1,10 @@
 package de.hetzge.eclipse.aicoder.context;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 
-import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -15,36 +12,35 @@ import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IFileEditorInput;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.config.ContextConfig.FileTreeConfig;
+import de.hetzge.eclipse.aicoder.config.TaskConfig;
 import de.hetzge.eclipse.aicoder.util.ContextUtils;
-import de.hetzge.eclipse.aicoder.util.GitUtils;
-import de.hetzge.eclipse.aicoder.util.GitUtils.GitState;
+import de.hetzge.eclipse.aicoder.util.FileTreeUtils;
 
 public class FileTreeContextEntry extends ContextEntry {
 
+	public static final String LABEL = "File Tree";
 	public static final String PREFIX = "FILE_TREE";
 
 	private final IProject project;
+	private final List<String> whitelist;
+	private final List<String> blacklist;
 
-	public FileTreeContextEntry(IProject project, Duration creationDuration) {
+	public FileTreeContextEntry(IProject project, List<String> whitelist, List<String> blacklist, Duration creationDuration) {
 		super(List.of(), creationDuration);
 		this.project = project;
+		this.whitelist = whitelist;
+		this.blacklist = blacklist;
 	}
 
 	@Override
 	public String getLabel() {
-		return "File Tree";
+		return LABEL;
 	}
 
 	@Override
 	public String getContent(ContextContext context) {
-		try {
-			final GitState gitState = GitUtils.getGitState(this.project);
-			final StringBuilder stringBuilder = new StringBuilder();
-			appendResourceTree(stringBuilder, this.project, gitState, 0);
-			return ContextUtils.codeTemplate("Project file tree", stringBuilder.toString());
-		} catch (final CoreException | IOException exception) {
-			throw new RuntimeException("Error reading file tree", exception);
-		}
+		return ContextUtils.codeTemplate("Project file tree", FileTreeUtils.createResourceTreeString(this.project, this.whitelist, this.blacklist));
 	}
 
 	@Override
@@ -52,32 +48,18 @@ public class FileTreeContextEntry extends ContextEntry {
 		return new ContextEntryKey(PREFIX, this.project.getName());
 	}
 
-	private void appendResourceTree(StringBuilder stringBuilder, IResource resource, GitState gitState, int depth) throws CoreException {
-		if (gitState.isIgnored(resource)) {
-			return;
-		}
-		if (resource instanceof final IContainer container) {
-			final String indent = "  ".repeat(depth);
-			stringBuilder.append(indent).append(container.getName()).append("\n");
-			final IResource[] members = container.members();
-			for (final IResource child : members) {
-				appendResourceTree(stringBuilder, child, gitState, depth + 1);
-			}
-		} else if (resource instanceof final IFile file) {
-			final String indent = "  ".repeat(depth);
-			stringBuilder.append(indent).append(file.getName()).append("\n");
-		}
+	public static ContextEntryFactory factory(IEditorInput editorInput, TaskConfig config) {
+		return new ContextEntryFactory(PREFIX, () -> create(editorInput, config), () -> new EmptyContextEntry(PREFIX, LABEL, null));
 	}
 
-	public static ContextEntryFactory factory(IEditorInput editorInput) {
-		return new ContextEntryFactory(PREFIX, () -> create(editorInput));
-	}
-
-	public static ContextEntry create(IEditorInput editorInput) throws CoreException {
+	public static ContextEntry create(IEditorInput editorInput, TaskConfig config) throws CoreException {
+		final long before = System.currentTimeMillis();
 		if (editorInput instanceof final IFileEditorInput fileEditorInput) {
 			final IFile file = fileEditorInput.getFile();
 			final IProject project = file.getProject();
-			return new FileTreeContextEntry(project, Duration.ZERO);
+			final List<String> whitelist = config.getContextConfig(PREFIX).map(FileTreeConfig.class::cast).map(FileTreeConfig::getWhitelist).orElse(List.of());
+			final List<String> blacklist = config.getContextConfig(PREFIX).map(FileTreeConfig.class::cast).map(FileTreeConfig::getBlacklist).orElse(List.of());
+			return new FileTreeContextEntry(project, whitelist, blacklist, Duration.ofMillis(System.currentTimeMillis() - before));
 		}
 		if (editorInput == null) {
 			throw new CoreException(new Status(IStatus.ERROR, AiCoderActivator.PLUGIN_ID, "Editor input is null"));

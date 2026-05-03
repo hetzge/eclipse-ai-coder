@@ -15,6 +15,7 @@ import de.hetzge.eclipse.aicoder.util.ContextUtils;
 
 public class ProjectInformationsContextEntry extends ContextEntry {
 
+	public static final String LABEL = "Project informations";
 	public static final String PREFIX = "PROJECT_INFORMATIONS";
 
 	private ProjectInformationsContextEntry(List<ProjectInformationContextEntry> entries, Duration creationDuration) {
@@ -28,7 +29,7 @@ public class ProjectInformationsContextEntry extends ContextEntry {
 
 	@Override
 	public String getLabel() {
-		return "Project informations";
+		return LABEL;
 	}
 
 	@Override
@@ -42,7 +43,7 @@ public class ProjectInformationsContextEntry extends ContextEntry {
 	}
 
 	public static ContextEntryFactory factory(IProject project) {
-		return new ContextEntryFactory(PREFIX, () -> create(project));
+		return new ContextEntryFactory(PREFIX, () -> create(project), () -> new EmptyContextEntry(PREFIX, LABEL, AiCoderImageKey.INFORMATIONS_ICON));
 	}
 
 	public static ContextEntry create(IProject project) {

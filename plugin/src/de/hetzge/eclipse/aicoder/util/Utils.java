@@ -2,6 +2,8 @@ package de.hetzge.eclipse.aicoder.util;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -104,5 +106,12 @@ public final class Utils {
 				.map(part -> part.replaceAll("^/+", "").replaceAll("/+$", ""))
 				.filter(part -> !part.isEmpty())
 				.collect(Collectors.joining("/"));
+	}
+
+	public static boolean matches(String glob, Path path) {
+		if (glob == null || glob.isBlank()) {
+			return true;
+		}
+		return FileSystems.getDefault().getPathMatcher("glob:" + glob).matches(path);
 	}
 }

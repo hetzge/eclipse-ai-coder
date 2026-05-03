@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 
@@ -21,6 +22,9 @@ import mjson.Json;
 
 public final class LlmUtils {
 
+	public static final List<String> OPENAI_REASONING_SUFFIXES = List.of(":minimal", ":low", ":medium", ":high", ":xhigh");
+
+	public static final String OPENROUTER_BASE_URL = "https://openrouter.ai/api";
 	private static final String CODESTRAL_BASE_URL = "https://codestral.mistral.ai";
 	private static final String INCEPTIONLABS_BASE_URL = "https://api.inceptionlabs.ai";
 
@@ -37,6 +41,10 @@ public final class LlmUtils {
 
 	public static CompletableFuture<LlmResponse> executeEdit(String systemPrompt, String prompt) {
 		return execute(LlmOption.createEditModelOptionFromPreferences(), systemPrompt, prompt, null);
+	}
+
+	public static CompletableFuture<LlmResponse> executeRerank(String systemPrompt, String prompt) {
+		return execute(LlmOption.createRerankModelOptionFromPreferences(), systemPrompt, prompt, null); // TODO
 	}
 
 	public static CompletableFuture<LlmResponse> executeQuickFix(String systemPrompt, String prompt) {
@@ -58,7 +66,13 @@ public final class LlmUtils {
 		case MISTRAL:
 			return executeMistral(llmModelOption, systemPrompt, prompt, suffix);
 		case OPENAI:
-			return executeOpenAi(llmModelOption, systemPrompt, prompt, suffix);
+			final String urlString = AiCoderPreferences.getOpenAiBaseUrl();
+			final String openAiApiKey = AiCoderPreferences.getOpenAiApiKey();
+			return executeOpenAi(urlString, openAiApiKey, llmModelOption, systemPrompt, prompt, suffix);
+		case OPENROUTER:
+			final String openRouterUrlString = OPENROUTER_BASE_URL;
+			final String openRouterApiKey = AiCoderPreferences.getOpenRouterApiKey();
+			return executeOpenAi(openRouterUrlString, openRouterApiKey, llmModelOption, systemPrompt, prompt, suffix);
 		case INCEPTIONLABS:
 			return executeInceptionLabs(llmModelOption, systemPrompt, prompt, suffix);
 		default:
@@ -74,14 +88,23 @@ public final class LlmUtils {
 		final Json json = Json.object();
 		json.set("model", llmModelOption.modelKey());
 		json.set("stream", false);
-		json.set("options", Json.object().set("temperature", 0));
+		json.set("options", Json.object()
+				.set("temperature", 0)
+				.set("num_ctx", 128000));
 		if (isFillInTheMiddle) {
 			if (!isPseudoFim) {
 				json.set("suffix", suffix);
 				json.at("options").set("stop", createStop(multilineEnabled));
+				final String fimTemplate = AiCoderPreferences.getFimTemplate();
+				if (StringUtils.isNotBlank(fimTemplate)) {
+					json.set("raw", true); // disable ollama's template engine
+					json.set("prompt", JinjaUtils.applyTemplate(AiCoderPreferences.getFimTemplate(), Map.ofEntries(
+							Map.entry("prefix", prompt),
+							Map.entry("suffix", suffix))));
+				}
 			} else {
 				final String pseudoFimSystemPrompt = getPseduoFIMSystemPrompt();
-				final String pseudoFimUserPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getOpenAiFimTemplate(), Map.ofEntries(
+				final String pseudoFimUserPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getFimTemplate(), Map.ofEntries(
 						Map.entry("prefix", prompt),
 						Map.entry("suffix", suffix)));
 				json.set("system", pseudoFimSystemPrompt);
@@ -108,8 +131,8 @@ public final class LlmUtils {
 						final String responseBody = response.body();
 						final Json responseJson = Json.read(responseBody);
 						final String content = responseJson.at("response").asString();
-						final int inputTokens = responseJson.at("prompt_eval_count").asInteger();
-						final int outputTokens = responseJson.at("eval_count").asInteger();
+						final int inputTokens = responseJson.at("prompt_eval_count", 0).asInteger();
+						final int outputTokens = responseJson.at("eval_count", 0).asInteger();
 						return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration, false);
 					} else {
 						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
@@ -135,7 +158,7 @@ public final class LlmUtils {
 				json.set("stop", createStop(multilineEnabled));
 			} else {
 				final String pseudoFimSystemPrompt = getPseduoFIMSystemPrompt();
-				final String pseudoFimUserPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getOpenAiFimTemplate(), Map.ofEntries(
+				final String pseudoFimUserPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getFimTemplate(), Map.ofEntries(
 						Map.entry("prefix", prompt),
 						Map.entry("suffix", suffix)));
 				json.set("max_tokens", AiCoderPreferences.getMaxTokens());
@@ -172,16 +195,25 @@ public final class LlmUtils {
 				});
 	}
 
-	private static CompletableFuture<LlmResponse> executeOpenAi(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) {
+	private static CompletableFuture<LlmResponse> executeOpenAi(String urlString, String openAiApiKey, LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) {
 		final boolean isFillInTheMiddle = suffix != null;
 		final boolean isPseudoFim = isFillInTheMiddle && AiCoderPreferences.isEnablePseduoFim();
-		final String urlString = AiCoderPreferences.getOpenAiBaseUrl();
-		final String openAiApiKey = AiCoderPreferences.getOpenAiApiKey();
+		final String reasoningSuffix = OPENAI_REASONING_SUFFIXES.stream()
+				.filter(it -> llmModelOption.modelKey().endsWith(it))
+				.findFirst()
+				.orElse(null);
+		final String model = reasoningSuffix != null
+				? llmModelOption.modelKey().substring(0, llmModelOption.modelKey().length() - reasoningSuffix.length())
+				: llmModelOption.modelKey();
 		final Json json = Json.object();
-		json.set("model", llmModelOption.modelKey());
-		json.set("temperature", 0);
+		json.set("model", model);
+		// TODO temperature is not allowed for all openai apis
+		// json.set("temperature", 0);
+		if (reasoningSuffix != null) {
+			json.set("reasoning_effort", reasoningSuffix.substring(1));
+		}
 		if (isFillInTheMiddle) {
-			final String fimTemplatePrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getOpenAiFimTemplate(), Map.ofEntries(
+			final String fimTemplatePrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getFimTemplate(), Map.ofEntries(
 					Map.entry("prefix", prompt),
 					Map.entry("suffix", suffix)));
 			if (!isPseudoFim) {
@@ -242,7 +274,7 @@ public final class LlmUtils {
 				json.set("stop", createStop(multilineEnabled));
 			} else {
 				final String pseudoFimSystemPrompt = getPseduoFIMSystemPrompt();
-				final String pseudoFimUserPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getOpenAiFimTemplate(), Map.ofEntries(
+				final String pseudoFimUserPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getFimTemplate(), Map.ofEntries(
 						Map.entry("prefix", prompt),
 						Map.entry("suffix", suffix)));
 				json.set("messages", createMessages(pseudoFimSystemPrompt, pseudoFimUserPrompt));

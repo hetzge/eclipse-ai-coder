@@ -31,7 +31,12 @@ public enum AiCoderImageKey {
 	DIFF_NEW_ICON,
 	DIFF_OLD_ICON,
 	DIFF_LINE_ICON,
-	DIFF_CHAR_ICON;
+	DIFF_CHAR_ICON,
+	EXPAND_ICON,
+	COLLAPSE_ICON,
+	RERANK_ICON,
+	MULTILINE_ICON,
+	VIEWPORT_ICON;
 
 	static void initializeImages(ImageRegistry registry) {
 		try {
@@ -46,7 +51,7 @@ public enum AiCoderImageKey {
 			registerImage(registry, AiCoderImageKey.COPY_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/etool16/copy_edit.svg").toURL()));
 			registerImage(registry, AiCoderImageKey.BEFORE_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.jdt.ui/icons/full/etool16/shift_l_edit.svg").toURL()));
 			registerImage(registry, AiCoderImageKey.AFTER_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.jdt.ui/icons/full/etool16/shift_r_edit.svg").toURL()));
-			registerImage(registry, AiCoderImageKey.PIN_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/ovr16/pinned_ovr@2x.svg").toURL()));
+			registerImage(registry, AiCoderImageKey.PIN_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/etool16/pin_editor.svg").toURL()));
 			registerImage(registry, AiCoderImageKey.IMPORT_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/etool16/import_wiz.svg").toURL()));
 			registerImage(registry, AiCoderImageKey.BLACKLIST_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/elcl16/trash.svg").toURL()));
 			registerImage(registry, AiCoderImageKey.FILL_IN_MIDDLE_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui.workbench.texteditor/icons/full/elcl16/insert_template.svg").toURL()));
@@ -60,6 +65,11 @@ public enum AiCoderImageKey {
 			registerImage(registry, AiCoderImageKey.DIFF_OLD_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.compare/icons/full/elcl16/copycont_r_co.svg").toURL()));
 			registerImage(registry, AiCoderImageKey.DIFF_LINE_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.compare/icons/full/elcl16/syncpane_co.svg").toURL()));
 			registerImage(registry, AiCoderImageKey.DIFF_CHAR_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.compare/icons/full/etool16/ignorews_edit.svg").toURL()));
+			registerImage(registry, AiCoderImageKey.EXPAND_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/elcl16/expandall.svg").toURL()));
+			registerImage(registry, AiCoderImageKey.COLLAPSE_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/elcl16/collapseall.svg").toURL()));
+			registerImage(registry, AiCoderImageKey.RERANK_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.search/icons/full/elcl16/search_sortmatch.svg").toURL()));
+			registerImage(registry, AiCoderImageKey.MULTILINE_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui.workbench.texteditor/icons/full/etool16/wordwrap.svg").toURL()));
+			registerImage(registry, AiCoderImageKey.VIEWPORT_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/etool16/new_fastview.svg").toURL()));
 		} catch (final MalformedURLException exception) {
 			throw new RuntimeException(exception);
 		}

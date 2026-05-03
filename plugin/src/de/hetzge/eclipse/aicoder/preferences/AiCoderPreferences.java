@@ -29,6 +29,8 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String EDIT_MODEL_KEY = "de.hetzge.eclipse.aicoder.edit_model";
 	public static final String NEXT_EDIT_PROVIDER_KEY = "de.hetzge.eclipse.aicoder.next_edit_provider";
 	public static final String NEXT_EDIT_MODEL_KEY = "de.hetzge.eclipse.aicoder.next_edit_model";
+	public static final String RERANK_PROVIDER_KEY = "de.hetzge.eclipse.aicoder.rerank_provider";
+	public static final String RERANK_MODEL_KEY = "de.hetzge.eclipse.aicoder.rerank_model";
 	public static final String ENABLE_MULTILINE_KEY = "de.hetzge.eclipse.aicoder.enable_multiline";
 	public static final String ENABLE_AUTOCOMPLETE_KEY = "de.hetzge.eclipse.aicoder.enable_autocomplete";
 	public static final String ONLY_ON_CHANGE_AUTOCOMPLETE_KEY = "de.hetzge.eclipse.aicoder.only_on_change_autocomplete";
@@ -42,30 +44,33 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String DIFF_MODE_KEY = "de.hetzge.eclipse.aicoder.diff_mode";
 	public static final String CHANGE_CODE_SYSTEM_PROMPT_KEY = "de.hetzge.eclipse.aicoder.change_code_system_prompt";
 	public static final String GENERATE_CODE_SYSTEM_PROMPT_KEY = "de.hetzge.eclipse.aicoder.generate_code_system_prompt";
-	public static final String OPENAI_FIM_TEMPLATE_KEY = "de.hetzge.eclipse.aicoder.openai_fim_template";
+	public static final String FIM_TEMPLATE_KEY = "de.hetzge.eclipse.aicoder.fim_template";
 	public static final String ENABLE_PSEUDO_FIM_KEY = "de.hetzge.eclipse.aicoder.enable_pseduo_fim";
 	public static final String PSEUDO_FIM_SYSTEM_PROMPT_KEY = "de.hetzge.eclipse.aicoder.pseudo_fim_system_prompt";
 	public static final String TIMEOUT_KEY = "de.hetzge.eclipse.aicoder.timeout";
 	public static final String INCEPTIONLABS_API_KEY_KEY = "de.hetzge.eclipse.aicoder.inceptionlabs_api_key";
+	public static final String OPENROUTER_API_KEY_KEY = "de.hetzge.eclipse.aicoder.openrouter_api_key";
 
 	@Override
 	public void initializeDefaultPreferences() {
 		final IPreferenceStore store = getStore();
-		store.setDefault(CODESTRAL_API_KEY_KEY, "");
+		store.setDefault(CODESTRAL_API_KEY_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
 		store.setDefault(OLLAMA_BASE_URL_KEY, "http://localhost:11434");
 		store.setDefault(OPENAI_BASE_URL_KEY, "https://api.openai.com");
-		store.setDefault(OPENAI_API_KEY_KEY, "");
+		store.setDefault(OPENAI_API_KEY_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
 		store.setDefault(FILL_IN_MIDDLE_PROVIDER_KEY, LlmProvider.NONE.name());
-		store.setDefault(FILL_IN_MIDDLE_MODEL_KEY, "");
+		store.setDefault(FILL_IN_MIDDLE_MODEL_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
 		store.setDefault(QUICK_FIX_PROVIDER_KEY, LlmProvider.NONE.name());
-		store.setDefault(QUICK_FIX_MODEL_KEY, "");
+		store.setDefault(QUICK_FIX_MODEL_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
 		store.setDefault(QUICK_FIX_PROMPT_KEY, "Fix/complete the code");
 		store.setDefault(GENERATE_PROVIDER_KEY, LlmProvider.NONE.name());
-		store.setDefault(GENERATE_MODEL_KEY, "");
+		store.setDefault(GENERATE_MODEL_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
 		store.setDefault(EDIT_PROVIDER_KEY, LlmProvider.NONE.name());
-		store.setDefault(EDIT_MODEL_KEY, "");
+		store.setDefault(EDIT_MODEL_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
 		store.setDefault(NEXT_EDIT_PROVIDER_KEY, LlmProvider.NONE.name());
-		store.setDefault(NEXT_EDIT_MODEL_KEY, "");
+		store.setDefault(NEXT_EDIT_MODEL_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
+		store.setDefault(RERANK_PROVIDER_KEY, LlmProvider.NONE.name());
+		store.setDefault(RERANK_MODEL_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
 		store.setDefault(ENABLE_MULTILINE_KEY, true);
 		store.setDefault(ENABLE_AUTOCOMPLETE_KEY, true);
 		store.setDefault(ONLY_ON_CHANGE_AUTOCOMPLETE_KEY, true);
@@ -74,16 +79,17 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(MAX_TOKENS_KEY, 1024);
 		store.setDefault(IGNORE_JRE_CLASSES_KEY, true);
 		store.setDefault(DEBOUNCE_IN_MS_KEY, 400);
-		store.setDefault(MCP_SERVER_CONFIGURATIONS_KEY, "{}");
+		store.setDefault(MCP_SERVER_CONFIGURATIONS_KEY, Json.object().toString());
 		store.setDefault(CLEANUP_CODE_ON_APPLY_KEY, true);
 		store.setDefault(DIFF_MODE_KEY, DiffMode.LINE.name());
 		store.setDefault(CHANGE_CODE_SYSTEM_PROMPT_KEY, LlmPromptTemplates.changeCodeSystemPrompt());
 		store.setDefault(GENERATE_CODE_SYSTEM_PROMPT_KEY, LlmPromptTemplates.generateCodeSystemPrompt());
-		store.setDefault(OPENAI_FIM_TEMPLATE_KEY, "<|fim_prefix|>{{prefix}}<|fim_suffix|>{{suffix}}<|fim_middle|>");
+		store.setDefault(FIM_TEMPLATE_KEY, "<|fim_prefix|>{{prefix}}<|fim_suffix|>{{suffix}}<|fim_middle|>");
 		store.setDefault(ENABLE_PSEUDO_FIM_KEY, false);
 		store.setDefault(PSEUDO_FIM_SYSTEM_PROMPT_KEY, LlmPromptTemplates.pseudoFimCodeSystemPrompt());
 		store.setDefault(TIMEOUT_KEY, Duration.ofMinutes(5).toMillis());
-		store.setDefault(INCEPTIONLABS_API_KEY_KEY, "");
+		store.setDefault(INCEPTIONLABS_API_KEY_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
+		store.setDefault(OPENROUTER_API_KEY_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
 	}
 
 	public static String getCodestralApiKey() {
@@ -150,6 +156,19 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static void setNextEditLlmModelOption(LlmOption llmModelOption) {
 		getStore().setValue(NEXT_EDIT_PROVIDER_KEY, llmModelOption.provider().name());
 		getStore().setValue(NEXT_EDIT_MODEL_KEY, llmModelOption.modelKey());
+	}
+
+	public static LlmProvider getRerankProvider() {
+		return LlmProvider.valueOf(getStore().getString(RERANK_PROVIDER_KEY));
+	}
+
+	public static String getRerankModel() {
+		return getStore().getString(RERANK_MODEL_KEY);
+	}
+
+	public static void setRerankLlmModelOption(LlmOption llmModelOption) {
+		getStore().setValue(RERANK_PROVIDER_KEY, llmModelOption.provider().name());
+		getStore().setValue(RERANK_MODEL_KEY, llmModelOption.modelKey());
 	}
 
 	public static boolean isMultilineEnabled() {
@@ -228,8 +247,8 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		return getStore().getString(GENERATE_CODE_SYSTEM_PROMPT_KEY);
 	}
 
-	public static String getOpenAiFimTemplate() {
-		return getStore().getString(OPENAI_FIM_TEMPLATE_KEY);
+	public static String getFimTemplate() {
+		return getStore().getString(FIM_TEMPLATE_KEY);
 	}
 
 	public static boolean isEnablePseduoFim() {
@@ -246,5 +265,9 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 
 	public static String getInceptionLabsApiKey() {
 		return getStore().getString(INCEPTIONLABS_API_KEY_KEY);
+	}
+
+	public static String getOpenRouterApiKey() {
+		return getStore().getString(OPENROUTER_API_KEY_KEY);
 	}
 }

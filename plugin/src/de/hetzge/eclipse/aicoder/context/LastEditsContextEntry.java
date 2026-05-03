@@ -25,6 +25,7 @@ import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
 
 public class LastEditsContextEntry extends ContextEntry {
 
+	public static final String LABEL = "Last Edits";
 	public static final String PREFIX = "LAST_EDITS";
 	private static final int CONTEXT_PADDING_LINE_COUNT = 10; // TODO preferences
 
@@ -37,7 +38,7 @@ public class LastEditsContextEntry extends ContextEntry {
 
 	@Override
 	public String getLabel() {
-		return "Last Edits";
+		return LABEL;
 	}
 
 	@Override
@@ -58,7 +59,7 @@ public class LastEditsContextEntry extends ContextEntry {
 	}
 
 	public static ContextEntryFactory factory() {
-		return new ContextEntryFactory(PREFIX, () -> create());
+		return new ContextEntryFactory(PREFIX, () -> create(), () -> new EmptyContextEntry(PREFIX, LABEL, AiCoderImageKey.BEFORE_ICON));
 	}
 
 	@SuppressWarnings("restriction")
@@ -80,6 +81,9 @@ public class LastEditsContextEntry extends ContextEntry {
 				}
 				final IDocument document = Display.getDefault().syncCall(() -> EclipseUtils.getDocumentForEditor(input)).orElse(null);
 				if (document == null) {
+					continue;
+				}
+				if (offset >= document.getLength()) {
 					continue;
 				}
 				final int line = document.getLineOfOffset(offset);
