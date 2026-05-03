@@ -49,6 +49,10 @@
         id="de.hetzge.eclipse.codestral.commands.dumpOutline"
         name="Dump Outline">
   </command>
+  <command
+        id="de.hetzge.eclipse.codestral.commands.resetCodeViewportMemory"
+        name="Reset Code Viewport Memory">
+  </command>
 	</extension>
 
 	<extension point="org.eclipse.ui.handlers">
@@ -79,6 +83,10 @@
   <handler
         class="de.hetzge.eclipse.aicoder.handler.DumpOutlineHandler"
         commandId="de.hetzge.eclipse.codestral.commands.dumpOutline">
+  </handler>
+  <handler
+        class="de.hetzge.eclipse.aicoder.handler.ResetCodeViewportMemoryHandler"
+        commandId="de.hetzge.eclipse.codestral.commands.resetCodeViewportMemory">
   </handler>
 	</extension>
 

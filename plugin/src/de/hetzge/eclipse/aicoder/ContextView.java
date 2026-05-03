@@ -51,6 +51,7 @@ import org.eclipse.ui.part.DrillDownAdapter;
 import org.eclipse.ui.part.ViewPart;
 
 import de.hetzge.eclipse.aicoder.context.BlacklistedContextEntry;
+import de.hetzge.eclipse.aicoder.context.CodeViewportMemoryContextEntry;
 import de.hetzge.eclipse.aicoder.context.ContextContext;
 import de.hetzge.eclipse.aicoder.context.ContextEntry;
 import de.hetzge.eclipse.aicoder.context.ContextEntryKey;
@@ -58,10 +59,12 @@ import de.hetzge.eclipse.aicoder.context.CustomContextEntry;
 import de.hetzge.eclipse.aicoder.context.CustomContextEntryData;
 import de.hetzge.eclipse.aicoder.context.EmptyContextEntry;
 import de.hetzge.eclipse.aicoder.context.UserContextEntry;
+import de.hetzge.eclipse.aicoder.handler.ResetCodeViewportMemoryHandler;
 import de.hetzge.eclipse.aicoder.handler.ToggleMultilineHandler;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.preferences.ContextPreferencePage;
 import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
+import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 import jakarta.inject.Inject;
 
 public class ContextView extends ViewPart {
@@ -243,6 +246,15 @@ public class ContextView extends ViewPart {
 					}
 				};
 				manager.add(removeAction);
+			} else if (firstEntry instanceof CodeViewportMemoryContextEntry) {
+				final Action resetAction = new Action("Reset") {
+					@Override
+					public void run() {
+						EclipseUtils.executeCommand(ResetCodeViewportMemoryHandler.COMMAND_ID);
+						ContextView.this.viewer.refresh(firstEntry);
+					}
+				};
+				manager.add(resetAction);
 			}
 
 			final Action blacklistAction = new Action(ContextPreferences.isBlacklisted(key) ? "Remove from Blacklist" : "Add to Blacklist") {

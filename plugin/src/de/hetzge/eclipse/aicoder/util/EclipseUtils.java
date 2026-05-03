@@ -9,6 +9,10 @@ import java.nio.file.Path;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.core.commands.ExecutionException;
+import org.eclipse.core.commands.NotEnabledException;
+import org.eclipse.core.commands.NotHandledException;
+import org.eclipse.core.commands.common.NotDefinedException;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
@@ -39,6 +43,7 @@ import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.contexts.IContextService;
+import org.eclipse.ui.handlers.IHandlerService;
 import org.eclipse.ui.ide.FileStoreEditorInput;
 import org.eclipse.ui.part.AbstractMultiEditor;
 import org.eclipse.ui.part.FileEditorInput;
@@ -281,5 +286,13 @@ public class EclipseUtils {
 	public static Optional<IPath> getEclipsePath(ITextEditor editor) {
 		final IFile file = editor.getEditorInput().getAdapter(IFile.class);
 		return Optional.ofNullable(file).map(IFile::getFullPath);
+	}
+
+	public static void executeCommand(String commandId) {
+		try {
+			PlatformUI.getWorkbench().getActiveWorkbenchWindow().getService(IHandlerService.class).executeCommand(commandId, null);
+		} catch (ExecutionException | NotDefinedException | NotEnabledException | NotHandledException exception) {
+			throw new RuntimeException("Failed to run command: " + commandId, exception);
+		}
 	}
 }
