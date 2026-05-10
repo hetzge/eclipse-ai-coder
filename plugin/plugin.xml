@@ -185,6 +185,36 @@
            name="Provider">
      </page>
      <page
+           category="de.hetzge.eclipse.aicoder.preferences.provider"
+           class="de.hetzge.eclipse.aicoder.preferences.OllamaPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.ollama"
+           name="Ollama">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.provider"
+           class="de.hetzge.eclipse.aicoder.preferences.MistralPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.mistral"
+           name="Mistral">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.provider"
+           class="de.hetzge.eclipse.aicoder.preferences.OpenAIPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.openai"
+           name="OpenAI">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.provider"
+           class="de.hetzge.eclipse.aicoder.preferences.InceptionlabsPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.inceptionlabs"
+           name="Inceptionlabs">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.provider"
+           class="de.hetzge.eclipse.aicoder.preferences.OpenRouterPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.openrouter"
+           name="OpenRouter">
+     </page>
+     <page
            category="de.hetzge.eclipse.aicoder.preferences"
            class="de.hetzge.eclipse.aicoder.preferences.McpPreferencePage"
            id="de.hetzge.eclipse.aicoder.preferences.mcp"
