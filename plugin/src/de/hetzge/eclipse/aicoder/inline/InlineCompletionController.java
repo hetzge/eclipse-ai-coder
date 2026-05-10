@@ -625,6 +625,9 @@ public final class InlineCompletionController {
 				this.completion.historyEntry().setContent(this.textViewer.getDocument().get());
 				AiCoderHistoryView.get().ifPresent(AiCoderHistoryView::refresh);
 			}, "Accepted");
+			if (line) {
+				this.setup(this.completion.withSkip(this.completion.lines().get(0))); // TODO
+			}
 		} catch (final BadLocationException exception) {
 			throw new RuntimeException("Failed to accept inline completion", exception);
 		}

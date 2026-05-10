@@ -44,6 +44,69 @@ public record InlineCompletion(
 		return replaceOffset + this.content().length();
 	}
 
+	public InlineCompletion withSkip(String skipContent) {
+		final int skip = skipContent.length();
+		// Advance the model region and widget offset
+		final Region newModelRegion = new Region(
+				this.modelRegion.getOffset() + skip,
+				this.modelRegion.getLength() - skip); // temporary, will be refined
+		final int newWidgetOffset = this.widgetOffset + skip;
+		final String newContent = this.content.substring(skip);
+		final List<String> newLines = newContent.lines().toList();
+		final String newFirstLine = newLines.isEmpty() ? "" : newLines.get(0);
+
+		// Determine the new suffix that still needs to be replaced.
+		// If the typed prefix (skipContent) consumed a prefix of the original
+		// firstLineSuffix, then the remaining suffix shrinks accordingly.
+		final String originalSuffix = this.firstLineSuffix;
+		final boolean typedFromSuffix = skip <= originalSuffix.length()
+				&& originalSuffix.startsWith(skipContent);
+		final String newFirstLineSuffix = typedFromSuffix
+				? originalSuffix.substring(skip)
+				: originalSuffix;
+
+		final String newFirstLineSuffixCharacter = !newFirstLineSuffix.isBlank()
+				? newFirstLineSuffix.substring(0, 1)
+				: null;
+
+		// Recalculate fill prefix / suffix based on the new first line and the
+		// remaining suffix.
+		final String newFirstLineFillPrefix;
+		final String newFirstLineFillSuffix;
+		if (!newFirstLine.isBlank()
+				&& !newFirstLineSuffix.isBlank()
+				&& newFirstLine.contains(newFirstLineSuffix)) {
+			final int idx = newFirstLine.indexOf(newFirstLineSuffix);
+			newFirstLineFillPrefix = newFirstLine.substring(0, idx);
+			newFirstLineFillSuffix = newFirstLine.substring(idx + newFirstLineSuffix.length());
+		} else {
+			newFirstLineFillPrefix = newFirstLine;
+			newFirstLineFillSuffix = "";
+		}
+
+		// Update the model region length to match the remaining suffix.
+		// (The constructor will later use the new firstLineSuffix length to
+		// set the region, but here we just pass the already computed region;
+		// nevertheless we correct the length to avoid inconsistency.)
+		final IRegion finalModelRegion = new Region(
+				newModelRegion.getOffset(),
+				newFirstLineSuffix.length());
+
+		return new InlineCompletion(
+				this.historyEntry,
+				this.widgetLineIndex,
+				finalModelRegion,
+				newWidgetOffset,
+				newContent,
+				newLines,
+				newFirstLineFillPrefix,
+				newFirstLineFillSuffix,
+				newFirstLineSuffix,
+				newFirstLineSuffixCharacter,
+				this.lineSpacing,
+				this.lineHeight);
+	}
+
 	public static InlineCompletion create(AiCoderHistoryEntry historyEntry, IDocument document, int modelOffset, int widgetOffset, int widgetLine, String content, int lineHeight, int defaultLineSpacing) throws BadLocationException {
 		final boolean isMultiline = content.lines().count() > 1;
 		// TODO validate if this is working
