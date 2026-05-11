@@ -93,14 +93,16 @@ public final class LlmUtils {
 				.set("num_ctx", AiCoderPreferences.getOllamaNumCtx()));
 		if (isFillInTheMiddle) {
 			if (!isPseudoFim) {
-				json.set("suffix", suffix);
 				json.at("options").set("stop", createStop(multilineEnabled));
 				final String fimTemplate = AiCoderPreferences.getFimTemplate();
 				if (StringUtils.isNotBlank(fimTemplate)) {
 					json.set("raw", true); // disable ollama's template engine
-					json.set("prompt", JinjaUtils.applyTemplate(AiCoderPreferences.getFimTemplate(), Map.ofEntries(
+					json.set("prompt", JinjaUtils.applyTemplate(fimTemplate, Map.ofEntries(
 							Map.entry("prefix", prompt),
 							Map.entry("suffix", suffix))));
+				} else {
+					json.set("prompt", prompt);
+					json.set("suffix", suffix);
 				}
 			} else {
 				final String pseudoFimSystemPrompt = getPseduoFIMSystemPrompt();
