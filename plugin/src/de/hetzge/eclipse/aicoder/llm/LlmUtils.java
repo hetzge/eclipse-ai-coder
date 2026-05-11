@@ -90,7 +90,7 @@ public final class LlmUtils {
 		json.set("stream", false);
 		json.set("options", Json.object()
 				.set("temperature", 0)
-				.set("num_ctx", 128000));
+				.set("num_ctx", AiCoderPreferences.getOllamaNumCtx()));
 		if (isFillInTheMiddle) {
 			if (!isPseudoFim) {
 				json.set("suffix", suffix);
