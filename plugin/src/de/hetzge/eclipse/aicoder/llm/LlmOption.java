@@ -1,6 +1,7 @@
 package de.hetzge.eclipse.aicoder.llm;
 
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
+import mjson.Json;
 
 public record LlmOption(
 		LlmProvider provider,
@@ -8,6 +9,16 @@ public record LlmOption(
 
 	public String getLabel() {
 		return this.provider.name() + " - " + this.modelKey;
+	}
+
+	public Json toJson() {
+		return Json.object()
+				.set("provider", this.provider.name())
+				.set("modelKey", this.modelKey);
+	}
+
+	public static LlmOption fromJson(Json json) {
+		return new LlmOption(LlmProvider.valueOf(json.at("provider").asString()), json.at("modelKey").asString());
 	}
 
 	public static LlmOption createFillInMiddleModelOptionFromPreferences() {

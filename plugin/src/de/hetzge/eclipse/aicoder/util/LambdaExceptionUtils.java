@@ -72,7 +72,7 @@ public final class LambdaExceptionUtils {
 		};
 	}
 
-	public static <T, E extends Exception>  Predicate<T> rethrowPredicate(Predicate_WithExceptions<T, E> predicate) throws E {
+	public static <T, E extends Exception> Predicate<T> rethrowPredicate(Predicate_WithExceptions<T, E> predicate) throws E {
 		return (t) -> {
 			try {
 				return predicate.test(t);

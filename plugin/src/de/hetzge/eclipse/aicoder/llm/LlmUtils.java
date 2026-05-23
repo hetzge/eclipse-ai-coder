@@ -55,33 +55,47 @@ public final class LlmUtils {
 		return execute(LlmOption.createFillInMiddleModelOptionFromPreferences(), null, prefix, suffix);
 	}
 
+	public static CompletableFuture<LlmResponse> executeAgent(LlmOption llmModelOption, LlmRequest llmRequest) {
+		return execute(llmModelOption, llmRequest);
+	}
+
 	private static CompletableFuture<LlmResponse> execute(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) {
+		final LlmRequest llmRequest = new LlmRequest(List.of(
+				new LlmMessage(LlmRole.SYSTEM, systemPrompt, null, List.of()),
+				new LlmMessage(LlmRole.USER, prompt, null, List.of())),
+				List.of(),
+				prompt,
+				suffix);
+		return execute(llmModelOption, llmRequest);
+	}
+
+	private static CompletableFuture<LlmResponse> execute(LlmOption llmModelOption, LlmRequest llmRequest) {
 		AiCoderActivator.log().log(new Status(IStatus.INFO, AiCoderActivator.PLUGIN_ID, String.format("Executing LLM: %s", llmModelOption)));
 		final LlmProvider provider = llmModelOption.provider();
 		switch (provider) {
 		case NONE:
 			throw new IllegalStateException("No LLM provider selected.");
 		case OLLAMA:
-			return executeOllama(llmModelOption, systemPrompt, prompt, suffix);
+			return executeOllama(llmModelOption, llmRequest);
 		case MISTRAL:
-			return executeMistral(llmModelOption, systemPrompt, prompt, suffix);
+			return executeMistral(llmModelOption, llmRequest);
 		case OPENAI:
 			final String urlString = AiCoderPreferences.getOpenAiBaseUrl();
 			final String openAiApiKey = AiCoderPreferences.getOpenAiApiKey();
-			return executeOpenAi(urlString, openAiApiKey, llmModelOption, systemPrompt, prompt, suffix);
+			return executeOpenAi(urlString, openAiApiKey, llmModelOption, llmRequest);
 		case OPENROUTER:
 			final String openRouterUrlString = OPENROUTER_BASE_URL;
 			final String openRouterApiKey = AiCoderPreferences.getOpenRouterApiKey();
-			return executeOpenAi(openRouterUrlString, openRouterApiKey, llmModelOption, systemPrompt, prompt, suffix);
+			return executeOpenAi(openRouterUrlString, openRouterApiKey, llmModelOption, llmRequest);
 		case INCEPTIONLABS:
-			return executeInceptionLabs(llmModelOption, systemPrompt, prompt, suffix);
+			return executeInceptionLabs(llmModelOption, llmRequest);
 		default:
 			throw new IllegalStateException("Illegal provider: " + provider);
 		}
 	}
 
-	private static CompletableFuture<LlmResponse> executeOllama(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) {
-		final boolean isFillInTheMiddle = suffix != null;
+	private static CompletableFuture<LlmResponse> executeOllama(LlmOption llmModelOption, LlmRequest llmRequest) {
+		final boolean isFillInTheMiddle = llmRequest.suffix() != null;
 		final boolean isPseudoFim = isFillInTheMiddle && AiCoderPreferences.isEnablePseduoFim();
 		final String urlString = AiCoderPreferences.getOllamaBaseUrl();
 		final boolean multilineEnabled = AiCoderPreferences.isMultilineEnabled();
@@ -98,26 +112,36 @@ public final class LlmUtils {
 				if (StringUtils.isNotBlank(fimTemplate)) {
 					json.set("raw", true); // disable ollama's template engine
 					json.set("prompt", JinjaUtils.applyTemplate(fimTemplate, Map.ofEntries(
-							Map.entry("prefix", prompt),
-							Map.entry("suffix", suffix))));
+							Map.entry("prefix", llmRequest.prefix()),
+							Map.entry("suffix", llmRequest.suffix()))));
 				} else {
-					json.set("prompt", prompt);
-					json.set("suffix", suffix);
+					json.set("prompt", llmRequest.prefix());
+					json.set("suffix", llmRequest.suffix());
 				}
 			} else {
 				final String pseudoFimSystemPrompt = getPseduoFIMSystemPrompt();
 				final String pseudoFimUserPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getFimTemplate(), Map.ofEntries(
-						Map.entry("prefix", prompt),
-						Map.entry("suffix", suffix)));
+						Map.entry("prefix", llmRequest.prefix()),
+						Map.entry("suffix", llmRequest.suffix())));
 				json.set("system", pseudoFimSystemPrompt);
 				json.set("prompt", pseudoFimUserPrompt);
 			}
 			json.at("options").set("num_predict", AiCoderPreferences.getMaxTokens());
 		} else {
-			json.set("prompt", prompt);
-			json.set("system", systemPrompt);
+			json.set("tools", llmRequest.toolDefinitions().stream().map(toolDefinition -> toolDefinition.json()).toList());
+			json.set("messages", llmRequest.messages().stream().map(message -> Json.object()
+					.set("role", message.role().name().toLowerCase())
+					.set("content", message.content())
+					.set("tool_name", message.toolCallId())
+					.set("tool_calls", message.toolCallRequest().stream().map(toolCallRequest -> Json.object()
+							.set("id", toolCallRequest.id())
+							.set("type", toolCallRequest.type())
+							.set("function", Json.object()
+									.set("name", toolCallRequest.functionName())
+									.set("arguments", toolCallRequest.arguments())))
+							.toList())));
 		}
-		final URI uri = URI.create(Utils.joinUriParts(List.of(urlString, "/api/generate")));
+		final URI uri = URI.create(Utils.joinUriParts(List.of(urlString, isFillInTheMiddle ? "/api/generate" : "/api/chat")));
 		final long beforeTimestamp = System.currentTimeMillis();
 		final HttpRequest request = HttpRequest.newBuilder()
 				.uri(uri)
@@ -135,16 +159,23 @@ public final class LlmUtils {
 						final String content = responseJson.at("response").asString();
 						final int inputTokens = responseJson.at("prompt_eval_count", 0).asInteger();
 						final int outputTokens = responseJson.at("eval_count", 0).asInteger();
-						return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration, false);
+						final List<LlmToolCallRequest> toolCallRequests = responseJson.has("tool_calls")
+								? responseJson.at("tool_calls").asJsonList().stream().map(toolCallJson -> new LlmToolCallRequest(
+										toolCallJson.at("id").asString(),
+										toolCallJson.at("type").asString(),
+										toolCallJson.at("function").at("name").asString(),
+										toolCallJson.at("function").at("arguments"))).toList()
+								: List.of();
+						return new LlmResponse(llmModelOption, content, responseBody, toolCallRequests, inputTokens, outputTokens, duration, false);
 					} else {
 						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
-						return new LlmResponse(llmModelOption, "", response.body(), 0, 0, duration, true);
+						return new LlmResponse(llmModelOption, "", response.body(), List.of(), 0, 0, duration, true);
 					}
 				});
 	}
 
-	private static CompletableFuture<LlmResponse> executeMistral(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) {
-		final boolean isFillInTheMiddle = suffix != null;
+	private static CompletableFuture<LlmResponse> executeMistral(LlmOption llmModelOption, LlmRequest llmRequest) {
+		final boolean isFillInTheMiddle = llmRequest.suffix() != null;
 		final boolean isPseudoFim = isFillInTheMiddle && AiCoderPreferences.isEnablePseduoFim();
 		final String urlString = CODESTRAL_BASE_URL;
 		final String codestralApiKey = AiCoderPreferences.getCodestralApiKey();
@@ -154,20 +185,21 @@ public final class LlmUtils {
 		json.set("temperature", 0);
 		if (isFillInTheMiddle) {
 			if (!isPseudoFim) {
-				json.set("prompt", prompt);
-				json.set("suffix", suffix);
+				json.set("prompt", llmRequest.prefix());
+				json.set("suffix", llmRequest.suffix());
 				json.set("max_tokens", AiCoderPreferences.getMaxTokens());
 				json.set("stop", createStop(multilineEnabled));
 			} else {
 				final String pseudoFimSystemPrompt = getPseduoFIMSystemPrompt();
 				final String pseudoFimUserPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getFimTemplate(), Map.ofEntries(
-						Map.entry("prefix", prompt),
-						Map.entry("suffix", suffix)));
+						Map.entry("prefix", llmRequest.prefix()),
+						Map.entry("suffix", llmRequest.suffix())));
 				json.set("max_tokens", AiCoderPreferences.getMaxTokens());
 				json.set("messages", createMessages(pseudoFimSystemPrompt, pseudoFimUserPrompt));
 			}
 		} else {
-			json.set("messages", createMessages(systemPrompt, prompt));
+			json.set("tools", llmRequest.toolDefinitions().stream().map(toolDefinition -> toolDefinition.json()).toList());
+			json.set("messages", createMessages(llmRequest.messages()));
 		}
 		final String path = isFillInTheMiddle && !isPseudoFim ? "/v1/fim/completions" : "/v1/chat/completions";
 		final URI uri = URI.create(Utils.joinUriParts(List.of(urlString, path)));
@@ -189,16 +221,23 @@ public final class LlmUtils {
 						final String content = responseJson.at("choices").at(0).at("message").at("content").asString();
 						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
-						return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration, false);
+						final List<LlmToolCallRequest> toolCallRequests = responseJson.at("choices").at(0).at("message").has("tool_calls")
+								? responseJson.at("choices").at(0).at("message").at("tool_calls").asJsonList().stream().map(toolCallJson -> new LlmToolCallRequest(
+										toolCallJson.at("id").asString(),
+										toolCallJson.at("type").asString(),
+										toolCallJson.at("function").at("name").asString(),
+										toolCallJson.at("function").at("arguments"))).toList()
+								: List.of();
+						return new LlmResponse(llmModelOption, content, responseBody, toolCallRequests, inputTokens, outputTokens, duration, false);
 					} else {
 						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
-						return new LlmResponse(llmModelOption, "", response.body(), 0, 0, duration, true);
+						return new LlmResponse(llmModelOption, "", response.body(), List.of(), 0, 0, duration, true);
 					}
 				});
 	}
 
-	private static CompletableFuture<LlmResponse> executeOpenAi(String urlString, String openAiApiKey, LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) {
-		final boolean isFillInTheMiddle = suffix != null;
+	private static CompletableFuture<LlmResponse> executeOpenAi(String urlString, String openAiApiKey, LlmOption llmModelOption, LlmRequest llmRequest) {
+		final boolean isFillInTheMiddle = llmRequest.suffix() != null;
 		final boolean isPseudoFim = isFillInTheMiddle && AiCoderPreferences.isEnablePseduoFim();
 		final String reasoningSuffix = OPENAI_REASONING_SUFFIXES.stream()
 				.filter(it -> llmModelOption.modelKey().endsWith(it))
@@ -216,8 +255,8 @@ public final class LlmUtils {
 		}
 		if (isFillInTheMiddle) {
 			final String fimTemplatePrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getFimTemplate(), Map.ofEntries(
-					Map.entry("prefix", prompt),
-					Map.entry("suffix", suffix)));
+					Map.entry("prefix", llmRequest.prefix()),
+					Map.entry("suffix", llmRequest.suffix())));
 			if (!isPseudoFim) {
 				json.set("prompt", fimTemplatePrompt);
 				json.set("max_tokens", AiCoderPreferences.getMaxTokens());
@@ -227,7 +266,8 @@ public final class LlmUtils {
 				json.set("messages", createMessages(pseudoFimSystemPrompt, fimTemplatePrompt));
 			}
 		} else {
-			json.set("messages", createMessages(systemPrompt, prompt));
+			json.set("tools", llmRequest.toolDefinitions().stream().map(toolDefinition -> toolDefinition.json()).toList());
+			json.set("messages", createMessages(llmRequest.messages()));
 		}
 		final String path = isFillInTheMiddle && !isPseudoFim ? "/v1/completions" : "/v1/chat/completions";
 		final URI uri = URI.create(Utils.joinUriParts(List.of(urlString, path)));
@@ -251,16 +291,23 @@ public final class LlmUtils {
 								: responseJson.at("choices").at(0).at("message").at("content").asString();
 						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
-						return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration, false);
+						final List<LlmToolCallRequest> toolCallRequests = responseJson.at("choices").at(0).at("message").has("tool_calls")
+								? responseJson.at("choices").at(0).at("message").at("tool_calls").asJsonList().stream().map(toolCallJson -> new LlmToolCallRequest(
+										toolCallJson.at("id").asString(),
+										toolCallJson.at("type").asString(),
+										toolCallJson.at("function").at("name").asString(),
+										toolCallJson.at("function").at("arguments"))).toList()
+								: List.of();
+						return new LlmResponse(llmModelOption, content, responseBody, toolCallRequests, inputTokens, outputTokens, duration, false);
 					} else {
 						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
-						return new LlmResponse(llmModelOption, "", response.body(), 0, 0, duration, true);
+						return new LlmResponse(llmModelOption, "", response.body(), List.of(), 0, 0, duration, true);
 					}
 				});
 	}
 
-	private static CompletableFuture<LlmResponse> executeInceptionLabs(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) {
-		final boolean isFillInTheMiddle = suffix != null;
+	private static CompletableFuture<LlmResponse> executeInceptionLabs(LlmOption llmModelOption, LlmRequest llmRequest) {
+		final boolean isFillInTheMiddle = llmRequest.suffix() != null;
 		final boolean isPseudoFim = isFillInTheMiddle && AiCoderPreferences.isEnablePseduoFim();
 		final String urlString = INCEPTIONLABS_BASE_URL;
 		final String inceptionApiKey = AiCoderPreferences.getInceptionLabsApiKey();
@@ -270,19 +317,19 @@ public final class LlmUtils {
 		json.set("temperature", 0);
 		if (isFillInTheMiddle) {
 			if (!isPseudoFim) {
-				json.set("prompt", prompt);
-				json.set("suffix", suffix);
+				json.set("prompt", llmRequest.prefix());
+				json.set("suffix", llmRequest.suffix());
 				json.set("max_tokens", AiCoderPreferences.getMaxTokens());
 				json.set("stop", createStop(multilineEnabled));
 			} else {
 				final String pseudoFimSystemPrompt = getPseduoFIMSystemPrompt();
 				final String pseudoFimUserPrompt = JinjaUtils.applyTemplate(AiCoderPreferences.getFimTemplate(), Map.ofEntries(
-						Map.entry("prefix", prompt),
-						Map.entry("suffix", suffix)));
+						Map.entry("prefix", llmRequest.prefix()),
+						Map.entry("suffix", llmRequest.suffix())));
 				json.set("messages", createMessages(pseudoFimSystemPrompt, pseudoFimUserPrompt));
 			}
 		} else {
-			json.set("messages", createMessages(systemPrompt, prompt));
+			json.set("messages", createMessages(llmRequest.messages()));
 		}
 		final String path = isFillInTheMiddle && !isPseudoFim ? "/v1/fim/completions" : "/v1/chat/completions";
 		final URI uri = URI.create(Utils.joinUriParts(List.of(urlString, path)));
@@ -306,10 +353,17 @@ public final class LlmUtils {
 								: responseJson.at("choices").at(0).at("message").at("content").asString();
 						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
-						return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration, false);
+						final List<LlmToolCallRequest> toolCallRequests = responseJson.at("choices").at(0).at("message").has("tool_calls")
+								? responseJson.at("choices").at(0).at("message").at("tool_calls").asJsonList().stream().map(toolCallJson -> new LlmToolCallRequest(
+										toolCallJson.at("id").asString(),
+										toolCallJson.at("type").asString(),
+										toolCallJson.at("function").at("name").asString(),
+										toolCallJson.at("function").at("arguments"))).toList()
+								: List.of();
+						return new LlmResponse(llmModelOption, content, responseBody, toolCallRequests, inputTokens, outputTokens, duration, false);
 					} else {
 						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
-						return new LlmResponse(llmModelOption, "", response.body(), 0, 0, duration, true);
+						return new LlmResponse(llmModelOption, "", response.body(), List.of(), 0, 0, duration, true);
 					}
 				});
 	}
@@ -347,10 +401,10 @@ public final class LlmUtils {
 						final String content = responseJson.at("choices").at(0).at("message").at("content").asString();
 						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
-						return new LlmResponse(llmModelOption, content, responseBody, inputTokens, outputTokens, duration, false);
+						return new LlmResponse(llmModelOption, content, responseBody, List.of(), inputTokens, outputTokens, duration, false);
 					} else {
 						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
-						return new LlmResponse(llmModelOption, "", response.body(), 0, 0, duration, true);
+						return new LlmResponse(llmModelOption, "", response.body(), List.of(), 0, 0, duration, true);
 					}
 				});
 	}
@@ -376,4 +430,29 @@ public final class LlmUtils {
 						.set("role", "user")
 						.set("content", prompt));
 	}
+
+	private static Json createMessages(List<LlmMessage> messages) {
+		final Json array = Json.array();
+		for (final LlmMessage message : messages) {
+			final Json messageJson = Json.object()
+					.set("role", message.role().name().toLowerCase())
+					.set("content", message.content());
+			if (message.toolCallId() != null) {
+				messageJson.set("tool_call_id", message.toolCallId());
+			}
+			if (message.toolCallRequest() != null && !message.toolCallRequest().isEmpty()) {
+				messageJson.set("tool_calls", Json.array(message.toolCallRequest().stream()
+						.map(toolCallRequest -> Json.object()
+								.set("id", toolCallRequest.id())
+								.set("type", toolCallRequest.type())
+								.set("function", Json.object()
+										.set("name", toolCallRequest.functionName())
+										.set("arguments", toolCallRequest.arguments())))
+						.toArray()));
+			}
+			array.add(messageJson);
+		}
+		return array;
+	}
+
 }

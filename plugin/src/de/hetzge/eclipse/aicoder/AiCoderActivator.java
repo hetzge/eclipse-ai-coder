@@ -14,6 +14,7 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
+import de.hetzge.eclipse.aicoder.agent.AgentTasksState;
 import de.hetzge.eclipse.aicoder.config.ConfigManager;
 import de.hetzge.eclipse.aicoder.content.InstructionStorage;
 import de.hetzge.eclipse.aicoder.mcp.McpClients;
@@ -26,6 +27,7 @@ public class AiCoderActivator extends AbstractUIPlugin {
 	private InstructionStorage instructionStorage;
 	private EditorViewMemory editorViewMemory;
 	private ConfigManager configManager;
+	private AgentTasksState agentTasksState;
 
 	public AiCoderActivator() {
 	}
@@ -37,6 +39,7 @@ public class AiCoderActivator extends AbstractUIPlugin {
 		this.instructionStorage = InstructionStorage.load(getStateLocation());
 		this.editorViewMemory = new EditorViewMemory(1000);
 		this.configManager = new ConfigManager();
+		this.agentTasksState = new AgentTasksState();
 		McpClients.INSTANCE.reload(() -> {
 			log().info("MCP clients loaded: " + McpClients.INSTANCE.getMcpStatusCountsString());
 		});
@@ -70,6 +73,10 @@ public class AiCoderActivator extends AbstractUIPlugin {
 
 	public ConfigManager getConfigManager() {
 		return this.configManager;
+	}
+
+	public AgentTasksState getAgentTasksState() {
+		return this.agentTasksState;
 	}
 
 	public static AiCoderActivator getDefault() {
