@@ -21,36 +21,80 @@ public final class SearchTool extends Tool {
 					.set("properties", Json.object()
 							.set("pattern", Json.object()
 									.set("type", "string")
-									.set("description", "The pattern to search for.")))
+									.set("description", "The pattern to search for."))
+							.set("project", Json.object()
+									.set("type", "string")
+									.set("description", "Project name to search in")))
 					.set("required", Json.array().add("pattern")));
 
-	private final IProject project;
+	private static Json prepareDefinition(List<IProject> projects) {
+		final Json definition = Json.read(DEFINITION.toString());
+		if (projects.size() == 1) {
+			definition.at("parameters").at("properties").delAt("project");
+		} else {
+			definition.at("parameters").at("properties").at("project").set("enum", projects.stream().map(IProject::getName).toList());
+		}
+		return definition;
+	}
 
-	public SearchTool(IProject project) {
-		super(DEFINITION);
-		this.project = project;
+	private final List<IProject> projects;
+
+	public SearchTool(List<IProject> projects) {
+		super(prepareDefinition(projects));
+		this.projects = projects;
+		if (this.projects.isEmpty()) {
+			throw new IllegalArgumentException("At least one project must be provided.");
+		}
 	}
 
 	@Override
 	public String execute(Json arguments) {
 		final String pattern = arguments.at("pattern").asString();
 		try {
-			final List<SearchResult> results = ProjectSearchUtils.search(this.project, SearchOptions.builder(pattern).build(), new NullProgressMonitor());
 			final StringBuilder builder = new StringBuilder();
-			for (final SearchResult result : results) {
-				if (builder.length() > 0) {
-					builder.append('\n');
+			if (arguments.has("project")) {
+				final String projectName = arguments.at("project").asString();
+				final IProject project = this.projects.stream()
+						.filter(it -> it.getName().equals(projectName))
+						.findFirst()
+						.orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectName));
+				final List<SearchResult> results = ProjectSearchUtils.search(project, SearchOptions.builder(pattern).build(), new NullProgressMonitor());
+				for (final SearchResult result : results) {
+					if (builder.length() > 0) {
+						builder.append('\n');
+					}
+					builder
+							.append(result.getFile().getProjectRelativePath().toOSString())
+							.append(':')
+							.append(result.getLineNumber())
+							.append(':')
+							.append(result.getColumnStart())
+							.append(':')
+							.append(result.getColumnEnd())
+							.append(':')
+							.append(result.getLineContent());
 				}
-				builder
-						.append(result.getFile().getFullPath().toString())
-						.append(':')
-						.append(result.getLineNumber())
-						.append(':')
-						.append(result.getColumnStart())
-						.append(':')
-						.append(result.getColumnEnd())
-						.append(':')
-						.append(result.getLineContent());
+			} else {
+				for (final IProject project : this.projects) {
+					final List<SearchResult> results = ProjectSearchUtils.search(project, SearchOptions.builder(pattern).build(), new NullProgressMonitor());
+					for (final SearchResult result : results) {
+						if (builder.length() > 0) {
+							builder.append('\n');
+						}
+						builder
+								.append(project.getName())
+								.append(':')
+								.append(result.getFile().getProjectRelativePath().toOSString())
+								.append(':')
+								.append(result.getLineNumber())
+								.append(':')
+								.append(result.getColumnStart())
+								.append(':')
+								.append(result.getColumnEnd())
+								.append(':')
+								.append(result.getLineContent());
+					}
+				}
 			}
 			return builder.toString();
 		} catch (final Exception exception) {

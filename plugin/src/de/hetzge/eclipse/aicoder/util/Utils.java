@@ -4,6 +4,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -113,5 +115,21 @@ public final class Utils {
 			return true;
 		}
 		return FileSystems.getDefault().getPathMatcher("glob:" + glob).matches(path);
+	}
+
+	public static String formatRelativeTime(Instant date) {
+		final long diffInSeconds = Duration.between(date, Instant.now()).getSeconds();
+		if (diffInSeconds < 60) {
+			return diffInSeconds + " seconds ago";
+		} else if (diffInSeconds < 3600) {
+			final long minutes = diffInSeconds / 60;
+			return minutes + " minute" + (minutes != 1 ? "s" : "") + " ago";
+		} else if (diffInSeconds < 86400) {
+			final long hours = diffInSeconds / 3600;
+			return hours + " hour" + (hours != 1 ? "s" : "") + " ago";
+		} else {
+			final long days = diffInSeconds / 86400;
+			return days + " day" + (days != 1 ? "s" : "") + " ago";
+		}
 	}
 }

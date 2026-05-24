@@ -6,14 +6,19 @@ import java.util.List;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IProject;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.CompletionMode;
+import de.hetzge.eclipse.aicoder.agent.AgentRequest;
+import de.hetzge.eclipse.aicoder.base.TextSelection;
 import de.hetzge.eclipse.aicoder.content.EditInstruction;
 import de.hetzge.eclipse.aicoder.content.InstructionStorage;
 import de.hetzge.eclipse.aicoder.content.InstructionUtils;
-import de.hetzge.eclipse.aicoder.inline.InlineCompletionController;
 import de.hetzge.eclipse.aicoder.inline.InstructionPopupDialog;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
@@ -26,14 +31,29 @@ public class TriggerInstructionHandler extends AbstractHandler {
 		final ITextEditor textEditor = EclipseUtils.getActiveTextEditor().orElseThrow(() -> new ExecutionException("No active text editor"));
 		final List<EditInstruction> instructions = InstructionUtils.resolve(EclipseUtils.getPath(textEditor).orElse(null));
 		final EditInstruction lastInstruction = instructionStorage.getLastInstruction();
-		final InstructionPopupDialog instructionPopupDialog = new InstructionPopupDialog(Display.getDefault().getActiveShell(), instructions, lastInstruction.content(), (instruction, llmModelOption) -> {
+		final CompletionMode mode = CompletionMode.getMode(EclipseUtils.getTextViewer(textEditor), "dummy", true); // TODO !!!!!!!!!!!!!
+		final InstructionPopupDialog instructionPopupDialog = new InstructionPopupDialog(Display.getDefault().getActiveShell(), mode, instructions, lastInstruction.content(), (instruction, llmModelOption) -> {
 			try {
 				instructionStorage.addEditInstruction(instruction.content());
 			} catch (final IOException exception) {
 				AiCoderActivator.log().error("Failed to store instruction.", exception);
 			}
-			AiCoderPreferences.setEditLlmModelOption(llmModelOption);
-			InlineCompletionController.setup(textEditor).trigger(instruction.content());
+			AiCoderPreferences.setLlmModelOption(mode, llmModelOption);
+
+			// TODO
+//			InlineCompletionController.setup(textEditor).trigger(instruction.content());
+
+			if (EclipseUtils.getActiveTextEditor().get().getEditorInput() instanceof final IFileEditorInput fileEditorInput) {
+				try {
+					final IFile file = fileEditorInput.getFile();
+					final IProject project = file.getProject();
+					final TextSelection textSelection = TextSelection.fromTextEditor(textEditor).orElseThrow(() -> new ExecutionException("No text selection"));
+					final AgentRequest agentRequest = new AgentRequest(List.of(project), llmModelOption, textSelection, instruction.content());
+					AiCoderActivator.getDefault().getAgentService().execute(agentRequest);
+				} catch (final IOException | ExecutionException e) {
+					e.printStackTrace(); // TODO
+				}
+			}
 		}, () -> textEditor.setFocus());
 		instructionPopupDialog.open();
 		return null;

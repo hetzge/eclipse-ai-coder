@@ -1,10 +1,8 @@
-package de.hetzge.eclipse.aicoder;
+package de.hetzge.eclipse.aicoder.copy;
 
 import org.eclipse.core.runtime.ILog;
-import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
-import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.ImageRegistry;
@@ -16,7 +14,6 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
-import de.hetzge.eclipse.aicoder.agent.AgentService;
 import de.hetzge.eclipse.aicoder.agent.AgentTasksState;
 import de.hetzge.eclipse.aicoder.config.ConfigManager;
 import de.hetzge.eclipse.aicoder.content.InstructionStorage;
@@ -31,7 +28,6 @@ public class AiCoderActivator extends AbstractUIPlugin {
 	private EditorViewMemory editorViewMemory;
 	private ConfigManager configManager;
 	private AgentTasksState agentTasksState;
-	private AgentService agentService;
 
 	public AiCoderActivator() {
 	}
@@ -44,20 +40,6 @@ public class AiCoderActivator extends AbstractUIPlugin {
 		this.editorViewMemory = new EditorViewMemory(1000);
 		this.configManager = new ConfigManager();
 		this.agentTasksState = new AgentTasksState();
-		final Job loadAgentTasksJob = new Job("Load agent tasks") {
-			@Override
-			protected IStatus run(IProgressMonitor monitor) {
-				try {
-					AiCoderActivator.getDefault().getAgentTasksState().load();
-					return Status.OK_STATUS;
-				} catch (final Exception exception) {
-					return new Status(IStatus.ERROR, PLUGIN_ID, "Failed to load agent tasks", exception);
-				}
-			}
-		};
-		loadAgentTasksJob.schedule();
-		loadAgentTasksJob.join();
-		this.agentService = new AgentService();
 		McpClients.INSTANCE.reload(() -> {
 			log().info("MCP clients loaded: " + McpClients.INSTANCE.getMcpStatusCountsString());
 		});
@@ -95,10 +77,6 @@ public class AiCoderActivator extends AbstractUIPlugin {
 
 	public AgentTasksState getAgentTasksState() {
 		return this.agentTasksState;
-	}
-
-	public AgentService getAgentService() {
-		return this.agentService;
 	}
 
 	public static AiCoderActivator getDefault() {

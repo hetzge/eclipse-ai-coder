@@ -45,6 +45,7 @@ public class LlmPreferencePage extends FieldEditorPreferencePage implements IWor
 		createModelGroup("Edit LLM", AiCoderPreferences.EDIT_PROVIDER_KEY, AiCoderPreferences.EDIT_MODEL_KEY);
 		createModelGroup("Next edit LLM", AiCoderPreferences.NEXT_EDIT_PROVIDER_KEY, AiCoderPreferences.NEXT_EDIT_MODEL_KEY);
 		createModelGroup("Rerank LLM", AiCoderPreferences.RERANK_PROVIDER_KEY, AiCoderPreferences.RERANK_MODEL_KEY);
+		createModelGroup("Agent LLM", AiCoderPreferences.AGENT_PROVIDER_KEY, AiCoderPreferences.AGENT_MODEL_KEY);
 	}
 
 	private void createModelGroup(String groupText, String providerKey, String modelKey) {

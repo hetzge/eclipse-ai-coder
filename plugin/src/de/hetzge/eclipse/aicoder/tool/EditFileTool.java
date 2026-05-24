@@ -4,6 +4,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Optional;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
@@ -23,6 +25,9 @@ public final class EditFileTool extends Tool {
 			.set("parameters", Json.object()
 					.set("type", "object")
 					.set("properties", Json.object()
+							.set("project", Json.object()
+									.set("type", "string")
+									.set("description", "Project name to edit the file in"))
 							.set("path", Json.object()
 									.set("type", "string")
 									.set("description", "Local file path (relative to project root)."))
@@ -32,13 +37,26 @@ public final class EditFileTool extends Tool {
 							.set("new_text", Json.object()
 									.set("type", "string")
 									.set("description", "The new text to insert in place of old_text.")))
-					.set("required", Json.array().add("path").add("old_text").add("new_text")));
+					.set("required", Json.array().add("project").add("path").add("old_text").add("new_text")));
 
-	private final IProject project;
+	private static Json prepareDefinition(List<IProject> projects) {
+		final Json definition = Json.read(DEFINITION.toString());
+		if (projects.size() == 1) {
+			definition.at("parameters").at("properties").delAt("project");
+		} else {
+			definition.at("parameters").at("properties").at("project").set("enum", projects.stream().map(IProject::getName).toList());
+		}
+		return definition;
+	}
 
-	public EditFileTool(IProject project) {
-		super(DEFINITION);
-		this.project = project;
+	private final List<IProject> projects;
+
+	public EditFileTool(List<IProject> projects) {
+		super(prepareDefinition(projects));
+		this.projects = projects;
+		if (this.projects.isEmpty()) {
+			throw new IllegalArgumentException("At least one project must be provided.");
+		}
 	}
 
 	@Override
@@ -46,6 +64,13 @@ public final class EditFileTool extends Tool {
 		final String pathArg = arguments.at("path").asString();
 		final String oldText = arguments.at("old_text").asString();
 		final String newText = arguments.at("new_text").asString();
+		final Optional<IProject> projectOptional = arguments.has("project")
+				? this.projects.stream().filter(it -> it.getName().equals(arguments.at("project").asString())).findFirst()
+				: this.projects.size() == 1 ? Optional.of(this.projects.get(0)) : Optional.empty();
+		if (projectOptional.isEmpty()) {
+			return "Error: Project not found: " + arguments.at("project").asString() + ". Available projects: " + this.projects.stream().map(IProject::getName).toList();
+		}
+		final IProject project = projectOptional.get();
 
 		if (pathArg == null || pathArg.isBlank()) {
 			return "Error: path argument is required.";
@@ -59,7 +84,7 @@ public final class EditFileTool extends Tool {
 
 		final IFile file;
 		try {
-			final IResource resource = this.project.findMember(IPath.fromOSString(pathArg));
+			final IResource resource = project.findMember(IPath.fromOSString(pathArg));
 			if (resource == null || !resource.exists() || !(resource instanceof IFile)) {
 				return "Error: File not found or not a file: " + pathArg;
 			}

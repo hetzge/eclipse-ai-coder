@@ -1,8 +1,11 @@
 package de.hetzge.eclipse.aicoder.tool;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.List;
+import java.util.Optional;
 
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IProject;
@@ -20,6 +23,9 @@ public final class ListFilesTool extends Tool {
 			.set("parameters", Json.object()
 					.set("type", "object")
 					.set("properties", Json.object()
+							.set("project", Json.object()
+									.set("type", "string")
+									.set("description", "Project name to list files from"))
 							.set("path", Json.object()
 									.set("type", "string")
 									.set("description", "The path to list files from. Default: project root."))
@@ -28,19 +34,56 @@ public final class ListFilesTool extends Tool {
 									.set("description", "The pattern to search for in file names. Default: empty string."))
 							.set("max_results", Json.object()
 									.set("type", "integer")
-									.set("description", "The maximum number of results to return. Default: 100."))
+									.set("description", "The maximum number of results to return. Default: 100."))));
 
-					));
+	private static Json prepareDefinition(List<IProject> projects) {
+		final Json definition = Json.read(DEFINITION.toString());
+		if (projects.size() == 1) {
+			definition.at("parameters").at("properties").delAt("project");
+		} else {
+			definition.at("parameters").at("properties").at("project").set("enum", projects.stream().map(IProject::getName).toList());
+		}
+		return definition;
+	}
 
-	private final IProject project;
+	private final List<IProject> projects;
 
-	public ListFilesTool(IProject project) {
-		super(DEFINITION);
-		this.project = project;
+	public ListFilesTool(List<IProject> projects) {
+		super(prepareDefinition(projects));
+		this.projects = projects;
+		if (this.projects.isEmpty()) {
+			throw new IllegalArgumentException("At least one project must be provided.");
+		}
 	}
 
 	@Override
 	public String execute(Json arguments) {
+		final StringBuilder sb = new StringBuilder();
+		if (arguments.has("project")) {
+			final String projectName = arguments.at("project").asString();
+			final Optional<IProject> projectOptional = this.projects.stream()
+					.filter(it -> it.getName().equals(projectName))
+					.findFirst();
+			if (projectOptional.isEmpty()) {
+				return "Error: Project not found: " + projectName + ". Available projects: " + this.projects.stream().map(IProject::getName).toList();
+			}
+			final IProject project = projectOptional.get();
+			sb.append(execute(project, arguments));
+		} else {
+			for (final IProject project : this.projects) {
+				if (sb.length() > 0) {
+					sb.append("\n");
+				}
+				sb.append("Project: ").append(project.getName()).append("\n");
+				for (final String line : execute(project, arguments).lines().toList()) {
+					sb.append("  ").append(line).append("\n");
+				}
+			}
+		}
+		return sb.toString();
+	}
+
+	private String execute(IProject project, Json arguments) {
 		final String resolvedPath = arguments.has("path") ? arguments.at("path").asString() : "";
 		final String resolvedSearchPattern = arguments.has("search_pattern") ? arguments.at("search_pattern").asString() : "";
 		final int resolvedMaxResults = arguments.has("max_results") ? arguments.at("max_results").asInteger() : 100;
@@ -48,8 +91,8 @@ public final class ListFilesTool extends Tool {
 		if (!resolvedSearchPattern.isBlank()) {
 			final String patternLower = resolvedSearchPattern.toLowerCase();
 			final List<IResource> matches = new ArrayList<>();
-			final java.util.Deque<IContainer> stack = new java.util.ArrayDeque<>();
-			stack.push(this.project);
+			final Deque<IContainer> stack = new ArrayDeque<>();
+			stack.push(project);
 			while (!stack.isEmpty() && matches.size() < resolvedMaxResults) {
 				final IContainer current = stack.pop();
 				try {
@@ -76,16 +119,17 @@ public final class ListFilesTool extends Tool {
 					sb.append("\n");
 				}
 				final IResource member = matches.get(i);
-				sb.append(member instanceof IContainer ? "[DIR] " : "[FILE] ").append(member.getProjectRelativePath().toPortableString());
+				sb.append(member instanceof IContainer ? "[DIR] " : "[FILE] ")
+						.append(member.getProjectRelativePath().toPortableString());
 			}
 			return sb.toString();
 		}
 
 		IContainer container;
 		if (resolvedPath.isEmpty()) {
-			container = this.project;
+			container = project;
 		} else {
-			final IResource resource = this.project.findMember(IPath.fromOSString(resolvedPath));
+			final IResource resource = project.findMember(IPath.fromOSString(resolvedPath));
 			if (resource == null || !resource.exists()) {
 				return "Error: Path not found: " + resolvedPath;
 			}

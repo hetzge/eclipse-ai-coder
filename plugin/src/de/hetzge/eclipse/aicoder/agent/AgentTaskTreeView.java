@@ -1,14 +1,27 @@
 package de.hetzge.eclipse.aicoder.agent;
 
+import java.util.List;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ILabelProviderListener;
 import org.eclipse.jface.viewers.ITreeContentProvider;
+import org.eclipse.jface.viewers.ITreeSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.part.ViewPart;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.AiCoderImageKey;
+import de.hetzge.eclipse.aicoder.util.Utils;
 
 public final class AgentTaskTreeView extends ViewPart {
 
@@ -22,15 +35,33 @@ public final class AgentTaskTreeView extends ViewPart {
 	@Override
 	public void createPartControl(Composite parent) {
 		this.treeViewer = new TreeViewer(parent);
+		this.treeViewer.setUseHashlookup(true);
 		this.treeViewer.setContentProvider(new AgentTaskContentProvider());
 		this.treeViewer.setLabelProvider(new AgentTaskLabelProvider());
 		this.treeViewer.addDoubleClickListener(event -> {
 			final Object selected = event.getSelection();
-			if (selected instanceof final AgentTask agentTask) {
-				// TODO open editor
+			if (selected instanceof final ITreeSelection treeSelection) {
+				if (treeSelection.getFirstElement() instanceof final AgentTask agentTask) {
+					try {
+						PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().openEditor(new AgentTrajectoryEditorInput(agentTask), AgentTrajectoryEditor.ID);
+					} catch (final PartInitException exception) {
+						AiCoderActivator.log().error("Failed to open agent task editor", exception);
+						ErrorDialog.openError(getSite().getShell(), "Error", "Failed to open agent task editor", Status.error(exception.getMessage(), exception));
+					}
+				}
 			}
 		});
 		AiCoderActivator.getDefault().getAgentTasksState().addListener(this.agentTasksStateListener);
+		new Job("Refresh agent task tree") {
+			@Override
+			protected IStatus run(IProgressMonitor monitor) {
+				if (!AgentTaskTreeView.this.treeViewer.getTree().isDisposed()) {
+					refresh();
+					this.schedule(1000 * 60);
+				}
+				return Status.OK_STATUS;
+			}
+		}.schedule();
 	}
 
 	@Override
@@ -43,12 +74,18 @@ public final class AgentTaskTreeView extends ViewPart {
 		AiCoderActivator.getDefault().getAgentTasksState().removeListener(this.agentTasksStateListener);
 	}
 
+	private void refresh() {
+		Display.getDefault().asyncExec(() -> {
+			AgentTaskTreeView.this.treeViewer.setInput(List.of());
+			AgentTaskTreeView.this.treeViewer.refresh();
+		});
+	}
+
 	private class AgentTasksStateListener implements AgentTasksState.AgentTasksStateListener {
 
 		@Override
-		public void onAgentTasksChanged() {
-			AgentTaskTreeView.this.treeViewer.setInput(null);
-			AgentTaskTreeView.this.treeViewer.expandAll();
+		public void onAgentTasksChanged(AgentTask task) {
+			refresh();
 		}
 	}
 
@@ -96,15 +133,25 @@ public final class AgentTaskTreeView extends ViewPart {
 
 		@Override
 		public Image getImage(Object element) {
+			if (element instanceof final AgentTask agentTask) {
+				if (agentTask.getStatus() == AgentStatus.RUNNING) {
+					return AiCoderActivator.getImage(AiCoderImageKey.RUN_ICON);
+				} else if (agentTask.getStatus() == AgentStatus.ERROR) {
+					return AiCoderActivator.getImage(AiCoderImageKey.REJECT_ICON);
+				} else if (agentTask.getStatus() == AgentStatus.SUCCESS) {
+					return AiCoderActivator.getImage(AiCoderImageKey.ACCEPT_ICON);
+				}
+			}
 			return null;
 		}
 
 		@Override
 		public String getText(Object element) {
 			if (element instanceof final AgentTask agentTask) {
-				return agentTask.title();
+				return String.format("[%s] %s - %s", agentTask.getStatus(), agentTask.getTitle(), Utils.formatRelativeTime(agentTask.getCreationTime()));
 			}
 			return null;
 		}
+
 	}
 }

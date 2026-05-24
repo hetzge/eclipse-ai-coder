@@ -1,4 +1,4 @@
-package de.hetzge.eclipse.aicoder;
+package de.hetzge.eclipse.aicoder.base;
 
 import java.time.Duration;
 import java.util.function.Supplier;

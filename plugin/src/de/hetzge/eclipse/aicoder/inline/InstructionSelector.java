@@ -24,7 +24,8 @@ import org.eclipse.swt.widgets.Text;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
-import de.hetzge.eclipse.aicoder.Debouncer;
+import de.hetzge.eclipse.aicoder.CompletionMode;
+import de.hetzge.eclipse.aicoder.base.Debouncer;
 import de.hetzge.eclipse.aicoder.content.EditInstruction;
 import de.hetzge.eclipse.aicoder.llm.LlmOption;
 import de.hetzge.eclipse.aicoder.llm.LlmSelector;
@@ -40,7 +41,7 @@ public class InstructionSelector extends Composite {
 	private Button applyButton;
 	private LlmSelector llmSelector;
 
-	public InstructionSelector(Composite parent, List<EditInstruction> instructions, String initial, BiConsumer<EditInstruction, LlmOption> onSelect) {
+	public InstructionSelector(Composite parent, CompletionMode mode, List<EditInstruction> instructions, String initial, BiConsumer<EditInstruction, LlmOption> onSelect) {
 		super(parent, SWT.NONE);
 		this.onSelect = onSelect;
 		this.instructions = instructions;
@@ -117,7 +118,7 @@ public class InstructionSelector extends Composite {
 				event.doit = false;
 			}
 		}));
-		this.llmSelector = new LlmSelector(this, SWT.NONE, LlmOption.createEditModelOptionFromPreferences(), () -> {
+		this.llmSelector = new LlmSelector(this, SWT.NONE, LlmOption.createModelOptionFromPreferences(mode), () -> {
 			updateApplyButton();
 		});
 		this.llmSelector.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.TOP).grab(true, false).create());

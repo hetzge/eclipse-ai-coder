@@ -35,6 +35,13 @@ public final class LlmSelector extends Composite {
 	}
 
 	public Optional<LlmOption> getOption() {
+		if (!hasValidOption()) {
+			return Optional.empty();
+		}
 		return Optional.ofNullable(this.llmModelOption);
+	}
+
+	public boolean hasValidOption() {
+		return this.llmModelOption != null && this.llmModelOption.provider() != LlmProvider.NONE;
 	}
 }

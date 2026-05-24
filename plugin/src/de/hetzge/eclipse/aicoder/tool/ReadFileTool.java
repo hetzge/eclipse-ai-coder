@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Optional;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
@@ -24,6 +25,9 @@ public final class ReadFileTool extends Tool {
 			.set("parameters", Json.object()
 					.set("type", "object")
 					.set("properties", Json.object()
+							.set("project", Json.object()
+									.set("type", "string")
+									.set("description", "Project name to read the file from"))
 							.set("path", Json.object()
 									.set("type", "string")
 									.set("description", "Local file path (relative to project root)."))
@@ -42,27 +46,50 @@ public final class ReadFileTool extends Tool {
 									.set("type", "boolean")
 									.set("description", "Whether to prepend each line with its line number (e.g., '42: '). Ignored if byte_offset is set. Default: false")
 									.set("default", false)))
-					.set("required", Json.array().add("source")));
+					.set("required", Json.array().add("path")));
 
-	private final IProject project;
+	private static Json prepareDefinition(List<IProject> projects) {
+		final Json definition = Json.read(DEFINITION.toString());
+		if (projects.size() == 1) {
+			definition.at("parameters").at("properties").delAt("project");
+		} else {
+			definition.at("parameters").at("properties").at("project").set("enum", projects.stream().map(IProject::getName).toList());
+		}
+		return definition;
+	}
 
-	public ReadFileTool(IProject project) {
-		super(DEFINITION);
-		this.project = project;
+	private final List<IProject> projects;
+
+	public ReadFileTool(List<IProject> projects) {
+		super(prepareDefinition(projects));
+		this.projects = projects;
+		if (this.projects.isEmpty()) {
+			throw new IllegalArgumentException("At least one project must be provided.");
+		}
 	}
 
 	@Override
 	public String execute(Json arguments) {
-		final String source = arguments.at("source").asString();
+		final String pathArg = arguments.at("path").asString();
 		final int startLine = arguments.has("start_line") ? arguments.at("start_line").asInteger() : 1;
 		final Integer endLine = arguments.has("end_line") && !arguments.at("end_line").isNull() ? arguments.at("end_line").asInteger() : null;
 		final int maxLines = arguments.has("max_lines") ? arguments.at("max_lines").asInteger() : 2000;
 		final boolean includeLineNumbers = arguments.has("include_line_numbers") && arguments.at("include_line_numbers").asBoolean();
+		final Optional<IProject> projectOptional = arguments.has("project")
+				? this.projects.stream().filter(it -> it.getName().equals(arguments.at("project").asString())).findFirst()
+				: this.projects.size() == 1 ? Optional.of(this.projects.get(0)) : Optional.empty();
+		if (projectOptional.isEmpty()) {
+			return "Error: Project not found: " + arguments.at("project").asString() + ". Available projects: " + this.projects.stream().map(IProject::getName).toList();
+		}
+		final IProject project = projectOptional.get();
+
 		final String content;
 		try {
-			content = readFile(source, StandardCharsets.UTF_8);
+			content = readFile(project, pathArg, StandardCharsets.UTF_8);
+		} catch (final FileNotFoundException exception) {
+			return "Error: File not found: " + pathArg;
 		} catch (final Exception exception) {
-			AiCoderActivator.log().error("Error reading file: " + source, exception);
+			AiCoderActivator.log().error("Error reading file: " + pathArg, exception);
 			return "Error reading file: " + exception.getMessage();
 		}
 		final List<String> lines = content.lines().toList();
@@ -84,9 +111,9 @@ public final class ReadFileTool extends Tool {
 		return builder.toString();
 	}
 
-	private String readFile(String source, Charset charset) throws IOException {
+	private String readFile(IProject project, String source, Charset charset) throws IOException {
 		final IPath path = IPath.fromOSString(source);
-		final IResource resource = path.isAbsolute() ? this.project.getWorkspace().getRoot().findMember(path) : this.project.getFile(source);
+		final IResource resource = path.isAbsolute() ? project.getWorkspace().getRoot().findMember(path) : project.getFile(source);
 		if (resource == null || !resource.exists()) {
 			throw new FileNotFoundException(source);
 		}

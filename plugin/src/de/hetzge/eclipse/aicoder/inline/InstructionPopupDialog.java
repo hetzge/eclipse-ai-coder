@@ -14,19 +14,22 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Shell;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.CompletionMode;
 import de.hetzge.eclipse.aicoder.content.EditInstruction;
 import de.hetzge.eclipse.aicoder.llm.LlmOption;
 
 public class InstructionPopupDialog extends PopupDialog {
 
 	private InstructionSelector instructionSelector;
+	private final CompletionMode mode;
 	private final List<EditInstruction> instructions;
 	private final String initial;
 	private final BiConsumer<EditInstruction, LlmOption> onSelect;
 	private final Runnable onClose;
 
-	public InstructionPopupDialog(Shell parent, List<EditInstruction> instructions, String initial, BiConsumer<EditInstruction, LlmOption> onSelect, Runnable onClose) {
+	public InstructionPopupDialog(Shell parent, CompletionMode mode, List<EditInstruction> instructions, String initial, BiConsumer<EditInstruction, LlmOption> onSelect, Runnable onClose) {
 		super(parent, SWT.NONE, true, false, false, false, false, null, null);
+		this.mode = mode;
 		this.instructions = instructions;
 		this.initial = initial;
 		this.onSelect = onSelect;
@@ -37,7 +40,7 @@ public class InstructionPopupDialog extends PopupDialog {
 	protected Control createContents(Composite parent) {
 		final Composite container = (Composite) super.createDialogArea(parent);
 		container.setLayout(new FillLayout());
-		this.instructionSelector = new InstructionSelector(container, this.instructions, this.initial, (instruction, llmModelOption) -> {
+		this.instructionSelector = new InstructionSelector(container, this.mode, this.instructions, this.initial, (instruction, llmModelOption) -> {
 			close();
 			this.onSelect.accept(instruction, llmModelOption);
 		});

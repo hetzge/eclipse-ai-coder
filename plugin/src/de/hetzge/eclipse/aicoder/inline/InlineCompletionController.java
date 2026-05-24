@@ -58,8 +58,8 @@ import org.eclipse.ui.texteditor.ITextEditor;
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.CompletionMode;
 import de.hetzge.eclipse.aicoder.ContextView;
-import de.hetzge.eclipse.aicoder.Debouncer;
 import de.hetzge.eclipse.aicoder.EditHistoryDiffUtils;
+import de.hetzge.eclipse.aicoder.base.Debouncer;
 import de.hetzge.eclipse.aicoder.config.TaskConfig;
 import de.hetzge.eclipse.aicoder.context.ContextContext;
 import de.hetzge.eclipse.aicoder.context.ContextEntry;
@@ -198,21 +198,7 @@ public final class InlineCompletionController {
 		final int defaultLineSpacing = widget.getLineSpacing();
 		final IEditorInput editorInput = this.textEditor.getEditorInput();
 		final String filePath = editorInput.getName();
-		final boolean hasSelection = EclipseUtils.hasSelection(this.textViewer);
-		CompletionMode mode;
-		if (hasSelection) {
-			if (instruction == null) {
-				mode = CompletionMode.QUICK_FIX;
-			} else {
-				mode = CompletionMode.EDIT;
-			}
-		} else {
-			if (instruction == null) {
-				mode = CompletionMode.INLINE;
-			} else {
-				mode = CompletionMode.GENERATE;
-			}
-		}
+		final CompletionMode mode = CompletionMode.getMode(this.textViewer, instruction, false);
 		final AiCoderHistoryEntry historyEntry = new AiCoderHistoryEntry(HistoryType.fromCompletionMode(mode), filePath, this.textViewer.getDocument().get());
 		this.job = new Job("AI completion") {
 

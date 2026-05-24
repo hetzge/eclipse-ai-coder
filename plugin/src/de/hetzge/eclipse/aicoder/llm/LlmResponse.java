@@ -5,6 +5,7 @@ import java.util.List;
 
 public final class LlmResponse {
 	private final LlmOption llmModelOption;
+	private final String reasoning;
 	private final String content;
 	private final String plainResponse;
 	private final List<LlmToolCallRequest> toolCallRequests;
@@ -13,8 +14,9 @@ public final class LlmResponse {
 	private final Duration duration;
 	private final boolean error;
 
-	public LlmResponse(LlmOption llmModelOption, String content, String plainResponse, List<LlmToolCallRequest> toolCallRequests, int inputTokens, int outputTokens, Duration duration, boolean error) {
+	public LlmResponse(LlmOption llmModelOption, String reasoning, String content, String plainResponse, List<LlmToolCallRequest> toolCallRequests, int inputTokens, int outputTokens, Duration duration, boolean error) {
 		this.llmModelOption = llmModelOption;
+		this.reasoning = reasoning;
 		this.content = content;
 		this.plainResponse = plainResponse;
 		this.toolCallRequests = toolCallRequests;
@@ -26,6 +28,10 @@ public final class LlmResponse {
 
 	public LlmOption getLlmModelOption() {
 		return this.llmModelOption;
+	}
+
+	public String getReasoning() {
+		return this.reasoning;
 	}
 
 	public String getContent() {

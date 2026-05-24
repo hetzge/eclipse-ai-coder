@@ -102,6 +102,7 @@ public final class LlmUtils {
 		final Json json = Json.object();
 		json.set("model", llmModelOption.modelKey());
 		json.set("stream", false);
+		json.set("think", true);
 		json.set("options", Json.object()
 				.set("temperature", 0)
 				.set("num_ctx", AiCoderPreferences.getOllamaNumCtx()));
@@ -129,17 +130,23 @@ public final class LlmUtils {
 			json.at("options").set("num_predict", AiCoderPreferences.getMaxTokens());
 		} else {
 			json.set("tools", llmRequest.toolDefinitions().stream().map(toolDefinition -> toolDefinition.json()).toList());
-			json.set("messages", llmRequest.messages().stream().map(message -> Json.object()
-					.set("role", message.role().name().toLowerCase())
-					.set("content", message.content())
-					.set("tool_name", message.toolCallId())
-					.set("tool_calls", message.toolCallRequest().stream().map(toolCallRequest -> Json.object()
-							.set("id", toolCallRequest.id())
-							.set("type", toolCallRequest.type())
-							.set("function", Json.object()
-									.set("name", toolCallRequest.functionName())
-									.set("arguments", toolCallRequest.arguments())))
-							.toList())));
+			json.set("messages", llmRequest.messages().stream().map(message -> {
+				final Json messageJson = Json.object()
+						.set("role", message.role().name().toLowerCase())
+						.set("content", message.content())
+						.set("tool_name", message.toolCallId())
+						.set("tool_calls", message.toolCallRequest().stream().map(toolCallRequest -> Json.object()
+								.set("id", toolCallRequest.id())
+								.set("type", toolCallRequest.type())
+								.set("function", Json.object()
+										.set("name", toolCallRequest.functionName())
+										.set("arguments", toolCallRequest.arguments())))
+								.toList());
+				if (StringUtils.isNotBlank(message.reasoning())) {
+					messageJson.set("thinking", message.reasoning());
+				}
+				return messageJson;
+			}));
 		}
 		final URI uri = URI.create(Utils.joinUriParts(List.of(urlString, isFillInTheMiddle ? "/api/generate" : "/api/chat")));
 		final long beforeTimestamp = System.currentTimeMillis();
@@ -157,6 +164,9 @@ public final class LlmUtils {
 						final String responseBody = response.body();
 						final Json responseJson = Json.read(responseBody);
 						final String content = responseJson.at("response").asString();
+						final String reasoning = responseJson.has("thinking") && responseJson.at("thinking").isString()
+								? responseJson.at("thinking").asString()
+								: "";
 						final int inputTokens = responseJson.at("prompt_eval_count", 0).asInteger();
 						final int outputTokens = responseJson.at("eval_count", 0).asInteger();
 						final List<LlmToolCallRequest> toolCallRequests = responseJson.has("tool_calls")
@@ -164,12 +174,13 @@ public final class LlmUtils {
 										toolCallJson.at("id").asString(),
 										toolCallJson.at("type").asString(),
 										toolCallJson.at("function").at("name").asString(),
-										toolCallJson.at("function").at("arguments"))).toList()
+										Json.read(toolCallJson.at("function").at("arguments").asString()))).toList()
 								: List.of();
-						return new LlmResponse(llmModelOption, content, responseBody, toolCallRequests, inputTokens, outputTokens, duration, false);
+						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
+						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, duration, false);
 					} else {
 						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
-						return new LlmResponse(llmModelOption, "", response.body(), List.of(), 0, 0, duration, true);
+						return new LlmResponse(llmModelOption, "", "", response.body(), List.of(), 0, 0, duration, true);
 					}
 				});
 	}
@@ -218,7 +229,13 @@ public final class LlmUtils {
 					if (response.statusCode() == 200) {
 						final String responseBody = response.body();
 						final Json responseJson = Json.read(responseBody);
-						final String content = responseJson.at("choices").at(0).at("message").at("content").asString();
+						final String content = responseJson.at("choices").at(0).at("message").at("content").isString()
+								? responseJson.at("choices").at(0).at("message").at("content").asString()
+								: "";
+						final String reasoning = responseJson.at("choices").at(0).at("message").has("reasoning")
+								&& responseJson.at("choices").at(0).at("message").at("reasoning").isString()
+										? responseJson.at("choices").at(0).at("message").at("reasoning").asString()
+										: "";
 						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
 						final List<LlmToolCallRequest> toolCallRequests = responseJson.at("choices").at(0).at("message").has("tool_calls")
@@ -226,12 +243,13 @@ public final class LlmUtils {
 										toolCallJson.at("id").asString(),
 										toolCallJson.at("type").asString(),
 										toolCallJson.at("function").at("name").asString(),
-										toolCallJson.at("function").at("arguments"))).toList()
+										Json.read(toolCallJson.at("function").at("arguments").asString()))).toList()
 								: List.of();
-						return new LlmResponse(llmModelOption, content, responseBody, toolCallRequests, inputTokens, outputTokens, duration, false);
+						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
+						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, duration, false);
 					} else {
 						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
-						return new LlmResponse(llmModelOption, "", response.body(), List.of(), 0, 0, duration, true);
+						return new LlmResponse(llmModelOption, "", "", response.body(), List.of(), 0, 0, duration, true);
 					}
 				});
 	}
@@ -248,8 +266,6 @@ public final class LlmUtils {
 				: llmModelOption.modelKey();
 		final Json json = Json.object();
 		json.set("model", model);
-		// TODO temperature is not allowed for all openai apis
-		// json.set("temperature", 0);
 		if (reasoningSuffix != null) {
 			json.set("reasoning_effort", reasoningSuffix.substring(1));
 		}
@@ -288,7 +304,16 @@ public final class LlmUtils {
 						final Json responseJson = Json.read(responseBody);
 						final String content = isFillInTheMiddle && !isPseudoFim
 								? responseJson.at("choices").at(0).at("text").asString()
-								: responseJson.at("choices").at(0).at("message").at("content").asString();
+								: responseJson.at("choices").at(0).at("message").at("content").isString()
+										? responseJson.at("choices").at(0).at("message").at("content").asString()
+										: "";
+						final String reasoning = responseJson.at("choices").at(0).at("message").has("reasoning")
+								&& responseJson.at("choices").at(0).at("message").at("reasoning").isString()
+										? responseJson.at("choices").at(0).at("message").at("reasoning").asString()
+										: responseJson.at("choices").at(0).at("message").has("reasoning_content")
+												&& responseJson.at("choices").at(0).at("message").at("reasoning_content").isString()
+														? responseJson.at("choices").at(0).at("message").at("reasoning_content").asString()
+														: "";
 						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
 						final List<LlmToolCallRequest> toolCallRequests = responseJson.at("choices").at(0).at("message").has("tool_calls")
@@ -296,12 +321,13 @@ public final class LlmUtils {
 										toolCallJson.at("id").asString(),
 										toolCallJson.at("type").asString(),
 										toolCallJson.at("function").at("name").asString(),
-										toolCallJson.at("function").at("arguments"))).toList()
+										Json.read(toolCallJson.at("function").at("arguments").asString()))).toList()
 								: List.of();
-						return new LlmResponse(llmModelOption, content, responseBody, toolCallRequests, inputTokens, outputTokens, duration, false);
+						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
+						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, duration, false);
 					} else {
 						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
-						return new LlmResponse(llmModelOption, "", response.body(), List.of(), 0, 0, duration, true);
+						return new LlmResponse(llmModelOption, "", "", response.body(), List.of(), 0, 0, duration, true);
 					}
 				});
 	}
@@ -350,7 +376,16 @@ public final class LlmUtils {
 						final Json responseJson = Json.read(responseBody);
 						final String content = isFillInTheMiddle && !isPseudoFim
 								? responseJson.at("choices").at(0).at("text").asString()
-								: responseJson.at("choices").at(0).at("message").at("content").asString();
+								: responseJson.at("choices").at(0).at("message").at("content").isString()
+										? responseJson.at("choices").at(0).at("message").at("content").asString()
+										: "";
+						final String reasoning = responseJson.at("choices").at(0).at("message").has("reasoning")
+								&& responseJson.at("choices").at(0).at("message").at("reasoning").isString()
+										? responseJson.at("choices").at(0).at("message").at("reasoning").asString()
+										: responseJson.at("choices").at(0).at("message").has("reasoning_content")
+												&& responseJson.at("choices").at(0).at("message").at("reasoning_content").isString()
+														? responseJson.at("choices").at(0).at("message").at("reasoning_content").asString()
+														: "";
 						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
 						final List<LlmToolCallRequest> toolCallRequests = responseJson.at("choices").at(0).at("message").has("tool_calls")
@@ -358,12 +393,13 @@ public final class LlmUtils {
 										toolCallJson.at("id").asString(),
 										toolCallJson.at("type").asString(),
 										toolCallJson.at("function").at("name").asString(),
-										toolCallJson.at("function").at("arguments"))).toList()
+										Json.read(toolCallJson.at("function").at("arguments").asString()))).toList()
 								: List.of();
-						return new LlmResponse(llmModelOption, content, responseBody, toolCallRequests, inputTokens, outputTokens, duration, false);
+						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
+						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, duration, false);
 					} else {
 						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
-						return new LlmResponse(llmModelOption, "", response.body(), List.of(), 0, 0, duration, true);
+						return new LlmResponse(llmModelOption, "", "", response.body(), List.of(), 0, 0, duration, true);
 					}
 				});
 	}
@@ -399,12 +435,20 @@ public final class LlmUtils {
 						final String responseBody = response.body();
 						final Json responseJson = Json.read(responseBody);
 						final String content = responseJson.at("choices").at(0).at("message").at("content").asString();
+						final String reasoning = responseJson.at("choices").at(0).at("message").has("reasoning")
+								&& responseJson.at("choices").at(0).at("message").at("reasoning").isString()
+										? responseJson.at("choices").at(0).at("message").at("reasoning").asString()
+										: responseJson.at("choices").at(0).at("message").has("reasoning_content")
+												&& responseJson.at("choices").at(0).at("message").at("reasoning_content").isString()
+														? responseJson.at("choices").at(0).at("message").at("reasoning_content").asString()
+														: "";
 						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
-						return new LlmResponse(llmModelOption, content, responseBody, List.of(), inputTokens, outputTokens, duration, false);
+						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
+						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, List.of(), inputTokens, outputTokens, duration, false);
 					} else {
 						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
-						return new LlmResponse(llmModelOption, "", response.body(), List.of(), 0, 0, duration, true);
+						return new LlmResponse(llmModelOption, "", "", response.body(), List.of(), 0, 0, duration, true);
 					}
 				});
 	}
@@ -449,6 +493,9 @@ public final class LlmUtils {
 										.set("name", toolCallRequest.functionName())
 										.set("arguments", toolCallRequest.arguments())))
 						.toArray()));
+			}
+			if (StringUtils.isNotBlank(message.reasoning())) {
+				messageJson.set("reasoning_content", message.reasoning());
 			}
 			array.add(messageJson);
 		}

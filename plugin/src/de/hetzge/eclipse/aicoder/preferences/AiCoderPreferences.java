@@ -6,6 +6,7 @@ import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
 import org.eclipse.jface.preference.IPreferenceStore;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.CompletionMode;
 import de.hetzge.eclipse.aicoder.inline.DiffMode;
 import de.hetzge.eclipse.aicoder.llm.LlmOption;
 import de.hetzge.eclipse.aicoder.llm.LlmPromptTemplates;
@@ -31,6 +32,8 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String NEXT_EDIT_MODEL_KEY = "de.hetzge.eclipse.aicoder.next_edit_model";
 	public static final String RERANK_PROVIDER_KEY = "de.hetzge.eclipse.aicoder.rerank_provider";
 	public static final String RERANK_MODEL_KEY = "de.hetzge.eclipse.aicoder.rerank_model";
+	public static final String AGENT_PROVIDER_KEY = "de.hetzge.eclipse.aicoder.agent_provider";
+	public static final String AGENT_MODEL_KEY = "de.hetzge.eclipse.aicoder.agent_model";
 	public static final String ENABLE_MULTILINE_KEY = "de.hetzge.eclipse.aicoder.enable_multiline";
 	public static final String ENABLE_AUTOCOMPLETE_KEY = "de.hetzge.eclipse.aicoder.enable_autocomplete";
 	public static final String ONLY_ON_CHANGE_AUTOCOMPLETE_KEY = "de.hetzge.eclipse.aicoder.only_on_change_autocomplete";
@@ -70,6 +73,8 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(EDIT_MODEL_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
 		store.setDefault(NEXT_EDIT_PROVIDER_KEY, LlmProvider.NONE.name());
 		store.setDefault(NEXT_EDIT_MODEL_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
+		store.setDefault(AGENT_PROVIDER_KEY, LlmProvider.NONE.name());
+		store.setDefault(AGENT_MODEL_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
 		store.setDefault(RERANK_PROVIDER_KEY, LlmProvider.NONE.name());
 		store.setDefault(RERANK_MODEL_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
 		store.setDefault(ENABLE_MULTILINE_KEY, true);
@@ -110,12 +115,42 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		return getStore().getString(OPENAI_API_KEY_KEY);
 	}
 
+	public static void setLlmModelOption(CompletionMode mode, LlmOption llmModelOption) {
+		switch (mode) {
+		case INLINE:
+			setFillInMiddleLlmModelOption(llmModelOption);
+			break;
+		case EDIT:
+			setEditLlmModelOption(llmModelOption);
+			break;
+		case QUICK_FIX:
+			setQuickFixLlmModelOption(llmModelOption);
+			break;
+		case GENERATE:
+			setGenerateLlmModelOption(llmModelOption);
+			break;
+		case NEXT_EDIT:
+			setNextEditLlmModelOption(llmModelOption);
+			break;
+		case AGENT:
+			setAgentLlmModelOption(llmModelOption);
+			break;
+		default:
+			throw new IllegalArgumentException("Unsupported completion mode: " + mode);
+		}
+	}
+
 	public static LlmProvider getFillInMiddleProvider() {
 		return LlmProvider.valueOf(getStore().getString(FILL_IN_MIDDLE_PROVIDER_KEY));
 	}
 
 	public static String getFillInMiddleModel() {
 		return getStore().getString(FILL_IN_MIDDLE_MODEL_KEY);
+	}
+
+	public static void setFillInMiddleLlmModelOption(LlmOption llmModelOption) {
+		getStore().setValue(FILL_IN_MIDDLE_PROVIDER_KEY, llmModelOption.provider().name());
+		getStore().setValue(FILL_IN_MIDDLE_MODEL_KEY, llmModelOption.modelKey());
 	}
 
 	public static LlmProvider getQuickFixProvider() {
@@ -126,12 +161,22 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		return getStore().getString(QUICK_FIX_MODEL_KEY);
 	}
 
+	public static void setQuickFixLlmModelOption(LlmOption llmModelOption) {
+		getStore().setValue(QUICK_FIX_PROVIDER_KEY, llmModelOption.provider().name());
+		getStore().setValue(QUICK_FIX_MODEL_KEY, llmModelOption.modelKey());
+	}
+
 	public static LlmProvider getGenerateProvider() {
 		return LlmProvider.valueOf(getStore().getString(GENERATE_PROVIDER_KEY));
 	}
 
 	public static String getGenerateModel() {
 		return getStore().getString(GENERATE_MODEL_KEY);
+	}
+
+	public static void setGenerateLlmModelOption(LlmOption llmModelOption) {
+		getStore().setValue(GENERATE_PROVIDER_KEY, llmModelOption.provider().name());
+		getStore().setValue(GENERATE_MODEL_KEY, llmModelOption.modelKey());
 	}
 
 	public static LlmProvider getEditProvider() {
@@ -158,6 +203,19 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static void setNextEditLlmModelOption(LlmOption llmModelOption) {
 		getStore().setValue(NEXT_EDIT_PROVIDER_KEY, llmModelOption.provider().name());
 		getStore().setValue(NEXT_EDIT_MODEL_KEY, llmModelOption.modelKey());
+	}
+
+	public static LlmProvider getAgentProvider() {
+		return LlmProvider.valueOf(getStore().getString(AGENT_PROVIDER_KEY));
+	}
+
+	public static String getAgentModel() {
+		return getStore().getString(AGENT_MODEL_KEY);
+	}
+
+	public static void setAgentLlmModelOption(LlmOption llmModelOption) {
+		getStore().setValue(AGENT_PROVIDER_KEY, llmModelOption.provider().name());
+		getStore().setValue(AGENT_MODEL_KEY, llmModelOption.modelKey());
 	}
 
 	public static LlmProvider getRerankProvider() {

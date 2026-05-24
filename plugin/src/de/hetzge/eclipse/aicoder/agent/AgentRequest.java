@@ -1,34 +1,33 @@
 package de.hetzge.eclipse.aicoder.agent;
 
+import java.util.List;
+
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IWorkspace;
 
+import de.hetzge.eclipse.aicoder.base.TextSelection;
 import de.hetzge.eclipse.aicoder.llm.LlmOption;
 import mjson.Json;
 
-public record AgentRequest(IProject project, LlmOption llmOption, String instructions) {
+public record AgentRequest(List<IProject> projects, LlmOption llmOption, TextSelection selection, String instructions) {
 
 	public Json toJson() {
 		return Json.object()
-				.set("project", this.project.getName())
+				.set("projects", this.projects.stream().map(IProject::getName).toList())
 				.set("llmOption", this.llmOption.toJson())
+				.set("selection", this.selection.toJson())
 				.set("instructions", this.instructions);
 	}
 
-	public static AgentRequest fromJson(IWorkspace workspace, Json json) throws ProjectNotFoundException {
-		final IProject project = workspace.getRoot().getProject(json.at("project").asString());
-		if (!project.exists()) {
-			throw new ProjectNotFoundException("Project not found: " + json.at("project").asString());
-		}
+	public static AgentRequest fromJson(IWorkspace workspace, Json json) {
 		return new AgentRequest(
-				project,
+				json.at("projects").asJsonList().stream()
+						.map(Json::asString)
+						.map(workspace.getRoot()::getProject)
+						.filter(IProject::exists)
+						.toList(),
 				LlmOption.fromJson(json.at("llmOption")),
+				TextSelection.fromJson(json.at("selection")),
 				json.at("instructions").asString());
-	}
-
-	public static class ProjectNotFoundException extends Exception {
-		public ProjectNotFoundException(String message) {
-			super(message);
-		}
 	}
 }
