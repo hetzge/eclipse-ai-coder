@@ -129,7 +129,7 @@ public final class LlmUtils {
 			}
 			json.at("options").set("num_predict", AiCoderPreferences.getMaxTokens());
 		} else {
-			json.set("tools", llmRequest.toolDefinitions().stream().map(toolDefinition -> toolDefinition.json()).toList());
+			json.set("tools", llmRequest.toolDefinitions().stream().map(toolDefinition -> Json.object().set("type", "function").set("function", toolDefinition.json())).toList());
 			json.set("messages", llmRequest.messages().stream().map(message -> {
 				final Json messageJson = Json.object()
 						.set("role", message.role().name().toLowerCase())
@@ -209,7 +209,7 @@ public final class LlmUtils {
 				json.set("messages", createMessages(pseudoFimSystemPrompt, pseudoFimUserPrompt));
 			}
 		} else {
-			json.set("tools", llmRequest.toolDefinitions().stream().map(toolDefinition -> toolDefinition.json()).toList());
+			json.set("tools", llmRequest.toolDefinitions().stream().map(toolDefinition -> Json.object().set("type", "function").set("function", toolDefinition.json())).toList());
 			json.set("messages", createMessages(llmRequest.messages()));
 		}
 		final String path = isFillInTheMiddle && !isPseudoFim ? "/v1/fim/completions" : "/v1/chat/completions";
@@ -282,7 +282,7 @@ public final class LlmUtils {
 				json.set("messages", createMessages(pseudoFimSystemPrompt, fimTemplatePrompt));
 			}
 		} else {
-			json.set("tools", llmRequest.toolDefinitions().stream().map(toolDefinition -> toolDefinition.json()).toList());
+			json.set("tools", llmRequest.toolDefinitions().stream().map(toolDefinition -> Json.object().set("type", "function").set("function", toolDefinition.json())).toList());
 			json.set("messages", createMessages(llmRequest.messages()));
 		}
 		final String path = isFillInTheMiddle && !isPseudoFim ? "/v1/completions" : "/v1/chat/completions";

@@ -15,6 +15,7 @@ public final class SearchOptions {
 	private final Set<String> excludedExtensions;
 	private final int maxResults;
 	private final int maxFileSizeBytes;
+	private final Pattern filePattern;
 
 	private SearchOptions(Builder builder) {
 		this.pattern = builder.pattern;
@@ -25,6 +26,7 @@ public final class SearchOptions {
 		this.excludedExtensions = builder.excludedExtensions;
 		this.maxResults = builder.maxResults;
 		this.maxFileSizeBytes = builder.maxFileSizeBytes;
+		this.filePattern = builder.filePattern;
 	}
 
 	public Pattern getPattern() {
@@ -59,12 +61,17 @@ public final class SearchOptions {
 		return this.maxFileSizeBytes;
 	}
 
+	public Pattern getFilePattern() {
+		return this.filePattern;
+	}
+
 	public static Builder builder(String regex) {
 		return new Builder(regex);
 	}
 
 	public static class Builder {
 		private Pattern pattern;
+		private Pattern filePattern = null;
 		private boolean caseSensitive = true;
 		private boolean wholeWord = false;
 		private boolean searchBinaryFiles = false;
@@ -116,6 +123,13 @@ public final class SearchOptions {
 
 		public Builder maxFileSizeBytes(int max) {
 			this.maxFileSizeBytes = max;
+			return this;
+		}
+
+		public Builder filePattern(String filePattern) {
+			if (filePattern != null && !filePattern.isEmpty()) {
+				this.filePattern = Pattern.compile(filePattern);
+			}
 			return this;
 		}
 

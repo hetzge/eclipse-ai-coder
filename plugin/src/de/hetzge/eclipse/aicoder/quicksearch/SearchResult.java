@@ -1,20 +1,20 @@
 package de.hetzge.eclipse.aicoder.quicksearch;
 
-import org.eclipse.core.resources.IFile;
+import org.eclipse.core.runtime.IPath;
 
 /**
  * Represents a single search match result.
  */
 public final class SearchResult {
-	private final IFile file;
+	private final IPath path;
 	private final int lineNumber;
 	private final int columnStart;
 	private final int columnEnd;
 	private final String lineContent;
 	private final String matchedText;
 
-	public SearchResult(IFile file, int lineNumber, int columnStart, int columnEnd, String lineContent, String matchedText) {
-		this.file = file;
+	public SearchResult(IPath path, int lineNumber, int columnStart, int columnEnd, String lineContent, String matchedText) {
+		this.path = path;
 		this.lineNumber = lineNumber;
 		this.columnStart = columnStart;
 		this.columnEnd = columnEnd;
@@ -22,8 +22,8 @@ public final class SearchResult {
 		this.matchedText = matchedText;
 	}
 
-	public IFile getFile() {
-		return this.file;
+	public IPath getPath() {
+		return this.path;
 	}
 
 	public int getLineNumber() {
@@ -48,6 +48,6 @@ public final class SearchResult {
 
 	@Override
 	public String toString() {
-		return String.format("%s:%d:%d - %s", this.file.getProjectRelativePath(), this.lineNumber, this.columnStart, this.lineContent.trim());
+		return String.format("%s:%d:%d - %s", this.path.toOSString(), this.lineNumber, this.columnStart, this.lineContent.trim());
 	}
 }

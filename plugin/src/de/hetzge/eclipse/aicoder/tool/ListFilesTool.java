@@ -1,13 +1,13 @@
 package de.hetzge.eclipse.aicoder.tool;
 
-import java.util.ArrayDeque;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Deque;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 import org.eclipse.core.resources.IContainer;
+import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
@@ -17,40 +17,32 @@ import mjson.Json;
 
 public final class ListFilesTool extends Tool {
 
-	public static final Json DEFINITION = Json.object()
-			.set("name", "list_files")
-			.set("description", "Lists files in the project")
-			.set("parameters", Json.object()
-					.set("type", "object")
-					.set("properties", Json.object()
-							.set("project", Json.object()
-									.set("type", "string")
-									.set("description", "Project name to list files from"))
-							.set("path", Json.object()
-									.set("type", "string")
-									.set("description", "The path to list files from. Default: project root."))
-							.set("search_pattern", Json.object()
-									.set("type", "string")
-									.set("description", "The pattern to search for in file names. Default: empty string."))
-							.set("max_results", Json.object()
-									.set("type", "integer")
-									.set("description", "The maximum number of results to return. Default: 100."))));
-
 	private static Json prepareDefinition(List<IProject> projects) {
-		final Json definition = Json.read(DEFINITION.toString());
-		if (projects.size() == 1) {
-			definition.at("parameters").at("properties").delAt("project");
-		} else {
-			definition.at("parameters").at("properties").at("project").set("enum", projects.stream().map(IProject::getName).toList());
-		}
-		return definition;
+		return Json.object()
+				.set("name", "list_files")
+				.set("description", "Lists files in the project")
+				.set("parameters", Json.object()
+						.set("type", "object")
+						.set("properties", Json.object()
+								.set("path", Json.object()
+										.set("type", "string")
+										.set("description", "The path to list files from (relative to workspace root, as example " + ToolUtils.createPathPrefixExamples(projects) + ")."))
+								.set("file_pattern", Json.object()
+										.set("type", "string")
+										.set("description", "The regex pattern to search for in file names."))
+								.set("max_results", Json.object()
+										.set("type", "integer")
+										.set("description", "The maximum number of results to return. Default: 100.")))
+						.set("required", Json.array().add("path")));
 	}
 
 	private final List<IProject> projects;
+	private final FileSystem fileSystem;
 
-	public ListFilesTool(List<IProject> projects) {
+	public ListFilesTool(List<IProject> projects, FileSystem fileSystem) {
 		super(prepareDefinition(projects));
 		this.projects = projects;
+		this.fileSystem = fileSystem;
 		if (this.projects.isEmpty()) {
 			throw new IllegalArgumentException("At least one project must be provided.");
 		}
@@ -84,82 +76,131 @@ public final class ListFilesTool extends Tool {
 	}
 
 	private String execute(IProject project, Json arguments) {
-		final String resolvedPath = arguments.has("path") ? arguments.at("path").asString() : "";
-		final String resolvedSearchPattern = arguments.has("search_pattern") ? arguments.at("search_pattern").asString() : "";
-		final int resolvedMaxResults = arguments.has("max_results") ? arguments.at("max_results").asInteger() : 100;
+		final String pathArg = arguments.at("path", "").asString();
+		final String filePatternStr = arguments.at("file_pattern", ".*").asString();
+		final int maxResults = arguments.at("max_results", 100).asInteger();
 
-		if (!resolvedSearchPattern.isBlank()) {
-			final String patternLower = resolvedSearchPattern.toLowerCase();
-			final List<IResource> matches = new ArrayList<>();
-			final Deque<IContainer> stack = new ArrayDeque<>();
-			stack.push(project);
-			while (!stack.isEmpty() && matches.size() < resolvedMaxResults) {
-				final IContainer current = stack.pop();
-				try {
-					for (final IResource member : current.members()) {
-						if (member.getName().toLowerCase().contains(patternLower)) {
-							matches.add(member);
-							if (matches.size() >= resolvedMaxResults) {
-								break;
-							}
-						}
-						if (member instanceof IContainer) {
-							stack.push((IContainer) member);
-						}
-					}
-				} catch (final CoreException e) {
-					// skip inaccessible containers
-				}
-			}
-			matches.sort(Comparator.comparing(it -> it.getProjectRelativePath().toPortableString()));
-			final int limit = Math.min(matches.size(), resolvedMaxResults);
-			final StringBuilder sb = new StringBuilder();
-			for (int i = 0; i < limit; i++) {
-				if (i > 0) {
-					sb.append("\n");
-				}
-				final IResource member = matches.get(i);
-				sb.append(member instanceof IContainer ? "[DIR] " : "[FILE] ")
-						.append(member.getProjectRelativePath().toPortableString());
-			}
-			return sb.toString();
+		final Pattern filePattern = Pattern.compile(filePatternStr);
+
+		// Determine the container within the project
+		final IPath projectPrefix = IPath.fromOSString(project.getName());
+		final IPath requestedPath = pathArg.isEmpty() ? projectPrefix : IPath.fromOSString(pathArg);
+		// The path should be under the project
+		if (!projectPrefix.isPrefixOf(requestedPath)) {
+			return "Error: Path must be within the project " + project.getName() + ".";
 		}
-
-		IContainer container;
-		if (resolvedPath.isEmpty()) {
+		final IPath relativePath = requestedPath.removeFirstSegments(projectPrefix.segmentCount());
+		final IContainer container;
+		if (relativePath.isEmpty()) {
 			container = project;
 		} else {
-			final IResource resource = project.findMember(IPath.fromOSString(resolvedPath));
+			final IResource resource = project.findMember(relativePath);
 			if (resource == null || !resource.exists()) {
-				return "Error: Path not found: " + resolvedPath;
+				// Check if the path exists only in fileSystem
+				try {
+					if (this.fileSystem.contains(requestedPath) && !this.fileSystem.readFile(requestedPath).isEmpty()) {
+						// It's a file, list only that file
+						if (filePattern.matcher(requestedPath.lastSegment()).find()) {
+							return "[FILE] " + requestedPath.toOSString();
+						} else {
+							return "Error: Path does not match file pattern.";
+						}
+					}
+				} catch (final IOException exception) {
+					throw new RuntimeException("Failed to read file: " + requestedPath, exception);
+				}
+				return "Error: Path not found: " + pathArg;
 			}
 			if (!(resource instanceof IContainer)) {
-				return "Error: Path is not a directory: " + resolvedPath;
+				// It's a file, list only that file
+				if (filePattern.matcher(resource.getName()).find()) {
+					return "[FILE] " + requestedPath.toOSString();
+				} else {
+					return "Error: Path does not match file pattern.";
+				}
 			}
 			container = (IContainer) resource;
 		}
 
+		// Collect resources from workspace
+		final List<IResource> workspaceResources = new ArrayList<>();
+		collectResources(container, filePattern, workspaceResources);
+
+		// Collect paths from fileSystem that are not yet in workspace results
+		final IPath containerPath = container.getFullPath();
+		final List<IPath> fileSystemPaths = this.fileSystem.getPathsWithContent().stream()
+				.filter(p -> containerPath.isPrefixOf(p) && !workspaceResources.stream()
+						.anyMatch(r -> r.getFullPath().equals(p)))
+				.filter(p -> filePattern.matcher(p.lastSegment()).find())
+				.sorted()
+				.toList();
+
+		// Combine and limit
+		final List<Object> allEntries = new ArrayList<>();
+		allEntries.addAll(workspaceResources);
+		allEntries.addAll(fileSystemPaths);
+		allEntries.sort((a, b) -> {
+			final IPath pa = (a instanceof IResource) ? ((IResource) a).getFullPath() : (IPath) a;
+			final IPath pb = (b instanceof IResource) ? ((IResource) b).getFullPath() : (IPath) b;
+			return pa.toPortableString().compareTo(pb.toPortableString());
+		});
+
+		final int limit = Math.min(allEntries.size(), maxResults);
+		final StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < limit; i++) {
+			if (sb.length() > 0) {
+				sb.append("\n");
+			}
+			final Object entry = allEntries.get(i);
+			final String type;
+			final IPath path;
+			if (entry instanceof IResource) {
+				final IResource resource = (IResource) entry;
+				type = (resource instanceof IContainer) ? "[DIR] " : "[FILE] ";
+				path = resource.getFullPath();
+			} else {
+				type = "[FILE] ";
+				path = (IPath) entry;
+			}
+			sb.append(type).append(path.makeRelativeTo(project.getWorkspace().getRoot().getFullPath()));
+		}
+		return sb.toString();
+	}
+
+	private void collectResources(IContainer container, Pattern filePattern, List<IResource> result) {
 		try {
-			final IResource[] members = container.members();
-			final List<IResource> filtered = new ArrayList<>();
-			for (final IResource member : members) {
-				if (resolvedSearchPattern.isEmpty() || member.getName().toLowerCase().contains(resolvedSearchPattern.toLowerCase())) {
-					filtered.add(member);
+			for (final IResource member : container.members()) {
+				if (member instanceof IContainer) {
+					// Add directory if it matches pattern
+					if (filePattern.matcher(member.getName()).find()) {
+						result.add(member);
+					}
+					collectResources((IContainer) member, filePattern, result);
+				} else if (member instanceof IFile) {
+					final IFile file = (IFile) member;
+					// Skip empty files (unless they have content in fileSystem)
+					boolean hasContent = false;
+					try {
+						hasContent = file.getLocation().toFile().length() > 0;
+					} catch (final Exception e) {
+						// Assume empty
+					}
+					if (!hasContent) {
+						// Check if the fileSystem has non-empty content for this file
+						final IPath filePath = file.getFullPath();
+						if (!this.fileSystem.contains(filePath) || this.fileSystem.readFile(filePath).isEmpty()) {
+							continue;
+						}
+					}
+					if (filePattern.matcher(member.getName()).find()) {
+						result.add(member);
+					}
 				}
 			}
-			filtered.sort(Comparator.comparing(IResource::getName));
-			final int limit = Math.min(filtered.size(), resolvedMaxResults);
-			final StringBuilder sb = new StringBuilder();
-			for (int i = 0; i < limit; i++) {
-				final IResource member = filtered.get(i);
-				if (sb.length() > 0) {
-					sb.append("\n");
-				}
-				sb.append(member instanceof IContainer ? "[DIR] " : "[FILE] ").append(member.getProjectRelativePath().toPortableString());
-			}
-			return sb.toString();
 		} catch (final CoreException e) {
-			return "Error listing files: " + e.getMessage();
+			// skip inaccessible containers
+		} catch (final IOException exception) {
+			throw new RuntimeException("Failed to read file: " + container.getFullPath(), exception);
 		}
 	}
 }

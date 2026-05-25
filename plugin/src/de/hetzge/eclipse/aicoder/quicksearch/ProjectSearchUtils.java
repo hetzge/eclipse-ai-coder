@@ -196,6 +196,12 @@ public final class ProjectSearchUtils {
 			return extension == null || !excluded.contains(extension);
 		}
 
+		// Check file pattern
+		final Pattern filePattern = options.getFilePattern();
+		if (filePattern != null && !filePattern.matcher(file.getName()).find()) {
+			return false;
+		}
+
 		return true;
 	}
 
@@ -287,7 +293,7 @@ public final class ProjectSearchUtils {
 
 				while (matcher.find()) {
 					results.add(new SearchResult(
-							file,
+							file.getFullPath().makeRelativeTo(file.getProject().getWorkspace().getRoot().getFullPath()),
 							lineNumber,
 							matcher.start(),
 							matcher.end(),
