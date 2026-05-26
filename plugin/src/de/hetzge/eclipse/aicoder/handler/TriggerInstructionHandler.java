@@ -10,11 +10,14 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IFileEditorInput;
+import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.CompletionMode;
 import de.hetzge.eclipse.aicoder.agent.AgentRequest;
+import de.hetzge.eclipse.aicoder.agent.AgentTaskTreeView;
 import de.hetzge.eclipse.aicoder.base.TextSelection;
 import de.hetzge.eclipse.aicoder.content.EditInstruction;
 import de.hetzge.eclipse.aicoder.content.InstructionStorage;
@@ -50,7 +53,8 @@ public class TriggerInstructionHandler extends AbstractHandler {
 					final TextSelection textSelection = TextSelection.fromTextEditor(textEditor).orElseThrow(() -> new ExecutionException("No text selection"));
 					final AgentRequest agentRequest = new AgentRequest(List.of(project), llmModelOption, textSelection, instruction.content());
 					AiCoderActivator.getDefault().getAgentService().execute(agentRequest);
-				} catch (final IOException | ExecutionException e) {
+					PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().showView(AgentTaskTreeView.ID);
+				} catch (final IOException | ExecutionException | PartInitException e) {
 					e.printStackTrace(); // TODO
 				}
 			}

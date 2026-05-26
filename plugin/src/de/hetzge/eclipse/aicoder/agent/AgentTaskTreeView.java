@@ -25,6 +25,8 @@ import de.hetzge.eclipse.aicoder.util.Utils;
 
 public final class AgentTaskTreeView extends ViewPart {
 
+	public static final String ID = "de.hetzge.eclipse.aicoder.AgentTaskTreeView";
+
 	private final AgentTasksStateListener agentTasksStateListener;
 	private TreeViewer treeViewer;
 
