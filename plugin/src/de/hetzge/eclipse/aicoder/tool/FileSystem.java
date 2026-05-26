@@ -102,13 +102,13 @@ public final class FileSystem {
 
 	private IPath normalizePath(IPath path) {
 		if (isAvailableProjectPath(path)) {
-			return path;
+			return path.makeRelative();
 		}
 		final IFile file = this.workspaceRoot.getFile(path);
 		if (!file.exists()) {
 			throw new IllegalArgumentException("File does not exist: " + path);
 		}
-		return file.getFullPath().makeRelativeTo(this.workspaceRoot.getFullPath());
+		return file.getFullPath().makeRelativeTo(this.workspaceRoot.getFullPath()).makeRelative();
 	}
 
 	private boolean isAvailableProjectPath(IPath path) {
