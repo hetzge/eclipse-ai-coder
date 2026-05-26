@@ -602,7 +602,21 @@ public final class InlineCompletionController {
 			executeThenAbort(() -> { // prevent early abort by document change
 				int offset;
 				if (line) {
+					// TODO prevent requery in autocomplete mode
 					offset = this.completion.applyLineTo(this.textViewer.getDocument());
+					final InlineCompletion completion = this.completion;
+					Display.getDefault().asyncExec(() -> {
+						try {
+							final String nextLines = completion.content().substring(offset - completion.modelRegion().getOffset());
+							if (nextLines.isBlank()) {
+								AiCoderActivator.log().info("No next lines to add");
+								return;
+							}
+							this.setup(InlineCompletion.create(completion.historyEntry(), this.textViewer.getDocument(), offset, EclipseUtils.getWidgetOffset(this.textViewer, offset), EclipseUtils.getWidgetLine(this.textViewer, offset), nextLines, completion.lineHeight(), this.widget.getLineSpacing()));
+						} catch (final BadLocationException exception) {
+							throw new RuntimeException("Failed to create inline completion", exception);
+						}
+					});
 				} else {
 					offset = this.completion.applyTo(this.textViewer.getDocument());
 				}
@@ -611,9 +625,6 @@ public final class InlineCompletionController {
 				this.completion.historyEntry().setContent(this.textViewer.getDocument().get());
 				AiCoderHistoryView.get().ifPresent(AiCoderHistoryView::refresh);
 			}, "Accepted");
-			if (line) {
-				this.setup(this.completion.withSkip(this.completion.lines().get(0))); // TODO
-			}
 		} catch (final BadLocationException exception) {
 			throw new RuntimeException("Failed to accept inline completion", exception);
 		}
