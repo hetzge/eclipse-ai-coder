@@ -60,9 +60,16 @@ public final class LlmUtils {
 	}
 
 	private static CompletableFuture<LlmResponse> execute(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) {
-		final LlmRequest llmRequest = new LlmRequest(List.of(
-				new LlmMessage(LlmRole.SYSTEM, systemPrompt, null, List.of()),
-				new LlmMessage(LlmRole.USER, prompt, null, List.of())),
+		final List<LlmMessage> messages;
+		if (StringUtils.isBlank(suffix)) {
+			messages = List.of(
+					new LlmMessage(LlmRole.SYSTEM, "", systemPrompt, List.of()),
+					new LlmMessage(LlmRole.USER, "", prompt, List.of()));
+		} else {
+			messages = List.of();
+		}
+		final LlmRequest llmRequest = new LlmRequest(
+				messages,
 				List.of(),
 				prompt,
 				suffix);
@@ -169,7 +176,7 @@ public final class LlmUtils {
 								: "";
 						final int inputTokens = responseJson.at("prompt_eval_count", 0).asInteger();
 						final int outputTokens = responseJson.at("eval_count", 0).asInteger();
-						final List<LlmToolCallRequest> toolCallRequests = responseJson.has("tool_calls")
+						final List<LlmToolCallRequest> toolCallRequests = responseJson.has("tool_calls") && responseJson.at("tool_calls").isArray()
 								? responseJson.at("tool_calls").asJsonList().stream().map(toolCallJson -> new LlmToolCallRequest(
 										toolCallJson.at("id").asString(),
 										toolCallJson.at("type").asString(),
@@ -238,7 +245,8 @@ public final class LlmUtils {
 										: "";
 						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
-						final List<LlmToolCallRequest> toolCallRequests = responseJson.at("choices").at(0).at("message").has("tool_calls")
+						final Json toolCallsJson = responseJson.at("choices").at(0).at("message").at("tool_calls");
+						final List<LlmToolCallRequest> toolCallRequests = toolCallsJson != null && toolCallsJson.isArray()
 								? responseJson.at("choices").at(0).at("message").at("tool_calls").asJsonList().stream().map(toolCallJson -> new LlmToolCallRequest(
 										toolCallJson.at("id").asString(),
 										toolCallJson.at("type").asString(),
@@ -316,7 +324,8 @@ public final class LlmUtils {
 														: "";
 						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
-						final List<LlmToolCallRequest> toolCallRequests = responseJson.at("choices").at(0).at("message").has("tool_calls")
+						final Json toolCallsJson = responseJson.at("choices").at(0).at("message").at("tool_calls");
+						final List<LlmToolCallRequest> toolCallRequests = toolCallsJson != null && toolCallsJson.isArray()
 								? responseJson.at("choices").at(0).at("message").at("tool_calls").asJsonList().stream().map(toolCallJson -> new LlmToolCallRequest(
 										toolCallJson.at("id").asString(),
 										toolCallJson.at("type").asString(),
