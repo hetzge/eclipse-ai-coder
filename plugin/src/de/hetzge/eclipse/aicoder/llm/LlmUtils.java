@@ -310,28 +310,38 @@ public final class LlmUtils {
 					if (response.statusCode() == 200) {
 						final String responseBody = response.body();
 						final Json responseJson = Json.read(responseBody);
+						final Json messageJson = responseJson.at("choices").at(0).at("message");
 						final String content = isFillInTheMiddle && !isPseudoFim
 								? responseJson.at("choices").at(0).at("text").asString()
-								: responseJson.at("choices").at(0).at("message").at("content").isString()
-										? responseJson.at("choices").at(0).at("message").at("content").asString()
+								: messageJson.at("content").isString()
+										? messageJson.at("content").asString()
 										: "";
-						final String reasoning = responseJson.at("choices").at(0).at("message").has("reasoning")
-								&& responseJson.at("choices").at(0).at("message").at("reasoning").isString()
-										? responseJson.at("choices").at(0).at("message").at("reasoning").asString()
-										: responseJson.at("choices").at(0).at("message").has("reasoning_content")
-												&& responseJson.at("choices").at(0).at("message").at("reasoning_content").isString()
-														? responseJson.at("choices").at(0).at("message").at("reasoning_content").asString()
-														: "";
+						final String reasoning;
+						if (messageJson != null && messageJson.isObject()) {
+							reasoning = messageJson != null && messageJson.has("reasoning") && messageJson.at("reasoning").isString()
+									? messageJson.at("reasoning").asString()
+									: messageJson.has("reasoning_content")
+											&& messageJson.at("reasoning_content").isString()
+													? messageJson.at("reasoning_content").asString()
+													: "";
+						} else {
+							reasoning = "";
+						}
 						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
-						final Json toolCallsJson = responseJson.at("choices").at(0).at("message").at("tool_calls");
-						final List<LlmToolCallRequest> toolCallRequests = toolCallsJson != null && toolCallsJson.isArray()
-								? responseJson.at("choices").at(0).at("message").at("tool_calls").asJsonList().stream().map(toolCallJson -> new LlmToolCallRequest(
-										toolCallJson.at("id").asString(),
-										toolCallJson.at("type").asString(),
-										toolCallJson.at("function").at("name").asString(),
-										Json.read(toolCallJson.at("function").at("arguments").asString()))).toList()
-								: List.of();
+						final List<LlmToolCallRequest> toolCallRequests;
+						if (messageJson != null && messageJson.isObject()) {
+							final Json toolCallsJson = messageJson.at("tool_calls");
+							toolCallRequests = toolCallsJson != null && toolCallsJson.isArray()
+									? messageJson.at("tool_calls").asJsonList().stream().map(toolCallJson -> new LlmToolCallRequest(
+											toolCallJson.at("id").asString(),
+											toolCallJson.at("type").asString(),
+											toolCallJson.at("function").at("name").asString(),
+											Json.read(toolCallJson.at("function").at("arguments").asString()))).toList()
+									: List.of();
+						} else {
+							toolCallRequests = List.of();
+						}
 						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
 						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, duration, false);
 					} else {
@@ -383,27 +393,38 @@ public final class LlmUtils {
 					if (response.statusCode() == 200) {
 						final String responseBody = response.body();
 						final Json responseJson = Json.read(responseBody);
+						final Json messageJson = responseJson.at("choices").at(0).at("message");
 						final String content = isFillInTheMiddle && !isPseudoFim
 								? responseJson.at("choices").at(0).at("text").asString()
-								: responseJson.at("choices").at(0).at("message").at("content").isString()
-										? responseJson.at("choices").at(0).at("message").at("content").asString()
+								: messageJson.at("content").isString()
+										? messageJson.at("content").asString()
 										: "";
-						final String reasoning = responseJson.at("choices").at(0).at("message").has("reasoning")
-								&& responseJson.at("choices").at(0).at("message").at("reasoning").isString()
-										? responseJson.at("choices").at(0).at("message").at("reasoning").asString()
-										: responseJson.at("choices").at(0).at("message").has("reasoning_content")
-												&& responseJson.at("choices").at(0).at("message").at("reasoning_content").isString()
-														? responseJson.at("choices").at(0).at("message").at("reasoning_content").asString()
-														: "";
+						final String reasoning;
+						if (messageJson != null && messageJson.isObject()) {
+							reasoning = messageJson.has("reasoning")
+									&& messageJson.at("reasoning").isString()
+											? messageJson.at("reasoning").asString()
+											: messageJson.has("reasoning_content")
+													&& messageJson.at("reasoning_content").isString()
+															? messageJson.at("reasoning_content").asString()
+															: "";
+						} else {
+							reasoning = "";
+						}
 						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
-						final List<LlmToolCallRequest> toolCallRequests = responseJson.at("choices").at(0).at("message").has("tool_calls")
-								? responseJson.at("choices").at(0).at("message").at("tool_calls").asJsonList().stream().map(toolCallJson -> new LlmToolCallRequest(
-										toolCallJson.at("id").asString(),
-										toolCallJson.at("type").asString(),
-										toolCallJson.at("function").at("name").asString(),
-										Json.read(toolCallJson.at("function").at("arguments").asString()))).toList()
-								: List.of();
+						final List<LlmToolCallRequest> toolCallRequests;
+						if (messageJson != null && messageJson.isObject()) {
+							toolCallRequests = messageJson.has("tool_calls")
+									? messageJson.at("tool_calls").asJsonList().stream().map(toolCallJson -> new LlmToolCallRequest(
+											toolCallJson.at("id").asString(),
+											toolCallJson.at("type").asString(),
+											toolCallJson.at("function").at("name").asString(),
+											Json.read(toolCallJson.at("function").at("arguments").asString()))).toList()
+									: List.of();
+						} else {
+							toolCallRequests = List.of();
+						}
 						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
 						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, duration, false);
 					} else {

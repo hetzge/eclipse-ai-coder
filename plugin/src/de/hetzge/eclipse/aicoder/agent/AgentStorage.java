@@ -38,6 +38,7 @@ public final class AgentStorage {
 	}
 
 	public static List<AgentTask> loadAgentTasks() throws IOException {
+		Files.createDirectories(getTasksPath().toPath());
 		return Files.list(getTasksPath().toPath())
 				.map(it -> it.getFileName().toString())
 				.filter(it -> it.endsWith(".json"))
