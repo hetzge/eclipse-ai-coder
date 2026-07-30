@@ -6,22 +6,15 @@ import java.util.List;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
-import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IProject;
 import org.eclipse.swt.widgets.Display;
-import org.eclipse.ui.IFileEditorInput;
-import org.eclipse.ui.PartInitException;
-import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.CompletionMode;
-import de.hetzge.eclipse.aicoder.agent.AgentRequest;
-import de.hetzge.eclipse.aicoder.agent.AgentTaskTreeView;
-import de.hetzge.eclipse.aicoder.base.TextSelection;
 import de.hetzge.eclipse.aicoder.content.EditInstruction;
 import de.hetzge.eclipse.aicoder.content.InstructionStorage;
 import de.hetzge.eclipse.aicoder.content.InstructionUtils;
+import de.hetzge.eclipse.aicoder.inline.InlineCompletionController;
 import de.hetzge.eclipse.aicoder.inline.InstructionPopupDialog;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
@@ -44,20 +37,20 @@ public class TriggerInstructionHandler extends AbstractHandler {
 			AiCoderPreferences.setLlmModelOption(mode, llmModelOption);
 
 			// TODO
-//			InlineCompletionController.setup(textEditor).trigger(instruction.content());
+			InlineCompletionController.setup(textEditor).trigger(instruction.content());
 
-			if (EclipseUtils.getActiveTextEditor().get().getEditorInput() instanceof final IFileEditorInput fileEditorInput) {
-				try {
-					final IFile file = fileEditorInput.getFile();
-					final IProject project = file.getProject();
-					final TextSelection textSelection = TextSelection.fromTextEditor(textEditor).orElseThrow(() -> new ExecutionException("No text selection"));
-					final AgentRequest agentRequest = new AgentRequest(List.of(project), llmModelOption, textSelection, instruction.content());
-					AiCoderActivator.getDefault().getAgentService().execute(agentRequest);
-					PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().showView(AgentTaskTreeView.ID);
-				} catch (final IOException | ExecutionException | PartInitException e) {
-					e.printStackTrace(); // TODO
-				}
-			}
+//			if (EclipseUtils.getActiveTextEditor().get().getEditorInput() instanceof final IFileEditorInput fileEditorInput) {
+//				try {
+//					final IFile file = fileEditorInput.getFile();
+//					final IProject project = file.getProject();
+//					final TextSelection textSelection = TextSelection.fromTextEditor(textEditor).orElseThrow(() -> new ExecutionException("No text selection"));
+//					final AgentRequest agentRequest = new AgentRequest(List.of(project), llmModelOption, textSelection, instruction.content());
+//					AiCoderActivator.getDefault().getAgentService().execute(agentRequest);
+//					PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().showView(AgentTaskTreeView.ID);
+//				} catch (final IOException | ExecutionException | PartInitException e) {
+//					e.printStackTrace(); // TODO
+//				}
+//			}
 		}, () -> textEditor.setFocus());
 		instructionPopupDialog.open();
 		return null;

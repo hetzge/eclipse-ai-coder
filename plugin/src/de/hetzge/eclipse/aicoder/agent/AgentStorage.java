@@ -90,4 +90,8 @@ public final class AgentStorage {
 	private static IPath getStateLocationPath() {
 		return Platform.getStateLocation(AiCoderActivator.getDefault().getBundle());
 	}
+
+	public static IPath getFileSystemPath(UUID id) {
+		return getStateLocationPath().append("filesystem").append(id.toString());
+	}
 }

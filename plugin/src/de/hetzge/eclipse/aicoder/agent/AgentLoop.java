@@ -17,11 +17,6 @@ import de.hetzge.eclipse.aicoder.llm.LlmRole;
 import de.hetzge.eclipse.aicoder.llm.LlmToolCallRequest;
 import de.hetzge.eclipse.aicoder.llm.LlmToolDefinition;
 import de.hetzge.eclipse.aicoder.llm.LlmUtils;
-import de.hetzge.eclipse.aicoder.tool.EditFileTool;
-import de.hetzge.eclipse.aicoder.tool.FileSystem;
-import de.hetzge.eclipse.aicoder.tool.ListFilesTool;
-import de.hetzge.eclipse.aicoder.tool.ReadFileTool;
-import de.hetzge.eclipse.aicoder.tool.SearchTool;
 import de.hetzge.eclipse.aicoder.tool.Tool;
 
 // TODO limit loop
@@ -32,23 +27,18 @@ import de.hetzge.eclipse.aicoder.tool.Tool;
 // TODO focused agentic edit mode (tool to provide only replacement for selected text)
 // TODO fix arguments json with library
 // TODO limit output length
+// TODO edited files as children of the task tree
 
 public final class AgentLoop {
 
 	private AgentLoop() {
 	}
 
-	public static CompletableFuture<List<LlmMessage>> execute(List<IProject> projects, List<LlmMessage> initialMessages, Consumer<LlmMessage> messageConsumer) {
+	public static CompletableFuture<List<LlmMessage>> execute(List<Tool> tools, List<IProject> projects, List<LlmMessage> initialMessages, Consumer<LlmMessage> messageConsumer) {
 		if (projects.isEmpty()) {
 			throw new IllegalArgumentException("At least one project must be provided.");
 		}
 		return CompletableFuture.supplyAsync(() -> {
-			final FileSystem fileSystem = new FileSystem(projects, projects.get(0).getWorkspace().getRoot());
-			final List<Tool> tools = List.of(
-					new EditFileTool(projects, fileSystem),
-					new ListFilesTool(projects, fileSystem),
-					new ReadFileTool(projects, fileSystem),
-					new SearchTool(projects, fileSystem));
 			final List<LlmToolDefinition> toolDefinitions = tools
 					.stream()
 					.map(it -> new LlmToolDefinition(it.getDefinition()))

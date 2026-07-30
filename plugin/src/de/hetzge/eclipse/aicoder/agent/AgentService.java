@@ -8,11 +8,19 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+import org.eclipse.core.resources.IProject;
+
 import com.github.f4b6a3.uuid.UuidCreator;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.llm.LlmMessage;
 import de.hetzge.eclipse.aicoder.llm.LlmRole;
+import de.hetzge.eclipse.aicoder.tool.EditFileTool;
+import de.hetzge.eclipse.aicoder.tool.FileSystem;
+import de.hetzge.eclipse.aicoder.tool.ListFilesTool;
+import de.hetzge.eclipse.aicoder.tool.ReadFileTool;
+import de.hetzge.eclipse.aicoder.tool.SearchTool;
+import de.hetzge.eclipse.aicoder.tool.Tool;
 import de.hetzge.eclipse.aicoder.util.JinjaUtils;
 
 public final class AgentService {
@@ -56,7 +64,14 @@ public final class AgentService {
 		for (final LlmMessage message : initialMessages) {
 			AiCoderActivator.getDefault().getAgentTasksState().appendTrajectory(task.getId(), message);
 		}
-		final CompletableFuture<List<LlmMessage>> future = AgentLoop.execute(request.projects(), initialMessages, message -> {
+		final List<IProject> projects = request.projects();
+		final FileSystem fileSystem = new FileSystem(projects, projects.get(0).getWorkspace().getRoot());
+		final List<Tool> tools = List.of(
+				new EditFileTool(projects, fileSystem),
+				new ListFilesTool(projects, fileSystem),
+				new ReadFileTool(projects, fileSystem),
+				new SearchTool(projects, fileSystem));
+		final CompletableFuture<List<LlmMessage>> future = AgentLoop.execute(tools, projects, initialMessages, message -> {
 			try {
 				AiCoderActivator.getDefault().getAgentTasksState().appendTrajectory(task.getId(), message);
 			} catch (final Exception exception) {
@@ -65,6 +80,7 @@ public final class AgentService {
 		}).whenComplete((result, exception) -> {
 			try {
 				this.trajectoryById.remove(task.getId());
+				fileSystem.persist(AgentStorage.getFileSystemPath(task.getId()).toPath());
 				if (exception != null) {
 					AiCoderActivator.log().error("Failed to execute agent task", exception);
 					task.setStatus(AgentStatus.ERROR);
@@ -78,6 +94,15 @@ public final class AgentService {
 			} catch (final IOException ioException) {
 				AiCoderActivator.log().error("Failed to save agent task", ioException);
 				throw new RuntimeException("Failed to save agent task", ioException);
+			} finally {
+				if (task.getStatus() == AgentStatus.RUNNING) {
+					task.setStatus(AgentStatus.ERROR);
+					try {
+						AgentStorage.saveAgentTask(task);
+					} catch (final IOException innerException) {
+						AiCoderActivator.log().error("Failed to save agent task", innerException);
+					}
+				}
 			}
 		});
 		this.trajectoryById.put(task.getId(), future);

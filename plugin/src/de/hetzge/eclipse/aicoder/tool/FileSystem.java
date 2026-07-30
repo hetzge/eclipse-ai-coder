@@ -3,6 +3,8 @@ package de.hetzge.eclipse.aicoder.tool;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -16,42 +18,55 @@ import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 
+import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.quicksearch.SearchResult;
 
 public final class FileSystem {
 
 	private final List<IProject> projects;
 	private final IWorkspaceRoot workspaceRoot;
+	private final Map<IPath, String> referenceContentByPath;
 	private final Map<IPath, String> contentByPath;
 
 	public FileSystem(List<IProject> projects, IWorkspaceRoot workspaceRoot) {
 		this.projects = projects;
 		this.workspaceRoot = workspaceRoot;
+		this.referenceContentByPath = new HashMap<>();
 		this.contentByPath = new HashMap<>();
 	}
 
 	// only files are moveable
 	public void moveFile(IPath source, IPath destination) throws IOException {
 		final String content = readFile(source);
-		this.contentByPath.put(normalizePath(source), "");
-		this.contentByPath.put(normalizePath(destination), content);
+		putFile(source, "");
+		putFile(destination, content);
 	}
 
-	public void putFile(IPath path, String content) {
+	public void putFile(IPath path, String content) throws IOException {
+		if (!this.referenceContentByPath.containsKey(path)) {
+			this.referenceContentByPath.put(path, readReferenceFile(path));
+		}
 		this.contentByPath.put(normalizePath(path), content);
 	}
 
 	public String readFile(IPath path) throws IOException {
 		path = normalizePath(path);
 		if (this.contentByPath.containsKey(path)) {
-			return this.contentByPath.get(path);
+			return this.contentByPath.getOrDefault(path, "");
 		} else {
-			final IFile file = this.workspaceRoot.getFile(path);
-			try {
-				return new String(file.getContents(true).readAllBytes(), file.getCharset());
-			} catch (final CoreException exception) {
-				throw new IOException("Failed to read file: " + path, exception);
-			}
+			return readReferenceFile(path);
+		}
+	}
+
+	private String readReferenceFile(IPath path) throws IOException {
+		final IFile file = this.workspaceRoot.getFile(path);
+		if (!file.exists()) {
+			return "";
+		}
+		try {
+			return new String(file.getContents(true).readAllBytes(), file.getCharset());
+		} catch (final CoreException exception) {
+			throw new IOException("Failed to read file: " + path, exception);
 		}
 	}
 
@@ -100,6 +115,37 @@ public final class FileSystem {
 		return results;
 	}
 
+	public void persist(Path folder) throws IOException {
+		AiCoderActivator.log().info("Persisting file system to " + folder);
+		Files.createDirectories(folder);
+		for (final Path path : Files.walk(folder).filter(Files::isRegularFile).toList()) {
+			Files.delete(path);
+		}
+		for (final Map.Entry<IPath, String> entry : this.contentByPath.entrySet()) {
+			final Path originalFilePath = folder.resolve(entry.getKey().toString()).resolveSibling(entry.getKey().toPath().getFileName() + ".original");
+			final Path changedFilePath = folder.resolve(entry.getKey().toString());
+			Files.createDirectories(originalFilePath.getParent());
+			Files.writeString(originalFilePath, this.referenceContentByPath.getOrDefault(entry.getKey(), ""));
+			Files.createDirectories(changedFilePath.getParent());
+			Files.writeString(changedFilePath, entry.getValue());
+		}
+	}
+
+	public void load(Path folder) throws IOException {
+		AiCoderActivator.log().info("Loading file system from " + folder);
+		this.contentByPath.clear();
+		this.referenceContentByPath.clear();
+		for (final Path path : Files.walk(folder).filter(Files::isRegularFile).toList()) {
+			if (path.getFileName().toString().endsWith(".original")) {
+				final IPath relativePath = IPath.fromPath(path.getParent().relativize(path)).removeFileExtension();
+				this.referenceContentByPath.put(relativePath, Files.readString(path));
+			} else {
+				final IPath relativePath = IPath.fromPath(folder.relativize(path));
+				this.contentByPath.put(relativePath, Files.readString(path));
+			}
+		}
+	}
+
 	private IPath normalizePath(IPath path) {
 		if (isAvailableProjectPath(path)) {
 			return path.makeRelative();
@@ -114,4 +160,5 @@ public final class FileSystem {
 	private boolean isAvailableProjectPath(IPath path) {
 		return this.projects.stream().anyMatch(it -> IPath.fromPortableString(it.getName()).isPrefixOf(path));
 	}
+
 }

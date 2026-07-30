@@ -36,5 +36,10 @@ public final class AgentTrajectoryMessageComposite extends Composite {
 			toolCallText.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
 			toolCallText.setText(toolCallRequest.arguments().toString());
 		}
+
+//		final Browser browser = new Browser(this, SWT.NONE);
+//		browser.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
+//		browser.setText(MarkdownUtils.markdownToHtml(message.content()));
+
 	}
 }
