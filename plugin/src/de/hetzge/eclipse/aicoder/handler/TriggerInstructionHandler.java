@@ -27,7 +27,7 @@ public class TriggerInstructionHandler extends AbstractHandler {
 		final ITextEditor textEditor = EclipseUtils.getActiveTextEditor().orElseThrow(() -> new ExecutionException("No active text editor"));
 		final List<EditInstruction> instructions = InstructionUtils.resolve(EclipseUtils.getPath(textEditor).orElse(null));
 		final EditInstruction lastInstruction = instructionStorage.getLastInstruction();
-		final CompletionMode mode = CompletionMode.getMode(EclipseUtils.getTextViewer(textEditor), "dummy", true); // TODO !!!!!!!!!!!!!
+		final CompletionMode mode = CompletionMode.getMode(EclipseUtils.getTextViewer(textEditor), "dummy", false); // TODO !!!!!!!!!!!!!
 		final InstructionPopupDialog instructionPopupDialog = new InstructionPopupDialog(Display.getDefault().getActiveShell(), mode, instructions, lastInstruction.content(), (instruction, llmModelOption) -> {
 			try {
 				instructionStorage.addEditInstruction(instruction.content());

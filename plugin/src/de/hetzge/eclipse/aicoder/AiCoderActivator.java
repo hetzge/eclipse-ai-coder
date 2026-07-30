@@ -55,8 +55,8 @@ public class AiCoderActivator extends AbstractUIPlugin {
 				}
 			}
 		};
-		loadAgentTasksJob.schedule();
-		loadAgentTasksJob.join();
+//		loadAgentTasksJob.schedule();
+//		loadAgentTasksJob.join(); // TODO
 		this.agentService = new AgentService();
 		McpClients.INSTANCE.reload(() -> {
 			log().info("MCP clients loaded: " + McpClients.INSTANCE.getMcpStatusCountsString());

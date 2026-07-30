@@ -36,7 +36,7 @@ public final class LlmUtils {
 	}
 
 	public static CompletableFuture<LlmResponse> executeGenerate(String systemPrompt, String prompt) {
-		return execute(LlmOption.createEditModelOptionFromPreferences(), systemPrompt, prompt, null);
+		return execute(LlmOption.createGenerateModelOptionFromPreferences(), systemPrompt, prompt, null);
 	}
 
 	public static CompletableFuture<LlmResponse> executeEdit(String systemPrompt, String prompt) {
