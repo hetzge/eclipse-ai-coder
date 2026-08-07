@@ -125,9 +125,7 @@ public class ContextView extends ViewPart {
 			final int index = this.modeCombo.getSelectionIndex();
 			if (index >= 0 && index < this.panels.size()) {
 				toggleContextViewPanel(this.panels.get(index));
-				System.out.println("ContextView.createPartControl(1)");
 			}
-			System.out.println("ContextView.createPartControl(2) " + index);
 		}));
 
 		contributeToActionBars();
