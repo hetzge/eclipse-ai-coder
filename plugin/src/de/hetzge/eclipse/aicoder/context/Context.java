@@ -82,12 +82,12 @@ public final class Context {
 
 	public static final Set<String> DEFAULT_ACTIVE_PREFIXES = Set.of(FillInMiddleContextEntry.PREFIX);
 
-	public static Optional<? extends ContextEntry> create(ContextEntryKey key) throws CoreException {
+	public static Optional<? extends ContextEntry> create(ContextContext context, ContextEntryKey key) throws CoreException {
 		final List<? extends Function<ContextEntryKey, Optional<? extends ContextEntry>>> factories = List.of(
 				LambdaExceptionUtils.rethrowFunction(TypeMemberContextEntry::create),
 				LambdaExceptionUtils.rethrowFunction(PackageContextEntry::create),
 				LambdaExceptionUtils.rethrowFunction(TypeContextEntry::create),
-				LambdaExceptionUtils.rethrowFunction(CustomContextEntryData::create));
+				LambdaExceptionUtils.rethrowFunction(entryKey -> CustomContextEntryData.create(context, entryKey)));
 		return factories.stream().flatMap(factory -> factory.apply(key).stream()).findFirst();
 	}
 }

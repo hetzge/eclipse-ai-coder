@@ -1,6 +1,7 @@
 package de.hetzge.eclipse.aicoder.preferences;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +14,7 @@ import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.osgi.service.prefs.Preferences;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.CompletionMode;
 import de.hetzge.eclipse.aicoder.context.ContextEntryKey;
 import de.hetzge.eclipse.aicoder.context.CustomContextEntryData;
 import de.hetzge.eclipse.aicoder.context.FillInMiddleContextEntry;
@@ -25,28 +27,46 @@ public final class ContextPreferences {
 	private static final String CONTEXT_TYPE_POSITIONS_PREFERENCE_KEY = "context_type_positions";
 	private static final String PREFERENCES_PREFERENCE_NODE = "de.hetzge.eclipse.aicoder";
 
-	private static final Set<ContextEntryKey> BLACKLIST = new HashSet<>();
-	private static final Set<ContextEntryKey> STICKYLIST = new HashSet<>();
-	private static final Set<ContextEntryKey> TEMPORARY_DISABLED = new HashSet<>();
-	private static final List<CustomContextEntryData> CUSTOM_CONTEXT_ENTRY_DATAS = new ArrayList<>();
-	private static final List<ContextTypePositionItem> CONTEXT_TYPE_POSITIONS = new ArrayList<>();
+	private final static Map<CompletionMode, ContextPreferences> contextPreferencesByMode;
 
 	static {
-		loadPreferences();
+		contextPreferencesByMode = new HashMap<>();
+		for (final CompletionMode mode : CompletionMode.values()) {
+			final ContextPreferences preferences = new ContextPreferences(PREFERENCES_PREFERENCE_NODE + "." + mode.name());
+			preferences.loadPreferences();
+			contextPreferencesByMode.put(mode, preferences);
+		}
 	}
 
-	private ContextPreferences() {
+	public static ContextPreferences get(CompletionMode mode) {
+		return contextPreferencesByMode.get(mode);
 	}
 
-	private static void loadPreferences() {
-		final Preferences preferences = InstanceScope.INSTANCE.getNode(PREFERENCES_PREFERENCE_NODE);
+	private final String qualifier;
+	private final Set<ContextEntryKey> blacklist;
+	private final Set<ContextEntryKey> stickylist;
+	private final Set<ContextEntryKey> temporaryDisabled;
+	private final List<CustomContextEntryData> customContextDataEntries;
+	private final List<ContextTypePositionItem> contextTypePositions;
+
+	private ContextPreferences(String qualifier) {
+		this.qualifier = qualifier;
+		this.blacklist = new HashSet<>();
+		this.stickylist = new HashSet<>();
+		this.temporaryDisabled = new HashSet<>();
+		this.customContextDataEntries = new ArrayList<>();
+		this.contextTypePositions = new ArrayList<>();
+	}
+
+	private void loadPreferences() {
+		final Preferences preferences = InstanceScope.INSTANCE.getNode(this.qualifier);
 
 		// Load blacklist
 		final String blacklistString = preferences.get(BLACKLIST_PREFERENCE_KEY, "");
 		for (final String keyString : blacklistString.split(",")) {
 			final Optional<ContextEntryKey> optional = ContextEntryKey.parseKeyString(keyString);
 			if (optional.isPresent()) {
-				BLACKLIST.add(optional.get());
+				this.blacklist.add(optional.get());
 			} else {
 				AiCoderActivator.log().warn(String.format("Failed to read blacklist key: '%s'", keyString));
 			}
@@ -57,7 +77,7 @@ public final class ContextPreferences {
 		for (final String keyString : stickylistString.split(",")) {
 			final Optional<ContextEntryKey> optional = ContextEntryKey.parseKeyString(keyString);
 			if (optional.isPresent()) {
-				STICKYLIST.add(optional.get());
+				this.stickylist.add(optional.get());
 			} else {
 				AiCoderActivator.log().warn(String.format("Failed to read sticky key: '%s'", keyString));
 			}
@@ -65,36 +85,36 @@ public final class ContextPreferences {
 
 		// Load user/custom context
 		final String userContextString = preferences.get(CUSTOM_CONTEXT_PREFERENCE_KEY, "[]");
-		CUSTOM_CONTEXT_ENTRY_DATAS.addAll(Json.read(userContextString).asJsonList().stream().map(CustomContextEntryData::createFromJson).toList());
+		this.customContextDataEntries.addAll(Json.read(userContextString).asJsonList().stream().map(CustomContextEntryData::createFromJson).toList());
 
 		// Load context type positions
 		final String contextTypePositionsString = preferences.get(CONTEXT_TYPE_POSITIONS_PREFERENCE_KEY, "[]");
-		CONTEXT_TYPE_POSITIONS.addAll(Json.read(contextTypePositionsString).asJsonList().stream().map(ContextTypePositionItem::createFromJson).toList());
+		this.contextTypePositions.addAll(Json.read(contextTypePositionsString).asJsonList().stream().map(ContextTypePositionItem::createFromJson).toList());
 	}
 
-	private static void savePreferences() {
+	private void savePreferences() {
 		final Preferences preferences = InstanceScope.INSTANCE.getNode(PREFERENCES_PREFERENCE_NODE);
 
 		// Save blacklist
-		final String blacklistString = BLACKLIST.stream()
+		final String blacklistString = this.blacklist.stream()
 				.map(ContextEntryKey::getKeyString)
 				.collect(Collectors.joining(","));
 		preferences.put(BLACKLIST_PREFERENCE_KEY, blacklistString);
 
 		// Save stickylist
-		final String stickylistString = STICKYLIST.stream()
+		final String stickylistString = this.stickylist.stream()
 				.map(ContextEntryKey::getKeyString)
 				.collect(Collectors.joining(","));
 		preferences.put(STICKYLIST_PREFERENCE_KEY, stickylistString);
 
 		// Save user/custom context
-		final String userContextString = Json.array(CUSTOM_CONTEXT_ENTRY_DATAS.stream()
+		final String userContextString = Json.array(this.customContextDataEntries.stream()
 				.map(CustomContextEntryData::toJson)
 				.toArray()).toString();
 		preferences.put(CUSTOM_CONTEXT_PREFERENCE_KEY, userContextString);
 
 		// Save context type positions
-		final String contextTypePositionsString = Json.array(CONTEXT_TYPE_POSITIONS.stream()
+		final String contextTypePositionsString = Json.array(this.contextTypePositions.stream()
 				.map(ContextTypePositionItem::toJson)
 				.toArray()).toString();
 		preferences.put(CONTEXT_TYPE_POSITIONS_PREFERENCE_KEY, contextTypePositionsString);
@@ -106,51 +126,51 @@ public final class ContextPreferences {
 		}
 	}
 
-	public static void addToBlacklist(ContextEntryKey entry) {
-		BLACKLIST.add(entry);
+	public void addToBlacklist(ContextEntryKey entry) {
+		this.blacklist.add(entry);
 		savePreferences();
 	}
 
-	public static void removeFromBlacklist(ContextEntryKey entry) {
-		BLACKLIST.remove(entry);
+	public void removeFromBlacklist(ContextEntryKey entry) {
+		this.blacklist.remove(entry);
 		savePreferences();
 	}
 
-	public static boolean isBlacklisted(ContextEntryKey entry) {
-		return BLACKLIST.contains(entry);
+	public boolean isBlacklisted(ContextEntryKey entry) {
+		return this.blacklist.contains(entry);
 	}
 
-	public static void addToStickylist(ContextEntryKey entry) {
-		STICKYLIST.add(entry);
+	public void addToStickylist(ContextEntryKey entry) {
+		this.stickylist.add(entry);
 		savePreferences();
 	}
 
-	public static void removeFromStickylist(ContextEntryKey entry) {
-		STICKYLIST.remove(entry);
+	public void removeFromStickylist(ContextEntryKey entry) {
+		this.stickylist.remove(entry);
 		savePreferences();
 	}
 
-	public static boolean isSticky(ContextEntryKey entry) {
-		return STICKYLIST.contains(entry);
+	public boolean isSticky(ContextEntryKey entry) {
+		return this.stickylist.contains(entry);
 	}
 
-	public static Set<ContextEntryKey> getBlacklist() {
-		return new HashSet<>(BLACKLIST);
+	public Set<ContextEntryKey> getBlacklist() {
+		return new HashSet<>(this.blacklist);
 	}
 
-	public static Set<ContextEntryKey> getStickylist() {
-		return new HashSet<>(STICKYLIST);
+	public Set<ContextEntryKey> getStickylist() {
+		return new HashSet<>(this.stickylist);
 	}
 
-	public static List<CustomContextEntryData> getCustomContextEntryDatas() {
-		return CUSTOM_CONTEXT_ENTRY_DATAS;
+	public List<CustomContextEntryData> getCustomContextEntryDatas() {
+		return this.customContextDataEntries;
 	}
 
-	public static void addToTemporaryDisabled(ContextEntryKey entry) {
-		TEMPORARY_DISABLED.add(entry);
+	public void addToTemporaryDisabled(ContextEntryKey entry) {
+		this.temporaryDisabled.add(entry);
 	}
 
-	public static void setTemporaryDisabled(ContextEntryKey entry, boolean enabled) {
+	public void setTemporaryDisabled(ContextEntryKey entry, boolean enabled) {
 		if (enabled) {
 			removeFromTemporaryDisabled(entry);
 		} else {
@@ -158,48 +178,48 @@ public final class ContextPreferences {
 		}
 	}
 
-	public static void removeFromTemporaryDisabled(ContextEntryKey entry) {
-		TEMPORARY_DISABLED.remove(entry);
+	public void removeFromTemporaryDisabled(ContextEntryKey entry) {
+		this.temporaryDisabled.remove(entry);
 	}
 
-	public static boolean isTemporaryDisabled(ContextEntryKey entry) {
-		return TEMPORARY_DISABLED.contains(entry);
+	public boolean isTemporaryDisabled(ContextEntryKey entry) {
+		return this.temporaryDisabled.contains(entry);
 	}
 
-	public static Set<ContextEntryKey> getTemporaryDisabled() {
-		return new HashSet<>(TEMPORARY_DISABLED);
+	public Set<ContextEntryKey> getTemporaryDisabled() {
+		return new HashSet<>(this.temporaryDisabled);
 	}
 
-	public static void setCustomContextEntries(List<CustomContextEntryData> datas) {
-		CUSTOM_CONTEXT_ENTRY_DATAS.clear();
-		CUSTOM_CONTEXT_ENTRY_DATAS.addAll(datas);
+	public void setCustomContextEntries(List<CustomContextEntryData> datas) {
+		this.customContextDataEntries.clear();
+		this.customContextDataEntries.addAll(datas);
 		savePreferences();
 	}
 
-	public static List<ContextTypePositionItem> getContextTypePositions() {
-		return CONTEXT_TYPE_POSITIONS;
+	public List<ContextTypePositionItem> getContextTypePositions() {
+		return this.contextTypePositions;
 	}
 
-	public static Map<String, ContextTypePositionItem> getContextTypePositionByPrefix() {
-		return CONTEXT_TYPE_POSITIONS.stream().collect(Collectors.toMap(ContextTypePositionItem::prefix, Function.identity()));
+	public Map<String, ContextTypePositionItem> getContextTypePositionByPrefix() {
+		return this.contextTypePositions.stream().collect(Collectors.toMap(ContextTypePositionItem::prefix, Function.identity()));
 	}
 
-	public static void setContextTypePositions(List<ContextTypePositionItem> newPositions) {
-		CONTEXT_TYPE_POSITIONS.clear();
-		CONTEXT_TYPE_POSITIONS.addAll(newPositions);
+	public void setContextTypePositions(List<ContextTypePositionItem> newPositions) {
+		this.contextTypePositions.clear();
+		this.contextTypePositions.addAll(newPositions);
 		savePreferences();
 	}
 
-	public static void setContextTypeEnabled(String contextKey, boolean enabled) {
+	public void setContextTypeEnabled(String contextKey, boolean enabled) {
 		if (contextKey.startsWith(FillInMiddleContextEntry.PREFIX)) {
 			return; // FIM must be always enabled
 		}
-		CONTEXT_TYPE_POSITIONS.replaceAll(item -> contextKey.startsWith(item.prefix()) ? item.withEnabled(enabled) : item);
+		this.contextTypePositions.replaceAll(item -> contextKey.startsWith(item.prefix()) ? item.withEnabled(enabled) : item);
 		savePreferences();
 	}
 
-	public static boolean isContextTypeEnabled(String contextKey) {
-		return CONTEXT_TYPE_POSITIONS.stream().anyMatch(item -> contextKey.startsWith(item.prefix()) && item.enabled());
+	public boolean isContextTypeEnabled(String contextKey) {
+		return this.contextTypePositions.stream().anyMatch(item -> contextKey.startsWith(item.prefix()) && item.enabled());
 	}
 
 	public record ContextTypePositionItem(String prefix, boolean enabled, int position) {

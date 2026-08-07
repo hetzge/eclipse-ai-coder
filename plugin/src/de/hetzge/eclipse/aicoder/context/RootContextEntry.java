@@ -17,7 +17,6 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.ui.IEditorInput;
 
 import de.hetzge.eclipse.aicoder.config.TaskConfig;
-import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
 
@@ -43,7 +42,7 @@ public class RootContextEntry extends ContextEntry {
 		return new ContextEntryKey(PREFIX, "ROOT");
 	}
 
-	public static RootContextEntry create(IDocument document, IEditorInput editorInput, int offset, String originalInstructions, TaskConfig config) throws BadLocationException, UnsupportedFlavorException, IOException, CoreException {
+	public static RootContextEntry create(ContextContext context, IDocument document, IEditorInput editorInput, int offset, String originalInstructions, TaskConfig config) throws BadLocationException, UnsupportedFlavorException, IOException, CoreException {
 		final long before = System.currentTimeMillis();
 		final IProject project = EclipseUtils.getProject(editorInput);
 		final String filename = EclipseUtils.getFilename(editorInput).orElse("Active File");
@@ -53,8 +52,8 @@ public class RootContextEntry extends ContextEntry {
 		factories.add(ProjectInformationsContextEntry.factory(project));
 		factories.add(FileTreeContextEntry.factory(editorInput, config));
 		factories.add(OpenEditorsContextEntry.factory());
-		factories.add(StickyContextEntry.factory());
-		factories.add(UserContextEntry.factory(path, config));
+		factories.add(StickyContextEntry.factory(context));
+		factories.add(UserContextEntry.factory(context, path, config));
 		if (compilationUnitOptional.isPresent()) {
 			final ICompilationUnit unit = compilationUnitOptional.get();
 			factories.add(SuperContextEntry.factory(unit, offset));
@@ -67,7 +66,7 @@ public class RootContextEntry extends ContextEntry {
 		factories.add(FillInMiddleContextEntry.factory(filename, document, offset, config));
 		factories.add(AiRerankContextEntry.factory(document, editorInput, originalInstructions, offset, config));
 		factories.add(CodeViewportMemoryContextEntry.factory(document, offset, config));
-		final List<String> orderedPrefixes = ContextPreferences.getContextTypePositions().stream()
+		final List<String> orderedPrefixes = context.getPreferences().getContextTypePositions().stream()
 				.map(item -> item.prefix())
 				.toList();
 		final List<ContextEntry> filteredAndSortedEntries = factories.parallelStream()
@@ -75,7 +74,7 @@ public class RootContextEntry extends ContextEntry {
 				.map(LambdaExceptionUtils.rethrowFunction(factory -> {
 					return factory.prefix().equals(FillInMiddleContextEntry.PREFIX) // Fill in middle is always enabled
 							|| config.getContextConfig(factory.prefix()).isPresent() // Is enabled by task config
-							|| (!config.hasContextConfig() && ContextPreferences.isContextTypeEnabled(factory.prefix())) // Is enabled in preferences
+							|| (!config.hasContextConfig() && context.getPreferences().isContextTypeEnabled(factory.prefix())) // Is enabled in preferences
 									? factory.supplier().get()
 									: factory.emptySupplier().get();
 				})) // TODO handle errors in supplier

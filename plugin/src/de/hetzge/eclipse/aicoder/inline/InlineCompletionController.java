@@ -74,6 +74,7 @@ import de.hetzge.eclipse.aicoder.llm.LlmResponse;
 import de.hetzge.eclipse.aicoder.llm.LlmUtils;
 import de.hetzge.eclipse.aicoder.next.NextEditRequest;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
+import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils.Runnable_WithExceptions;
 import de.hetzge.eclipse.aicoder.util.Utils;
@@ -233,10 +234,11 @@ public final class InlineCompletionController {
 					} else {
 						config = TaskConfig.createDefault();
 					}
-					final RootContextEntry rootContextEntry = RootContextEntry.create(document, this.textEditor.getEditorInput(), modelOffset, originalInstructions, config);
-					final String contextString = ContextEntry.apply(rootContextEntry, new ContextContext());
+					final ContextContext context = new ContextContext(ContextPreferences.get(mode));
+					final RootContextEntry rootContextEntry = RootContextEntry.create(context, document, this.textEditor.getEditorInput(), modelOffset, originalInstructions, config);
+					final String contextString = ContextEntry.apply(rootContextEntry, context);
 					// IMPORTANT: DO this after ContextEntry.apply(...)
-					updateContextView(rootContextEntry);
+					updateContextView(rootContextEntry, mode);
 					if (monitor.isCanceled()) {
 						historyEntry.setStatus(HistoryStatus.CANCELED);
 						updateHistoryEntry(historyEntry);
@@ -459,11 +461,11 @@ public final class InlineCompletionController {
 		Display.getDefault().syncExec(() -> InlineCompletionController.this.textViewer.setSelectedRange(selectionOffset, 0));
 	}
 
-	private void updateContextView(RootContextEntry rootContextEntry) {
+	private void updateContextView(RootContextEntry rootContextEntry, CompletionMode mode) {
 		Display.getDefault().syncExec(() -> {
 			try {
 				ContextView.get().ifPresent(view -> {
-					view.setRootContextEntry(rootContextEntry);
+					view.getAndEnablePanel(mode).setRootContextEntry(rootContextEntry);
 				});
 			} catch (final CoreException exception) {
 				throw new RuntimeException(exception);

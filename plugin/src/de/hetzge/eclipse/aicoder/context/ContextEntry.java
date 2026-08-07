@@ -8,8 +8,6 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
 
-import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
-
 public abstract class ContextEntry {
 
 	private int tokenCount;
@@ -53,7 +51,7 @@ public abstract class ContextEntry {
 	}
 
 	public static String apply(final ContextEntry entry, ContextContext context) {
-		if (ContextPreferences.isBlacklisted(entry.getKey()) || context.isDone(entry) || ContextPreferences.isTemporaryDisabled(entry.getKey())) {
+		if (context.getPreferences().isBlacklisted(entry.getKey()) || context.isDone(entry) || context.getPreferences().isTemporaryDisabled(entry.getKey())) {
 			entry.setTokenCount(0);
 			return "";
 		}

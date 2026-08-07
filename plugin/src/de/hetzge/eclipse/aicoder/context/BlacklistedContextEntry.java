@@ -9,7 +9,6 @@ import org.eclipse.swt.graphics.Image;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
-import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
 import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
 
 public class BlacklistedContextEntry extends ContextEntry {
@@ -39,10 +38,10 @@ public class BlacklistedContextEntry extends ContextEntry {
 		return AiCoderActivator.getImage(AiCoderImageKey.BLACKLIST_ICON);
 	}
 
-	public static BlacklistedContextEntry create() throws CoreException {
+	public static BlacklistedContextEntry create(ContextContext context) throws CoreException {
 		final long before = System.currentTimeMillis();
-		final List<? extends ContextEntry> entries = ContextPreferences.getBlacklist().stream()
-				.map(LambdaExceptionUtils.rethrowFunction(Context::create))
+		final List<? extends ContextEntry> entries = context.getPreferences().getBlacklist().stream()
+				.map(LambdaExceptionUtils.rethrowFunction(key -> Context.create(context, key)))
 				.flatMap(Optional::stream)
 				.toList();
 		return new BlacklistedContextEntry(entries, Duration.ofMillis(System.currentTimeMillis() - before));

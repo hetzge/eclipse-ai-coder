@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
 import de.hetzge.eclipse.aicoder.util.Utils;
 import mjson.Json;
 
@@ -58,8 +57,8 @@ public class CustomContextEntryData {
 				.set("glob", this.glob);
 	}
 
-	public static Optional<CustomContextEntry> create(ContextEntryKey key) {
-		return ContextPreferences.getCustomContextEntryDatas().stream()
+	public static Optional<CustomContextEntry> create(ContextContext context, ContextEntryKey key) {
+		return context.getPreferences().getCustomContextEntryDatas().stream()
 				.filter(it -> Objects.equals(it.getKey(), key.value()))
 				.findFirst()
 				.map(data -> new CustomContextEntry(data, true));

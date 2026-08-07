@@ -7,7 +7,6 @@ import java.util.List;
 
 import de.hetzge.eclipse.aicoder.config.ContextConfig.UserConfig;
 import de.hetzge.eclipse.aicoder.config.TaskConfig;
-import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
 
 public class UserContextEntry extends ContextEntry {
 
@@ -28,14 +27,14 @@ public class UserContextEntry extends ContextEntry {
 		return LABEL;
 	}
 
-	public static ContextEntryFactory factory(Path path, TaskConfig config) {
-		return new ContextEntryFactory(PREFIX, () -> create(path, config), () -> new EmptyContextEntry(PREFIX, LABEL, null));
+	public static ContextEntryFactory factory(ContextContext context, Path path, TaskConfig config) {
+		return new ContextEntryFactory(PREFIX, () -> create(context, path, config), () -> new EmptyContextEntry(PREFIX, LABEL, null));
 	}
 
-	public static UserContextEntry create(Path path, TaskConfig config) {
+	public static UserContextEntry create(ContextContext context, Path path, TaskConfig config) {
 		final long before = System.currentTimeMillis();
 		final List<CustomContextEntry> entries = new ArrayList<>();
-		entries.addAll(ContextPreferences.getCustomContextEntryDatas().stream()
+		entries.addAll(context.getPreferences().getCustomContextEntryDatas().stream()
 				.map(data -> new CustomContextEntry(data, data.matches(path)))
 				.toList());
 		entries.addAll(config.getContextConfig(PREFIX)
