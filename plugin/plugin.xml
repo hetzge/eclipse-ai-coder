@@ -47,6 +47,10 @@
         name="Trigger Instruction">
   </command>
   <command
+        id="de.hetzge.eclipse.codestral.commands.startAgent"
+        name="Start Agent">
+  </command>
+  <command
         id="de.hetzge.eclipse.codestral.commands.triggerNextEdit"
         name="Trigger Next Edit">
   </command>
@@ -80,6 +84,10 @@
   <handler
         class="de.hetzge.eclipse.aicoder.handler.TriggerInstructionHandler"
         commandId="de.hetzge.eclipse.codestral.commands.triggerInstruction">
+  </handler>
+  <handler
+        class="de.hetzge.eclipse.aicoder.handler.StartAgentHandler"
+        commandId="de.hetzge.eclipse.codestral.commands.startAgent">
   </handler>
   	<handler
         class="de.hetzge.eclipse.aicoder.handler.TriggerNextEditHandler"

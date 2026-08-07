@@ -6,28 +6,36 @@ import java.util.List;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IProject;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.IFileEditorInput;
+import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.CompletionMode;
+import de.hetzge.eclipse.aicoder.agent.AgentRequest;
+import de.hetzge.eclipse.aicoder.agent.AgentTaskTreeView;
+import de.hetzge.eclipse.aicoder.base.TextSelection;
 import de.hetzge.eclipse.aicoder.content.EditInstruction;
 import de.hetzge.eclipse.aicoder.content.InstructionStorage;
 import de.hetzge.eclipse.aicoder.content.InstructionUtils;
-import de.hetzge.eclipse.aicoder.inline.InlineCompletionController;
 import de.hetzge.eclipse.aicoder.inline.InstructionPopupDialog;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 
-public class TriggerInstructionHandler extends AbstractHandler {
+public class StartAgentHandler extends AbstractHandler {
+
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
-		AiCoderActivator.log().info("Execute trigger instruction handler");
+		AiCoderActivator.log().info("Start agent handler");
 		final InstructionStorage instructionStorage = AiCoderActivator.getDefault().getInstructionStorage();
 		final ITextEditor textEditor = EclipseUtils.getActiveTextEditor().orElseThrow(() -> new ExecutionException("No active text editor"));
 		final List<EditInstruction> instructions = InstructionUtils.resolve(EclipseUtils.getPath(textEditor).orElse(null));
 		final EditInstruction lastInstruction = instructionStorage.getLastInstruction();
-		final CompletionMode mode = CompletionMode.getMode(EclipseUtils.getTextViewer(textEditor), "dummy", false); // TODO !!!!!!!!!!!!!
+		final CompletionMode mode = CompletionMode.AGENT;
 		final InstructionPopupDialog instructionPopupDialog = new InstructionPopupDialog(Display.getDefault().getActiveShell(), mode, instructions, lastInstruction.content(), (instruction, llmModelOption) -> {
 			try {
 				instructionStorage.addEditInstruction(instruction.content());
@@ -35,7 +43,19 @@ public class TriggerInstructionHandler extends AbstractHandler {
 				AiCoderActivator.log().error("Failed to store instruction.", exception);
 			}
 			AiCoderPreferences.setLlmModelOption(mode, llmModelOption);
-			InlineCompletionController.setup(textEditor).trigger(instruction.content());
+			if (EclipseUtils.getActiveTextEditor().get().getEditorInput() instanceof final IFileEditorInput fileEditorInput) {
+				try {
+					final IFile file = fileEditorInput.getFile();
+					final IProject project = file.getProject();
+					final TextSelection textSelection = TextSelection.fromTextEditor(textEditor).orElseThrow(() -> new ExecutionException("No text selection"));
+					final AgentRequest agentRequest = new AgentRequest(List.of(project), llmModelOption, textSelection, instruction.content());
+					AiCoderActivator.getDefault().getAgentService().execute(agentRequest);
+					PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().showView(AgentTaskTreeView.ID);
+				} catch (final IOException | ExecutionException | PartInitException exception) {
+					AiCoderActivator.log().error("Failed to start agent", exception);
+					AiCoderActivator.openErrorDialog("Failed to start agent", exception.getMessage(), exception);
+				}
+			}
 		}, () -> textEditor.setFocus());
 		instructionPopupDialog.open();
 		return null;
