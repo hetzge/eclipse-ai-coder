@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -136,6 +137,22 @@ public final class FileSystem {
 		return this.contentByPath.keySet().stream()
 				.filter(it -> !this.contentByPath.get(it).isBlank())
 				.toList();
+	}
+
+	public Set<IPath> getChangedPaths() {
+		return this.contentByPath.keySet();
+	}
+
+	public String getChangedContent(IPath path) {
+		return this.contentByPath.getOrDefault(normalizePath(path), "");
+	}
+
+	public String getReferenceContent(IPath path) {
+		return this.referenceContentByPath.getOrDefault(normalizePath(path), "");
+	}
+
+	public String readWorktreeFile(IPath path) throws IOException {
+		return readReferenceFile(normalizePath(path));
 	}
 
 	public List<SearchResult> search(String pattern, String filePattern) {

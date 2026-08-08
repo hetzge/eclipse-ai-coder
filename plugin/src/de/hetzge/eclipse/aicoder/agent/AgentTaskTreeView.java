@@ -1,14 +1,22 @@
 package de.hetzge.eclipse.aicoder.agent;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
@@ -44,6 +52,7 @@ import de.hetzge.eclipse.aicoder.history.HistoryType;
 import de.hetzge.eclipse.aicoder.inline.InlineCompletionController;
 import de.hetzge.eclipse.aicoder.inline.Suggestion;
 import de.hetzge.eclipse.aicoder.tool.FileSystem;
+import de.hetzge.eclipse.aicoder.util.DiffUtils;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 import de.hetzge.eclipse.aicoder.util.Utils;
 
@@ -79,15 +88,7 @@ public final class AgentTaskTreeView extends ViewPart {
 							ErrorDialog.openError(getSite().getShell(), "Error", "Failed to open agent task editor", Status.error(exception.getMessage(), exception));
 						}
 					} else if (treeSelection.getFirstElement() instanceof final AgentChange agentChange) {
-						final AgentTask task = findTask(agentChange).orElseThrow(() -> new IllegalStateException("No task found for change: " + agentChange.path().toPortableString()));
-						final List<IProject> projects = task.getRequest().projects();
-						final FileSystem fileSystem = new FileSystem(projects, projects.get(0).getWorkspace().getRoot());
-						fileSystem.load(AgentStorage.getFileSystemPath(task.getId()).toPath());
-						final List<Suggestion> suggestions = fileSystem.toSuggestions(agentChange.path(), HistoryType.AGENT);
-						final IFile file = ResourcesPlugin.getWorkspace().getRoot().getFile(agentChange.path());
-						IDE.openEditor(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage(), file);
-						final InlineCompletionController controller = InlineCompletionController.setup(EclipseUtils.getActiveTextEditor().orElseThrow());
-						controller.setup(suggestions);
+						openChange(agentChange);
 					}
 				}
 			} catch (final Exception exception) {
@@ -189,7 +190,193 @@ public final class AgentTaskTreeView extends ViewPart {
 		};
 		abortAllTasksAction.setEnabled(hasRunningTasks());
 		manager.add(abortAllTasksAction);
+		manager.add(new Separator());
+		if (this.treeViewer.getSelection() instanceof final IStructuredSelection selection) {
+			final Object firstElement = selection.getFirstElement();
+			if (firstElement instanceof final AgentTask agentTask) {
+				fillTaskContextMenu(manager);
+			} else if (firstElement instanceof final AgentChange agentChange) {
+				fillFileContextMenu(manager);
+			}
+		}
 		manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
+	}
+
+	private void fillTaskContextMenu(IMenuManager manager) {
+		final List<AgentTask> tasks = getSelectedAgentTasks();
+		final Action applyAllAction = new Action("Apply all changes") {
+			@Override
+			public void run() {
+				applyTaskChanges(tasks, false);
+			}
+		};
+		applyAllAction.setEnabled(!tasks.isEmpty());
+		manager.add(applyAllAction);
+		final Action resetAllAction = new Action("Reset all to reference") {
+			@Override
+			public void run() {
+				applyTaskChanges(tasks, true);
+			}
+		};
+		resetAllAction.setEnabled(!tasks.isEmpty());
+		manager.add(resetAllAction);
+	}
+
+	private void fillFileContextMenu(IMenuManager manager) {
+		final List<AgentChange> changes = getSelectedAgentChanges();
+		final Action applyAction = new Action("Apply changes") {
+			@Override
+			public void run() {
+				applyChanges(changes, false);
+			}
+		};
+		applyAction.setEnabled(!changes.isEmpty());
+		manager.add(applyAction);
+		final Action resetAction = new Action("Reset to reference") {
+			@Override
+			public void run() {
+				applyChanges(changes, true);
+			}
+		};
+		resetAction.setEnabled(!changes.isEmpty());
+		manager.add(resetAction);
+		manager.add(new Separator());
+		if (!changes.isEmpty()) {
+			final AgentChange change = changes.get(0);
+			final Action openEditorAction = new Action("Open in editor") {
+				@Override
+				public void run() {
+					openChange(change);
+				}
+			};
+			manager.add(openEditorAction);
+			final Action compareWorktreeAction = new Action("Open compare dialog (worktree)") {
+				@Override
+				public void run() {
+					openCompareDialog(change, false);
+				}
+			};
+			manager.add(compareWorktreeAction);
+			final Action compareReferenceAction = new Action("Open compare dialog (reference)") {
+				@Override
+				public void run() {
+					openCompareDialog(change, true);
+				}
+			};
+			manager.add(compareReferenceAction);
+		}
+	}
+
+	private List<AgentChange> getSelectedAgentChanges() {
+		final List<AgentChange> changes = new ArrayList<>();
+		if (this.treeViewer.getSelection() instanceof final IStructuredSelection structuredSelection) {
+			for (final Object element : structuredSelection) {
+				if (element instanceof final AgentChange agentChange) {
+					changes.add(agentChange);
+				}
+			}
+		}
+		return changes;
+	}
+
+	private FileSystem loadFileSystem(AgentTask task) throws IOException {
+		final List<IProject> projects = task.getRequest().projects();
+		final FileSystem fileSystem = new FileSystem(projects, projects.get(0).getWorkspace().getRoot());
+		fileSystem.load(AgentStorage.getFileSystemPath(task.getId()).toPath());
+		return fileSystem;
+	}
+
+	private void applyTaskChanges(List<AgentTask> tasks, boolean reset) {
+		for (final AgentTask task : tasks) {
+			try {
+				final FileSystem fileSystem = loadFileSystem(task);
+				applyFileSystemChanges(fileSystem, new ArrayList<>(fileSystem.getChangedPaths()), reset);
+			} catch (final Exception exception) {
+				logAndShowError("Failed to " + (reset ? "reset" : "apply") + " changes", exception);
+			}
+		}
+	}
+
+	private void applyChanges(List<AgentChange> changes, boolean reset) {
+		final Map<AgentTask, List<IPath>> pathsByTask = new LinkedHashMap<>();
+		for (final AgentChange change : changes) {
+			findTask(change).ifPresent(task -> pathsByTask.computeIfAbsent(task, key -> new ArrayList<>()).add(change.path()));
+		}
+		for (final Map.Entry<AgentTask, List<IPath>> entry : pathsByTask.entrySet()) {
+			try {
+				final FileSystem fileSystem = loadFileSystem(entry.getKey());
+				applyFileSystemChanges(fileSystem, entry.getValue(), reset);
+			} catch (final Exception exception) {
+				logAndShowError("Failed to " + (reset ? "reset" : "apply") + " changes", exception);
+			}
+		}
+	}
+
+	private void applyFileSystemChanges(FileSystem fileSystem, List<IPath> paths, boolean reset) throws CoreException {
+		ResourcesPlugin.getWorkspace().run(monitor -> {
+			for (final IPath path : paths) {
+				final String content = reset ? fileSystem.getReferenceContent(path) : fileSystem.getChangedContent(path);
+				writeFileContent(path, content);
+			}
+		}, null);
+	}
+
+	private void writeFileContent(IPath path, String content) throws CoreException {
+		final IFile file = ResourcesPlugin.getWorkspace().getRoot().getFile(path);
+		if (content.isBlank()) {
+			if (file.exists()) {
+				file.delete(true, false, null);
+			}
+		} else if (!file.exists()) {
+			file.create(new ByteArrayInputStream(content.getBytes(getCharset(path))), true, null);
+		} else {
+			file.setContents(new ByteArrayInputStream(content.getBytes(getCharset(path))), true, true, null);
+		}
+	}
+
+	private Charset getCharset(IPath path) throws CoreException {
+		final IFile file = ResourcesPlugin.getWorkspace().getRoot().getFile(path);
+		if (file.exists()) {
+			return Charset.forName(file.getCharset());
+		}
+		return Charset.defaultCharset();
+	}
+
+	private void openChange(AgentChange agentChange) {
+		try {
+			final AgentTask task = findTask(agentChange).orElseThrow(() -> new IllegalStateException("No task found for change: " + agentChange.path().toPortableString()));
+			final List<IProject> projects = task.getRequest().projects();
+			final FileSystem fileSystem = new FileSystem(projects, projects.get(0).getWorkspace().getRoot());
+			fileSystem.load(AgentStorage.getFileSystemPath(task.getId()).toPath());
+			final List<Suggestion> suggestions = fileSystem.toSuggestions(agentChange.path(), HistoryType.AGENT);
+			final IFile file = ResourcesPlugin.getWorkspace().getRoot().getFile(agentChange.path());
+			IDE.openEditor(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage(), file);
+			final InlineCompletionController controller = InlineCompletionController.setup(EclipseUtils.getActiveTextEditor().orElseThrow());
+			controller.setup(suggestions);
+		} catch (final Exception exception) {
+			AiCoderActivator.log().error("Failed to open agent task editor", exception);
+			final String detail = exception.getMessage() != null ? exception.getMessage() : exception.toString();
+			ErrorDialog.openError(getSite().getShell(), "Error", "Failed to open agent task editor", Status.error(detail, exception));
+		}
+	}
+
+	private void openCompareDialog(AgentChange change, boolean reference) {
+		try {
+			final AgentTask task = findTask(change).orElseThrow(() -> new IllegalStateException("No task found for change: " + change.path().toPortableString()));
+			final FileSystem fileSystem = loadFileSystem(task);
+			final IPath path = change.path();
+			final String proposedContent = fileSystem.getChangedContent(path);
+			final String compareContent = reference ? fileSystem.getReferenceContent(path) : fileSystem.readWorktreeFile(path);
+			DiffUtils.openDiff(proposedContent, compareContent);
+		} catch (final Exception exception) {
+			logAndShowError("Failed to open compare dialog", exception);
+		}
+	}
+
+	private void logAndShowError(String message, Exception exception) {
+		AiCoderActivator.log().error(message, exception);
+		final String detail = exception.getMessage() != null ? exception.getMessage() : exception.toString();
+		ErrorDialog.openError(getSite().getShell(), "Error", message, Status.error(detail, exception));
 	}
 
 	private void updateActionEnablement() {
