@@ -27,11 +27,11 @@ public final class DiffUtils {
 	private DiffUtils() {
 	}
 
-	public static String diff(String oldContent, String newContent) {
+	public static Diff diff(String oldContent, String newContent) {
 		return diff(oldContent.lines().toList(), newContent.lines().toList());
 	}
 
-	public static String diff(List<String> oldList, List<String> newList) {
+	public static Diff diff(List<String> oldList, List<String> newList) {
 		final int m = oldList.size();
 		final int n = newList.size();
 
@@ -46,6 +46,8 @@ public final class DiffUtils {
 		// Backtrack to produce diff hunks
 		final StringBuilder stringBuilder = new StringBuilder();
 		int i = m, j = n;
+		int added = 0;
+		int removed = 0;
 		while (i > 0 || j > 0) {
 			if (i > 0 && j > 0 && oldList.get(i - 1).equals(newList.get(j - 1))) {
 				stringBuilder.insert(0, " " + oldList.get(i - 1) + "\n");
@@ -54,13 +56,15 @@ public final class DiffUtils {
 			} else if (j > 0 && (i == 0 || lcs[i][j - 1] >= lcs[i - 1][j])) {
 				stringBuilder.insert(0, "+" + newList.get(j - 1) + "\n");
 				j--;
+				added++;
 			} else if (i > 0 && (j == 0 || lcs[i][j - 1] < lcs[i - 1][j])) {
 				stringBuilder.insert(0, "-" + oldList.get(i - 1) + "\n");
 				i--;
+				removed++;
 			}
 		}
-
-		return stringBuilder.toString();
+		final String patch = stringBuilder.toString();
+		return new Diff(patch, added, removed);
 	}
 
 	public static void openDiff(String content, String previousContent) {
@@ -168,6 +172,9 @@ public final class DiffUtils {
 		public ITypedElement replace(ITypedElement dest, ITypedElement src) {
 			return null;
 		}
+	}
+
+	public static record Diff(String patch, int added, int removed) {
 	}
 
 }

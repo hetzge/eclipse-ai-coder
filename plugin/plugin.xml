@@ -117,19 +117,19 @@
     </key>
     <key
           commandId="de.hetzge.eclipse.codestral.commands.inlineCompletion.accept"
-          contextId="de.hetzge.eclipse.codestral.inlineCompletionVisible"
+          contextId="de.hetzge.eclipse.aicoder.inlineCompletionVisible"
           schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
           sequence="TAB">
     </key>
     <key
           commandId="de.hetzge.eclipse.codestral.commands.acceptLine"
-          contextId="de.hetzge.eclipse.codestral.inlineCompletionVisible"
+          contextId="de.hetzge.eclipse.aicoder.inlineCompletionVisible"
           schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
           sequence="M1+M2+M3+ARROW_DOWN">
     </key>
     <key
           commandId="de.hetzge.eclipse.codestral.commands.inlineCompletion.dismiss"
-          contextId="de.hetzge.eclipse.codestral.inlineCompletionVisible"
+          contextId="de.hetzge.eclipse.aicoder.inlineCompletionVisible"
           schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
           sequence="ESC">
     </key>
@@ -143,7 +143,7 @@
 
 	<extension point="org.eclipse.ui.contexts">
 		<context
-			id="de.hetzge.eclipse.codestral.inlineCompletionVisible"
+			id="de.hetzge.eclipse.aicoder.inlineCompletionVisible"
 			name="Inline Completion Visible"
 			description="Inline completion visible"
 			parentId="org.eclipse.ui.textEditorScope">

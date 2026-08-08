@@ -58,7 +58,7 @@ public final class AgentTasksState {
 		this.listeners.remove(listener);
 	}
 
-	private void fireAgentTasksChanged(AgentTask task) {
+	public synchronized void fireAgentTasksChanged(AgentTask task) {
 		for (final AgentTasksStateListener listener : this.listeners) {
 			listener.onAgentTasksChanged(task);
 		}

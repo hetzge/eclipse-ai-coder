@@ -74,13 +74,17 @@ public final class AgentService {
 		final CompletableFuture<List<LlmMessage>> future = AgentLoop.execute(tools, projects, initialMessages, message -> {
 			try {
 				AiCoderActivator.getDefault().getAgentTasksState().appendTrajectory(task.getId(), message);
+				task.setChanges(fileSystem.toAgentChanges());
+				AgentStorage.saveAgentTask(task);
+				fileSystem.persist(AgentStorage.getFileSystemPath(task.getId()).toPath());
+				AiCoderActivator.getDefault().getAgentTasksState().fireAgentTasksChanged(task);
+
 			} catch (final Exception exception) {
 				throw new RuntimeException("Failed to append trajectory", exception);
 			}
 		}).whenComplete((result, exception) -> {
 			try {
 				this.trajectoryById.remove(task.getId());
-				fileSystem.persist(AgentStorage.getFileSystemPath(task.getId()).toPath());
 				if (exception != null) {
 					AiCoderActivator.log().error("Failed to execute agent task", exception);
 					task.setStatus(AgentStatus.ERROR);

@@ -14,6 +14,21 @@ public record Suggestion(
 		int newLines,
 		int oldLines) {
 
+	public Suggestion withOffset(int additionalCharCount, int additionalLineCount) {
+		return new Suggestion(
+				this.historyEntry,
+				this.content,
+				this.modelOffset + additionalCharCount,
+				this.originalLength,
+				this.widgetLastLine + additionalLineCount, // TODO this can be problematic
+				this.newLines,
+				this.oldLines);
+	}
+
+	public int getAdditionalCharCount() {
+		return this.content.length() - this.originalLength;
+	}
+
 	public int getAdditionalLineCount() {
 		return Math.max(this.newLines - this.oldLines, 0);
 	}

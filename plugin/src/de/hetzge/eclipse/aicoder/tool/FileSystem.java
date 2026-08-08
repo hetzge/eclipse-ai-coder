@@ -19,7 +19,13 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.agent.AgentChange;
+import de.hetzge.eclipse.aicoder.agent.AgentChangeType;
+import de.hetzge.eclipse.aicoder.history.AiCoderHistoryEntry;
+import de.hetzge.eclipse.aicoder.history.HistoryType;
+import de.hetzge.eclipse.aicoder.inline.Suggestion;
 import de.hetzge.eclipse.aicoder.quicksearch.SearchResult;
+import de.hetzge.eclipse.aicoder.util.DiffUtils;
 
 public final class FileSystem {
 
@@ -33,6 +39,110 @@ public final class FileSystem {
 		this.workspaceRoot = workspaceRoot;
 		this.referenceContentByPath = new HashMap<>();
 		this.contentByPath = new HashMap<>();
+	}
+
+	public List<Suggestion> toSuggestions(IPath path, HistoryType historyType) throws IOException {
+		final IPath normalizedPath = normalizePath(path);
+		final String oldContent = this.referenceContentByPath.containsKey(normalizedPath)
+				? this.referenceContentByPath.get(normalizedPath)
+				: readReferenceFile(normalizedPath);
+		final String newContent = this.contentByPath.getOrDefault(normalizedPath, oldContent);
+
+		if (oldContent.equals(newContent)) {
+			return List.of();
+		}
+
+		final String[] oldLines = oldContent.split("\n", -1);
+		final String[] newLines = newContent.split("\n", -1);
+		final int[][] lcs = new int[oldLines.length + 1][newLines.length + 1];
+
+		for (int oldIndex = oldLines.length - 1; oldIndex >= 0; oldIndex--) {
+			for (int newIndex = newLines.length - 1; newIndex >= 0; newIndex--) {
+				lcs[oldIndex][newIndex] = oldLines[oldIndex].equals(newLines[newIndex])
+						? lcs[oldIndex + 1][newIndex + 1] + 1
+						: Math.max(lcs[oldIndex + 1][newIndex], lcs[oldIndex][newIndex + 1]);
+			}
+		}
+
+		final int[] oldOffsets = new int[oldLines.length + 1];
+		final int[] newOffsets = new int[newLines.length + 1];
+		for (int i = 1; i < oldOffsets.length; i++) {
+			final int newline = oldContent.indexOf('\n', oldOffsets[i - 1]);
+			oldOffsets[i] = newline < 0 ? oldContent.length() : newline + 1;
+		}
+		for (int i = 1; i < newOffsets.length; i++) {
+			final int newline = newContent.indexOf('\n', newOffsets[i - 1]);
+			newOffsets[i] = newline < 0 ? newContent.length() : newline + 1;
+		}
+
+		final List<Suggestion> suggestions = new ArrayList<>();
+		int oldIndex = 0;
+		int newIndex = 0;
+		int characterOffsetAdjustment = 0;
+		int lineOffsetAdjustment = 0;
+
+		while (oldIndex < oldLines.length || newIndex < newLines.length) {
+			if (oldIndex < oldLines.length
+					&& newIndex < newLines.length
+					&& oldLines[oldIndex].equals(newLines[newIndex])) {
+				oldIndex++;
+				newIndex++;
+				continue;
+			}
+
+			final int oldStart = oldIndex;
+			final int newStart = newIndex;
+			while (oldIndex < oldLines.length || newIndex < newLines.length) {
+				if (oldIndex < oldLines.length
+						&& newIndex < newLines.length
+						&& oldLines[oldIndex].equals(newLines[newIndex])) {
+					break;
+				}
+				if (newIndex >= newLines.length
+						|| oldIndex < oldLines.length && lcs[oldIndex + 1][newIndex] >= lcs[oldIndex][newIndex + 1]) {
+					oldIndex++;
+				} else {
+					newIndex++;
+				}
+			}
+
+			final int oldLength = oldOffsets[oldIndex] - oldOffsets[oldStart];
+			final String content = newContent.substring(newOffsets[newStart], newOffsets[newIndex]);
+			final int oldLineCount = oldIndex - oldStart;
+			final int newLineCount = newIndex - newStart;
+
+			System.out.println(" ------------------> " + (oldOffsets[oldStart] + characterOffsetAdjustment));
+
+			suggestions.add(new Suggestion(
+					new AiCoderHistoryEntry(historyType, normalizedPath.toString(), oldContent),
+					content,
+					oldOffsets[oldStart] + characterOffsetAdjustment,
+					oldLength,
+					Math.max(0, oldStart + oldLineCount - 1 + lineOffsetAdjustment),
+					newLineCount,
+					oldLineCount));
+
+			characterOffsetAdjustment += content.length() - oldLength;
+			lineOffsetAdjustment += newLineCount - oldLineCount;
+		}
+		return suggestions;
+	}
+
+	public List<AgentChange> toAgentChanges() {
+		final List<AgentChange> changes = new ArrayList<>();
+		for (final Map.Entry<IPath, String> entry : this.contentByPath.entrySet()) {
+			final String oldContent = this.referenceContentByPath.getOrDefault(entry.getKey(), "");
+			final String newContent = entry.getValue();
+			final DiffUtils.Diff diff = DiffUtils.diff(oldContent, newContent);
+			if (entry.getValue().isBlank()) {
+				changes.add(new AgentChange(entry.getKey(), AgentChangeType.DELETED, 0, diff.removed()));
+			} else if (this.referenceContentByPath.containsKey(entry.getKey())) {
+				changes.add(new AgentChange(entry.getKey(), AgentChangeType.MODIFIED, diff.added(), diff.removed()));
+			} else {
+				changes.add(new AgentChange(entry.getKey(), AgentChangeType.CREATED, diff.added(), 0));
+			}
+		}
+		return changes;
 	}
 
 	// only files are moveable

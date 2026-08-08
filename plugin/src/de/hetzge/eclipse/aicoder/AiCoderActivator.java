@@ -22,6 +22,20 @@ import de.hetzge.eclipse.aicoder.config.ConfigManager;
 import de.hetzge.eclipse.aicoder.content.InstructionStorage;
 import de.hetzge.eclipse.aicoder.mcp.McpClients;
 
+// TODO
+// - on switch editor abort inline completions/suggestions
+// - on close eclipse window abort suggestions (?!)
+// - fix added lines in suggestions (popup offsets)
+// - use AGENT context for agents
+// - abort agent action
+// - agent task file open diff action (original change)
+// - agent task file open compare action (compare with working tree)
+// - agent task apply all
+// - agent task revert to reference state
+// - if suggestion apply makes the editor blank then ask if file should be deleted
+// - tools selection in dialog
+// - additional tools: compile project, get warnings of file/folder
+
 public class AiCoderActivator extends AbstractUIPlugin {
 
 	public static final String PLUGIN_ID = "de.hetzge.eclipse.aicoder";
@@ -55,8 +69,8 @@ public class AiCoderActivator extends AbstractUIPlugin {
 				}
 			}
 		};
-//		loadAgentTasksJob.schedule();
-//		loadAgentTasksJob.join(); // TODO
+		loadAgentTasksJob.schedule();
+		loadAgentTasksJob.join(); // TODO
 		this.agentService = new AgentService();
 		McpClients.INSTANCE.reload(() -> {
 			log().info("MCP clients loaded: " + McpClients.INSTANCE.getMcpStatusCountsString());

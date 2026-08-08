@@ -1,6 +1,8 @@
 package de.hetzge.eclipse.aicoder.agent;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -16,12 +18,18 @@ public final class AgentTask {
 	private final String title;
 	private final AgentRequest request;
 	private AgentStatus status;
+	private final List<AgentChange> changes;
 
 	public AgentTask(UUID id, String title, AgentRequest request) {
+		this(id, title, request, new ArrayList<>());
+	}
+
+	public AgentTask(UUID id, String title, AgentRequest request, List<AgentChange> changes) {
 		this.id = id;
 		this.title = title;
 		this.request = request;
 		this.status = AgentStatus.RUNNING;
+		this.changes = changes;
 	}
 
 	public UUID getId() {
@@ -48,12 +56,22 @@ public final class AgentTask {
 		this.status = status;
 	}
 
+	public List<AgentChange> getChanges() {
+		return this.changes;
+	}
+
+	public void setChanges(List<AgentChange> changes) {
+		this.changes.clear();
+		this.changes.addAll(changes);
+	}
+
 	public Json toJson() {
 		final Json json = Json.object();
 		json.set("id", this.id.toString());
 		json.set("title", this.title);
 		json.set("request", this.request.toJson());
 		json.set("status", this.status.name());
+		json.set("changes", this.changes.stream().map(AgentChange::toJson).toList());
 		return json;
 	}
 
@@ -61,7 +79,8 @@ public final class AgentTask {
 		final AgentTask agentTask = new AgentTask(
 				UUID.fromString(json.at("id").asString()),
 				json.at("title").asString(),
-				AgentRequest.fromJson(workspace, json.at("request")));
+				AgentRequest.fromJson(workspace, json.at("request")),
+				json.at("changes", Json.array()).asJsonList().stream().map(AgentChange::fromJson).toList());
 		agentTask.setStatus(AgentStatus.valueOf(json.at("status").asString()));
 		return agentTask;
 	}

@@ -1,6 +1,7 @@
 package de.hetzge.eclipse.aicoder.inline;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -139,8 +140,7 @@ public final class InlineCompletionController {
 	private final Debouncer debouncer;
 	private final Debouncer editDebouncer;
 	private boolean abortDisabled;
-	private SuggestionPopupDialog suggestionPopupDialog;
-	private Suggestion suggestion;
+	private List<SuggestionController> suggestionControllers;
 	private Future<LlmResponse> llmResponseFuture;
 
 	private InlineCompletionController(ITextViewer textViewer, ITextEditor textEditor) {
@@ -161,8 +161,7 @@ public final class InlineCompletionController {
 		this.debouncer = new Debouncer(Display.getDefault(), AiCoderPreferences::getDebounceDuration);
 		this.editDebouncer = new Debouncer(Display.getDefault(), () -> Duration.ofMillis(1000));
 		this.abortDisabled = false;
-		this.suggestionPopupDialog = null;
-		this.suggestion = null;
+		this.suggestionControllers = null;
 		this.llmResponseFuture = null;
 	}
 
@@ -480,30 +479,41 @@ public final class InlineCompletionController {
 		redraw();
 	}
 
-	private void setup(Suggestion suggestion) {
+	public void setup(Suggestion suggestion) {
+		setup(List.of(suggestion));
+	}
+
+	public void setup(List<Suggestion> suggestions) {
 		AiCoderActivator.log().info("Activate context (content)");
-		this.suggestion = suggestion;
+		// sort suggestions by model offset ascending
 		setupContext();
 		redraw();
 		Display.getDefault().syncExec(() -> {
-			this.suggestionPopupDialog = new SuggestionPopupDialog(this.textViewer, suggestion);
-			this.suggestionPopupDialog.open();
-			this.suggestionPopupDialog.getShell().addDisposeListener(event -> {
-				final int returnCode = InlineCompletionController.this.suggestionPopupDialog.getReturnCode();
-				AiCoderActivator.log().info(String.format("Suggestion popup dialog returned with code: %d", returnCode));
-				if (returnCode == SuggestionPopupDialog.ACCEPT_RETURN_CODE) {
-					accept();
-				} else {
-					abort("Dismiss");
-				}
-				unsetSelection();
-			});
+			this.suggestionControllers = new ArrayList<>();
+			for (final Suggestion suggestion : suggestions.stream()
+					.sorted((a, b) -> Integer.compare(a.modelOffset(), b.modelOffset()))
+					.toList()) {
+				final SuggestionPopupDialog suggestionPopupDialog = new SuggestionPopupDialog(this.textViewer, suggestion);
+				final SuggestionController suggestionController = new SuggestionController(suggestion, suggestionPopupDialog);
+				suggestionPopupDialog.open();
+				suggestionPopupDialog.getShell().addDisposeListener(event -> {
+					final int returnCode = suggestionPopupDialog.getReturnCode();
+					AiCoderActivator.log().info(String.format("Suggestion popup dialog returned with code: %d", returnCode));
+					if (returnCode == SuggestionPopupDialog.ACCEPT_RETURN_CODE) {
+						accept(false, suggestionController);
+					} else {
+						abort("Dismiss");
+					}
+					unsetSelection();
+				});
+				this.suggestionControllers.add(suggestionController);
+			}
 		});
 	}
 
 	private void setupContext() {
 		Display.getDefault().syncExec(() -> {
-			this.context = EclipseUtils.getContextService(this.textEditor).activateContext("de.hetzge.eclipse.codestral.inlineCompletionVisible");
+			this.context = EclipseUtils.getContextService(this.textEditor).activateContext("de.hetzge.eclipse.aicoder.inlineCompletionVisible");
 		});
 	}
 
@@ -516,12 +526,6 @@ public final class InlineCompletionController {
 			this.llmResponseFuture.cancel(true);
 			this.llmResponseFuture = null;
 		}
-		if (this.suggestionPopupDialog != null) {
-			AiCoderActivator.log().info(String.format("Close suggestion popup dialog (reason: '%s')", reason));
-			this.suggestionPopupDialog.close();
-			this.suggestionPopupDialog = null;
-			this.textEditor.setFocus();
-		}
 		if (this.job != null) {
 			AiCoderActivator.log().info(String.format("Abort job (reason: '%s')", reason));
 			this.job.cancel();
@@ -532,12 +536,17 @@ public final class InlineCompletionController {
 			EclipseUtils.getContextService(this.textEditor).deactivateContext(this.context);
 			this.context = null;
 		}
-		if (this.suggestion != null) {
-			AiCoderActivator.log().info(String.format("Unset suggestion (reason: '%s')", reason));
-			if (this.suggestion.historyEntry().getStatus() == HistoryStatus.GENERATED) {
-				this.suggestion.historyEntry().setStatus(HistoryStatus.REJECTED);
+		if (this.suggestionControllers != null) {
+			for (final SuggestionController suggestionController : this.suggestionControllers) {
+				AiCoderActivator.log().info(String.format("Unset suggestion (reason: '%s')", reason));
+				if (suggestionController.suggestion.historyEntry().getStatus() == HistoryStatus.GENERATED) {
+					suggestionController.suggestion.historyEntry().setStatus(HistoryStatus.REJECTED);
+				}
+				AiCoderActivator.log().info(String.format("Close suggestion popup dialog (reason: '%s')", reason));
+				suggestionController.suggestionPopupDialog.close();
+				this.suggestionControllers = null;
 			}
-			this.suggestion = null;
+			this.textEditor.setFocus();
 			AiCoderHistoryView.get().ifPresent(AiCoderHistoryView::refresh);
 			this.paintListener.resetMetrics();
 		}
@@ -570,21 +579,22 @@ public final class InlineCompletionController {
 	}
 
 	public void acceptLine() {
-		accept(true);
+		accept(true, null);
 	}
 
 	public void accept() {
-		accept(false);
+		accept(false, null);
 	}
 
-	private void accept(boolean line) {
+	private void accept(boolean line, SuggestionController suggestionController) {
 		if (this.completion != null) {
 			acceptInlineCompletion(line);
 		}
-		if (this.suggestion != null) {
-			acceptSuggestion();
+		if (this.suggestionControllers != null) {
+			acceptSuggestion(suggestionController);
 		}
 		if (AiCoderPreferences.isCleanupCodeOnApplyEnabled()) {
+			// TODO only cleanup if no more suggestions are open
 			// TODO only cleanup if syntax is complete
 			AiCoderActivator.log().info("Trigger code cleanup on apply");
 			final Optional<ICompilationUnit> compilationUnitOptional = EclipseUtils.getCompilationUnit(this.textEditor.getEditorInput());
@@ -632,15 +642,36 @@ public final class InlineCompletionController {
 		}
 	}
 
-	private void acceptSuggestion() {
+	private void acceptSuggestion(SuggestionController suggestionController) {
 		try {
+			final List<SuggestionController> newSuggestionControllers = new ArrayList<>();
 			executeThenAbort(() -> { // prevent early abort by document change
-				this.suggestion.applyTo(this.textViewer.getDocument());
-				this.textViewer.setSelectedRange(this.suggestion.modelOffset() + this.suggestion.content().length(), 0);
-				this.suggestion.historyEntry().setStatus(HistoryStatus.ACCEPTED);
-				this.suggestion.historyEntry().setContent(this.textViewer.getDocument().get());
+				final List<SuggestionController> nextSuggestionControllers = this.suggestionControllers != null
+						? (suggestionController == null
+								? new ArrayList<>(this.suggestionControllers)
+								: List.of(suggestionController))
+						: List.of();
+				int offsetLines = 0;
+				int offsetChars = 0;
+				for (final SuggestionController nextSuggestionController : new ArrayList<>(this.suggestionControllers)) {
+					final Suggestion nextSuggestion = nextSuggestionController.suggestion;
+					if (nextSuggestionControllers.contains(suggestionController)) {
+						nextSuggestion.applyTo(this.textViewer.getDocument());
+						this.textViewer.setSelectedRange(nextSuggestion.modelOffset() + nextSuggestion.content().length(), 0);
+						nextSuggestion.historyEntry().setStatus(HistoryStatus.ACCEPTED);
+						nextSuggestion.historyEntry().setContent(this.textViewer.getDocument().get());
+						offsetLines += nextSuggestion.getAdditionalLineCount();
+						offsetChars += nextSuggestion.getAdditionalCharCount();
+						this.suggestionControllers.remove(suggestionController);
+					} else {
+						newSuggestionControllers.add(new SuggestionController(nextSuggestion.withOffset(offsetChars, offsetLines), nextSuggestionController.suggestionPopupDialog));
+					}
+				}
 				AiCoderHistoryView.get().ifPresent(AiCoderHistoryView::refresh);
 			}, "Accepted");
+			if (!newSuggestionControllers.isEmpty()) {
+				setup(newSuggestionControllers.stream().map(it -> it.suggestion).toList());
+			}
 		} catch (final BadLocationException exception) {
 			throw new RuntimeException("Failed to accept suggestion", exception);
 		}
@@ -698,12 +729,34 @@ public final class InlineCompletionController {
 			if (completion != null && completion.widgetLineIndex() == lineIndex) {
 				return completion.lineSpacing();
 			}
-			final Suggestion suggestion = InlineCompletionController.this.suggestion;
-			final SuggestionPopupDialog suggestionPopupDialog = InlineCompletionController.this.suggestionPopupDialog;
-			if (suggestionPopupDialog != null && suggestion != null && suggestion.widgetLastLine() == lineIndex) {
-				return (suggestionPopupDialog.getLineCount() - suggestion.oldLines() + 2) * InlineCompletionController.this.widget.getLineHeight(); // +2 for the buttons
+			final List<SuggestionController> suggestionControllers = InlineCompletionController.this.suggestionControllers;
+			if (suggestionControllers != null) {
+				int lineSpacing = 0;
+				for (final SuggestionController suggestionController : suggestionControllers) {
+					final Suggestion suggestion = suggestionController.suggestion;
+					final SuggestionPopupDialog suggestionPopupDialog = suggestionController.suggestionPopupDialog;
+					if (suggestion.widgetLastLine() == lineIndex) {
+						lineSpacing = Math.max(lineSpacing,
+								(suggestionPopupDialog.getLineCount() - suggestion.oldLines() + 2)
+										* InlineCompletionController.this.widget.getLineHeight());
+					}
+				}
+				if (lineSpacing > 0) {
+					return lineSpacing;
+				}
 			}
 			return null;
+		}
+	}
+
+	private class SuggestionController {
+
+		private final Suggestion suggestion;
+		private final SuggestionPopupDialog suggestionPopupDialog;
+
+		public SuggestionController(Suggestion suggestion, SuggestionPopupDialog suggestionPopupDialog) {
+			this.suggestion = suggestion;
+			this.suggestionPopupDialog = suggestionPopupDialog;
 		}
 	}
 

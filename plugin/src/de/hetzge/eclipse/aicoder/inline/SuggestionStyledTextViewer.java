@@ -57,7 +57,7 @@ public final class SuggestionStyledTextViewer {
 
 	public void setupLineDiff() {
 		this.styledText.setText("");
-		final List<String> diffLines = DiffUtils.diff(this.originalContent, this.suggestion.content()).lines().toList();
+		final List<String> diffLines = DiffUtils.diff(this.originalContent, this.suggestion.content()).patch().lines().toList();
 		int originalOffset = EclipseUtils.getWidgetOffset(this.parentTextViewer, this.suggestion.modelOffset());
 		for (int i = 0; i < diffLines.size(); i++) {
 			final String diffLine = diffLines.get(i);

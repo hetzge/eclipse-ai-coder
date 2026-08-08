@@ -47,7 +47,7 @@ public final class EditHistoryDiffUtils {
 				.map(LambdaExceptionUtils.rethrowFunction(it -> new String(it.getContents().readAllBytes(), file.getCharset()))))
 				.toList();
 		return IntStream.range(0, list.size() - 1)
-				.mapToObj(i -> DiffUtils.diff(list.get(i + 1), list.get(i)))
+				.mapToObj(i -> DiffUtils.diff(list.get(i + 1), list.get(i)).patch())
 				.toList()
 				.reversed();
 	}
@@ -70,7 +70,7 @@ public final class EditHistoryDiffUtils {
 		final String a = new String(state.getContents().readAllBytes(), file.getCharset());
 		final String b = getFileContent(file);
 		final String pathString = file.getFullPath().toString();
-		final String diff = DiffUtils.diff(a, b);
+		final String diff = DiffUtils.diff(a, b).patch();
 		return String.format("---%s\n+++%s\n@@\n%s\n", pathString, pathString, diff);
 	}
 
