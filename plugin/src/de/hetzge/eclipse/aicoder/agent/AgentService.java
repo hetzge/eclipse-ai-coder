@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.resources.IProject;
@@ -25,10 +27,10 @@ import de.hetzge.eclipse.aicoder.util.JinjaUtils;
 
 public final class AgentService {
 
-	private final Map<UUID, CompletableFuture<List<LlmMessage>>> trajectoryById;
+	private final Map<UUID, AgentTaskExecution> executionsById;
 
 	public AgentService() {
-		this.trajectoryById = new ConcurrentHashMap<>();
+		this.executionsById = new ConcurrentHashMap<>();
 	}
 
 	public void execute(AgentRequest request) throws IOException {
@@ -71,7 +73,8 @@ public final class AgentService {
 				new ListFilesTool(projects, fileSystem),
 				new ReadFileTool(projects, fileSystem),
 				new SearchTool(projects, fileSystem));
-		final CompletableFuture<List<LlmMessage>> future = AgentLoop.execute(tools, projects, initialMessages, message -> {
+		final AtomicBoolean cancelled = new AtomicBoolean(false);
+		final CompletableFuture<List<LlmMessage>> loopFuture = AgentLoop.execute(tools, projects, initialMessages, message -> {
 			try {
 				AiCoderActivator.getDefault().getAgentTasksState().appendTrajectory(task.getId(), message);
 				task.setChanges(fileSystem.toAgentChanges());
@@ -82,10 +85,15 @@ public final class AgentService {
 			} catch (final Exception exception) {
 				throw new RuntimeException("Failed to append trajectory", exception);
 			}
-		}).whenComplete((result, exception) -> {
+		}, cancelled);
+		loopFuture.whenComplete((result, exception) -> {
 			try {
-				this.trajectoryById.remove(task.getId());
-				if (exception != null) {
+				this.executionsById.remove(task.getId());
+				if (exception instanceof final CancellationException cancellationException) {
+					AiCoderActivator.log().info("Agent task aborted");
+					task.setStatus(AgentStatus.CANCELLED);
+					AgentStorage.saveAgentTask(task);
+				} else if (exception != null) {
 					AiCoderActivator.log().error("Failed to execute agent task", exception);
 					task.setStatus(AgentStatus.ERROR);
 					AgentStorage.saveAgentTask(task);
@@ -108,14 +116,36 @@ public final class AgentService {
 					}
 				}
 			}
+			AiCoderActivator.getDefault().getAgentTasksState().fireAgentTasksChanged(task);
 		});
-		this.trajectoryById.put(task.getId(), future);
+		this.executionsById.put(task.getId(), new AgentTaskExecution(loopFuture, cancelled));
+	}
+
+	public void abort(UUID id) {
+		final AgentTaskExecution execution = this.executionsById.get(id);
+		if (execution != null) {
+			execution.cancelled.set(true);
+			execution.future.cancel(true);
+		}
+	}
+
+	public void abortAll() {
+		for (final UUID id : List.copyOf(this.executionsById.keySet())) {
+			abort(id);
+		}
 	}
 
 	public void cancel(UUID id) {
-		final CompletableFuture<List<LlmMessage>> future = this.trajectoryById.get(id);
-		if (future != null) {
-			future.cancel(true);
+		abort(id);
+	}
+
+	private static final class AgentTaskExecution {
+		private final CompletableFuture<List<LlmMessage>> future;
+		private final AtomicBoolean cancelled;
+
+		private AgentTaskExecution(CompletableFuture<List<LlmMessage>> future, AtomicBoolean cancelled) {
+			this.future = future;
+			this.cancelled = cancelled;
 		}
 	}
 }

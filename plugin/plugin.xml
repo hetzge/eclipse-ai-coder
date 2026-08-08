@@ -62,6 +62,14 @@
         id="de.hetzge.eclipse.codestral.commands.resetCodeViewportMemory"
         name="Reset Code Viewport Memory">
   </command>
+  <command
+        id="de.hetzge.eclipse.codestral.commands.abortAgentTask"
+        name="Abort Task(s)">
+  </command>
+  <command
+        id="de.hetzge.eclipse.codestral.commands.abortAllAgentTasks"
+        name="Abort All Tasks">
+  </command>
 	</extension>
 
 	<extension point="org.eclipse.ui.handlers">
@@ -104,6 +112,14 @@
   <handler
         class="de.hetzge.eclipse.aicoder.handler.AcceptLineHandler"
         commandId="de.hetzge.eclipse.codestral.commands.acceptLine">
+  </handler>
+  <handler
+        class="de.hetzge.eclipse.aicoder.handler.AbortAgentTaskHandler"
+        commandId="de.hetzge.eclipse.codestral.commands.abortAgentTask">
+  </handler>
+  <handler
+        class="de.hetzge.eclipse.aicoder.handler.AbortAllAgentTasksHandler"
+        commandId="de.hetzge.eclipse.codestral.commands.abortAllAgentTasks">
   </handler>
 	</extension>
 
