@@ -155,6 +155,12 @@
           schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
           sequence="M1+M2+1">
     </key>
+    <key
+          commandId="de.hetzge.eclipse.codestral.commands.startAgent"
+          contextId="org.eclipse.ui.textEditorScope"
+          schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+          sequence="M1+M2+2">
+    </key>
  </extension>
 
 	<extension point="org.eclipse.ui.contexts">
