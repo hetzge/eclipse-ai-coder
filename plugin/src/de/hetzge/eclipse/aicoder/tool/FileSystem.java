@@ -13,6 +13,9 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.eclipse.core.filebuffers.FileBuffers;
+import org.eclipse.core.filebuffers.ITextFileBuffer;
+import org.eclipse.core.filebuffers.LocationKind;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IWorkspaceRoot;
@@ -115,6 +118,10 @@ public final class FileSystem {
 			return "";
 		}
 		try {
+			final ITextFileBuffer textFileBuffer = FileBuffers.getTextFileBufferManager().getTextFileBuffer(file.getFullPath(), LocationKind.IFILE);
+			if (textFileBuffer != null) {
+				return textFileBuffer.getDocument().get();
+			}
 			return new String(file.getContents(true).readAllBytes(), file.getCharset());
 		} catch (final CoreException exception) {
 			throw new IOException("Failed to read file: " + path, exception);

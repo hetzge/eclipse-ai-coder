@@ -19,7 +19,7 @@ public record Suggestion(
 		return EclipseUtils.getWidgetLine(textViewer, this.modelOffset) + this.oldLines - 1;
 	}
 
-	public Suggestion withOffset(int additionalCharCount, int additionalLineCount) {
+	public Suggestion withOffset(int additionalCharCount) {
 		return new Suggestion(
 				this.historyEntry,
 				this.content,

@@ -480,25 +480,34 @@ public final class InlineCompletionController {
 	}
 
 	public void setup(List<Suggestion> suggestions) {
+		setup0(suggestions.stream()
+				.map(suggestion -> new SuggestionController(suggestion, new SuggestionPopupDialog(this.textViewer, suggestion)))
+				.toList());
+	}
+
+	private void setup0(List<SuggestionController> suggestionControllers) {
+		if (suggestionControllers.isEmpty()) {
+			return;
+		}
 		AiCoderActivator.log().info("Activate context (content)");
-		// sort suggestions by model offset ascending
 		setupContext();
 		redraw();
 		Display.getDefault().syncExec(() -> {
 			this.suggestionControllers = new ArrayList<>();
-			for (final Suggestion suggestion : suggestions.stream()
-					.sorted((a, b) -> Integer.compare(a.modelOffset(), b.modelOffset()))
+			for (final SuggestionController suggestionController : suggestionControllers.stream()
+					.sorted((a, b) -> Integer.compare(a.suggestion.modelOffset(), b.suggestion.modelOffset()))
 					.toList()) {
-				final SuggestionPopupDialog suggestionPopupDialog = new SuggestionPopupDialog(this.textViewer, suggestion);
-				final SuggestionController suggestionController = new SuggestionController(suggestion, suggestionPopupDialog);
+				final SuggestionPopupDialog suggestionPopupDialog = suggestionController.suggestionPopupDialog;
 				suggestionPopupDialog.open();
 				suggestionPopupDialog.getContainer().addDisposeListener(event -> {
 					final int returnCode = suggestionPopupDialog.getReturnCode();
 					AiCoderActivator.log().info(String.format("Suggestion popup dialog returned with code: %d", returnCode));
 					if (returnCode == SuggestionPopupDialog.ACCEPT_RETURN_CODE) {
 						accept(false, suggestionController);
+					} else if (returnCode == SuggestionPopupDialog.REJECT_RETURN_CODE) {
+						abort(suggestionController);
 					} else {
-						abort("Dismiss");
+						throw new IllegalStateException("Unknown return code: " + returnCode);
 					}
 					unsetSelection();
 				});
@@ -511,6 +520,15 @@ public final class InlineCompletionController {
 		Display.getDefault().syncExec(() -> {
 			this.context = EclipseUtils.getContextService(this.textEditor).activateContext("de.hetzge.eclipse.aicoder.inlineCompletionVisible");
 		});
+	}
+
+	private void abort(final SuggestionController suggestionController) {
+		final List<Suggestion> nextSuggestions = InlineCompletionController.this.suggestionControllers.stream()
+				.filter(it -> it != suggestionController)
+				.map(it -> it.suggestion)
+				.toList();
+		abort("Dismiss");
+		setup(nextSuggestions);
 	}
 
 	public void abort(String reason) {
@@ -591,8 +609,7 @@ public final class InlineCompletionController {
 		if (this.suggestionControllers != null) {
 			acceptSuggestion(suggestionController);
 		}
-		if (AiCoderPreferences.isCleanupCodeOnApplyEnabled()) {
-			// TODO only cleanup if no more suggestions are open
+		if (AiCoderPreferences.isCleanupCodeOnApplyEnabled() && this.suggestionControllers.isEmpty()) {
 			// TODO only cleanup if syntax is complete
 			AiCoderActivator.log().info("Trigger code cleanup on apply");
 			final Optional<ICompilationUnit> compilationUnitOptional = EclipseUtils.getCompilationUnit(this.textEditor.getEditorInput());
@@ -649,20 +666,18 @@ public final class InlineCompletionController {
 								? new ArrayList<>(this.suggestionControllers)
 								: List.of(suggestionController))
 						: List.of();
-				int offsetLines = 0;
 				int offsetChars = 0;
 				for (final SuggestionController nextSuggestionController : new ArrayList<>(this.suggestionControllers)) {
 					final Suggestion nextSuggestion = nextSuggestionController.suggestion;
-					if (nextSuggestionControllers.contains(suggestionController)) {
+					if (nextSuggestionControllers.contains(nextSuggestionController)) {
 						nextSuggestion.applyTo(this.textViewer.getDocument());
 						this.textViewer.setSelectedRange(nextSuggestion.modelOffset() + nextSuggestion.content().length(), 0);
 						nextSuggestion.historyEntry().setStatus(HistoryStatus.ACCEPTED);
 						nextSuggestion.historyEntry().setContent(this.textViewer.getDocument().get());
-						offsetLines += nextSuggestion.getAdditionalLineCount();
 						offsetChars += nextSuggestion.getAdditionalCharCount();
 						this.suggestionControllers.remove(suggestionController);
 					} else {
-						newSuggestionControllers.add(new SuggestionController(nextSuggestion.withOffset(offsetChars, offsetLines), nextSuggestionController.suggestionPopupDialog));
+						newSuggestionControllers.add(new SuggestionController(nextSuggestion.withOffset(offsetChars), nextSuggestionController.suggestionPopupDialog));
 					}
 				}
 				AiCoderHistoryView.get().ifPresent(AiCoderHistoryView::refresh);
