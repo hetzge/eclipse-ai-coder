@@ -8,6 +8,8 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.ScrolledComposite;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
@@ -50,6 +52,14 @@ public final class AgentTrajectoryEditor extends EditorPart {
 		this.parentComposite = new Composite(this.scrollComposite, SWT.NONE);
 		this.parentComposite.setLayout(new GridLayout(1, false));
 		this.scrollComposite.setContent(this.parentComposite);
+		this.scrollComposite.addListener(SWT.Resize, event -> {
+			final int width = this.scrollComposite.getClientArea().width;
+			if (width > 0) {
+				this.parentComposite.layout(true, true);
+				final Point size = this.parentComposite.computeSize(width, SWT.DEFAULT);
+				this.scrollComposite.setMinSize(width, size.y);
+			}
+		});
 		new Job("Load trajectory") {
 			@Override
 			protected IStatus run(IProgressMonitor monitor) {
@@ -99,10 +109,13 @@ public final class AgentTrajectoryEditor extends EditorPart {
 		@Override
 		public void onAgentTrajectoryChanged(UUID id, LlmMessage message) {
 			Display.getDefault().asyncExec(() -> {
-				new AgentTrajectoryMessageComposite(AgentTrajectoryEditor.this.parentComposite, message);
+				final AgentTrajectoryMessageComposite messageComposite = new AgentTrajectoryMessageComposite(AgentTrajectoryEditor.this.parentComposite, message);
+				messageComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
 				AgentTrajectoryEditor.this.parentComposite.layout(true, true);
 				AgentTrajectoryEditor.this.parentComposite.pack();
-				AgentTrajectoryEditor.this.scrollComposite.setMinSize(AgentTrajectoryEditor.this.parentComposite.computeSize(SWT.DEFAULT, SWT.DEFAULT));
+				final int width = AgentTrajectoryEditor.this.scrollComposite.getClientArea().width;
+				final int height = AgentTrajectoryEditor.this.parentComposite.computeSize(width, SWT.DEFAULT).y;
+				AgentTrajectoryEditor.this.scrollComposite.setMinSize(Math.max(1, width), Math.max(1, height));
 			});
 		}
 	}
