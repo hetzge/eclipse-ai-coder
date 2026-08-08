@@ -492,7 +492,7 @@ public final class InlineCompletionController {
 				final SuggestionPopupDialog suggestionPopupDialog = new SuggestionPopupDialog(this.textViewer, suggestion);
 				final SuggestionController suggestionController = new SuggestionController(suggestion, suggestionPopupDialog);
 				suggestionPopupDialog.open();
-				suggestionPopupDialog.getShell().addDisposeListener(event -> {
+				suggestionPopupDialog.getContainer().addDisposeListener(event -> {
 					final int returnCode = suggestionPopupDialog.getReturnCode();
 					AiCoderActivator.log().info(String.format("Suggestion popup dialog returned with code: %d", returnCode));
 					if (returnCode == SuggestionPopupDialog.ACCEPT_RETURN_CODE) {
