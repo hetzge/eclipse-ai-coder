@@ -7,16 +7,16 @@ import java.util.stream.Collectors;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IRegion;
+import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.Region;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.history.AiCoderHistoryEntry;
+import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 
 public record InlineCompletion(
 		AiCoderHistoryEntry historyEntry,
-		int widgetLineIndex,
 		IRegion modelRegion,
-		int widgetOffset,
 		String content, // the whole completion content
 		List<String> lines, // the completion content line by line
 		String firstLineFillPrefix,
@@ -25,6 +25,14 @@ public record InlineCompletion(
 		String firstLineSuffixCharacter, // if the completion is not the end of the line, this contains the next letter (otherwise null)
 		int lineSpacing,
 		int lineHeight) {
+
+	public int widgetOffset(ITextViewer textViewer) {
+		return EclipseUtils.getWidgetOffset(textViewer, this.modelRegion().getOffset());
+	}
+
+	public int widgetLine(ITextViewer textViewer) throws BadLocationException {
+		return EclipseUtils.getWidgetLine(textViewer, this.modelRegion().getOffset());
+	}
 
 	public int applyLineTo(IDocument document) throws BadLocationException {
 		final String firstLine = this.lines.get(0);
@@ -44,7 +52,7 @@ public record InlineCompletion(
 		return replaceOffset + this.content().length();
 	}
 
-	public static InlineCompletion create(AiCoderHistoryEntry historyEntry, IDocument document, int modelOffset, int widgetOffset, int widgetLine, String content, int lineHeight, int defaultLineSpacing) throws BadLocationException {
+	public static InlineCompletion create(AiCoderHistoryEntry historyEntry, IDocument document, int modelOffset, String content, int lineHeight, int defaultLineSpacing) throws BadLocationException {
 		final boolean isMultiline = content.lines().count() > 1;
 		// TODO validate if this is working
 		if (isMultiline) {
@@ -87,6 +95,6 @@ public record InlineCompletion(
 			firstLineFillPrefix = firstLineContent;
 			firstLineFillSuffix = "";
 		}
-		return new InlineCompletion(historyEntry, widgetLine, modelRegion, widgetOffset, content, content.lines().toList(), firstLineFillPrefix, firstLineFillSuffix, firstLineSuffix, firstLineSuffixCharacter, lineSpacing, lineHeight);
+		return new InlineCompletion(historyEntry, modelRegion, content, content.lines().toList(), firstLineFillPrefix, firstLineFillSuffix, firstLineSuffix, firstLineSuffixCharacter, lineSpacing, lineHeight);
 	}
 }

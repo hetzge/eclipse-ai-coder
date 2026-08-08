@@ -312,7 +312,6 @@ public final class InlineCompletionController {
 									content,
 									modelOffset,
 									selectionText.length(),
-									EclipseUtils.getWidgetLine(this.textViewer, modelOffset) + oldLineCount - 1,
 									newLineCount,
 									oldLineCount));
 						} else if (mode == CompletionMode.INLINE || mode == CompletionMode.GENERATE) {
@@ -320,8 +319,6 @@ public final class InlineCompletionController {
 									historyEntry,
 									document,
 									modelOffset,
-									EclipseUtils.getWidgetOffset(this.textViewer, modelOffset),
-									EclipseUtils.getWidgetLine(this.textViewer, modelOffset),
 									content,
 									lineHeight,
 									defaultLineSpacing));
@@ -429,7 +426,6 @@ public final class InlineCompletionController {
 				newContent,
 				document.getLineOffset(firstLine + prefixLineOffset),
 				newEditable.length(),
-				EclipseUtils.getWidgetLine(this.textViewer, firstLine) + (int) newEditable.lines().count() - 1,
 				(int) newContent.lines().count(),
 				(int) newEditable.lines().count()));
 	}
@@ -559,12 +555,14 @@ public final class InlineCompletionController {
 			AiCoderHistoryView.get().ifPresent(AiCoderHistoryView::refresh);
 			this.paintListener.resetMetrics();
 		}
+		redraw();
 	}
 
 	private void redraw() {
 		Display.getDefault().syncExec(() -> {
-			// windows needs this ?! (TODO investigate if this is still needed, or if possible to only redraw affected lines)
-			this.textViewer.getTextWidget().redraw();
+			final StyledText textWidget = this.textViewer.getTextWidget();
+			final Font currentFont = textWidget.getFont();
+			textWidget.setFont(currentFont); // triggers full layout re‑computation
 		});
 	}
 
@@ -624,7 +622,7 @@ public final class InlineCompletionController {
 								AiCoderActivator.log().info("No next lines to add");
 								return;
 							}
-							this.setup(InlineCompletion.create(completion.historyEntry(), this.textViewer.getDocument(), offset, EclipseUtils.getWidgetOffset(this.textViewer, offset), EclipseUtils.getWidgetLine(this.textViewer, offset), nextLines, completion.lineHeight(), this.widget.getLineSpacing()));
+							this.setup(InlineCompletion.create(completion.historyEntry(), this.textViewer.getDocument(), offset, nextLines, completion.lineHeight(), this.widget.getLineSpacing()));
 						} catch (final BadLocationException exception) {
 							throw new RuntimeException("Failed to create inline completion", exception);
 						}
@@ -725,27 +723,31 @@ public final class InlineCompletionController {
 	private class StyledTextLineSpacingProviderImplementation implements StyledTextLineSpacingProvider {
 		@Override
 		public Integer getLineSpacing(int lineIndex) {
-			final InlineCompletion completion = InlineCompletionController.this.completion;
-			if (completion != null && completion.widgetLineIndex() == lineIndex) {
-				return completion.lineSpacing();
-			}
-			final List<SuggestionController> suggestionControllers = InlineCompletionController.this.suggestionControllers;
-			if (suggestionControllers != null) {
-				int lineSpacing = 0;
-				for (final SuggestionController suggestionController : suggestionControllers) {
-					final Suggestion suggestion = suggestionController.suggestion;
-					final SuggestionPopupDialog suggestionPopupDialog = suggestionController.suggestionPopupDialog;
-					if (suggestion.widgetLastLine() == lineIndex) {
-						lineSpacing = Math.max(lineSpacing,
-								(suggestionPopupDialog.getLineCount() - suggestion.oldLines() + 2)
-										* InlineCompletionController.this.widget.getLineHeight());
+			try {
+				final InlineCompletion completion = InlineCompletionController.this.completion;
+				if (completion != null && completion.widgetLine(InlineCompletionController.this.textViewer) == lineIndex) {
+					return completion.lineSpacing();
+				}
+				final List<SuggestionController> suggestionControllers = InlineCompletionController.this.suggestionControllers;
+				if (suggestionControllers != null) {
+					int lineSpacing = 0;
+					for (final SuggestionController suggestionController : suggestionControllers) {
+						final Suggestion suggestion = suggestionController.suggestion;
+						final SuggestionPopupDialog suggestionPopupDialog = suggestionController.suggestionPopupDialog;
+						if (suggestion.widgetLastLine(InlineCompletionController.this.textViewer) == lineIndex) {
+							lineSpacing = Math.max(lineSpacing,
+									(suggestionPopupDialog.getLineCount() - suggestion.oldLines() + 2)
+											* InlineCompletionController.this.widget.getLineHeight());
+						}
+					}
+					if (lineSpacing > 0) {
+						return lineSpacing;
 					}
 				}
-				if (lineSpacing > 0) {
-					return lineSpacing;
-				}
+				return null;
+			} catch (final BadLocationException exception) {
+				throw new RuntimeException("Failed to get widget line", exception);
 			}
-			return null;
 		}
 	}
 
@@ -773,7 +775,7 @@ public final class InlineCompletionController {
 			final Font font = widget.getFont();
 			final InlineCompletion completion = InlineCompletionController.this.completion;
 			if (completion != null) {
-				final Point location = widget.getLocationAtOffset(completion.widgetOffset());
+				final Point location = widget.getLocationAtOffset(completion.widgetOffset(InlineCompletionController.this.textViewer));
 				final List<String> lines = completion.lines();
 				event.gc.setBackground(new Color(200, 255, 200));
 				event.gc.setForeground(widget.getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY));
@@ -787,7 +789,7 @@ public final class InlineCompletionController {
 							final int suffixCharacterWidth = event.gc.textExtent(completion.firstLineSuffixCharacter()).x;
 							final int suffixWidth = event.gc.textExtent(completion.firstLineSuffix()).x;
 							final int fillPrefixWidth = event.gc.textExtent(completion.firstLineFillPrefix()).x;
-							final StyleRange styleRange = widget.getStyleRangeAtOffset(completion.widgetOffset());
+							final StyleRange styleRange = widget.getStyleRangeAtOffset(completion.widgetOffset(InlineCompletionController.this.textViewer));
 							final int metricWidth = fillPrefixWidth + suffixCharacterWidth;
 							if (needMetricUpdate(styleRange, metricWidth)) {
 								updateMetrics(event, completion, widget, metricWidth);
@@ -808,7 +810,7 @@ public final class InlineCompletionController {
 
 		private void updateMetrics(PaintEvent event, InlineCompletion completion, StyledText widget, int metricWidth) {
 			final FontMetrics fontMetrics = event.gc.getFontMetrics();
-			final StyleRange newStyleRange = new StyleRange(completion.widgetOffset(), 1, null, null);
+			final StyleRange newStyleRange = new StyleRange(completion.widgetOffset(InlineCompletionController.this.textViewer), 1, null, null);
 			newStyleRange.metrics = new GlyphMetrics(fontMetrics.getAscent(), fontMetrics.getDescent(), metricWidth);
 			widget.setStyleRange(newStyleRange);
 			this.modifiedMetrics.add(newStyleRange.metrics);

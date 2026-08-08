@@ -60,8 +60,7 @@ class InlineCompletionTest {
 	void test0(String input, String output, String expected, IRegion expectedRegion) throws BadLocationException {
 		final Document document = new Document(input.replace("<|cursor|>", ""));
 		final int offset = input.indexOf("<|cursor|>");
-		final int lineIndex = (int) input.lines().filter(line -> !line.contains("<|cursor|>")).count();
-		final InlineCompletion completion = InlineCompletion.create(null, document, offset, offset, lineIndex, output, 0, 0);
+		final InlineCompletion completion = InlineCompletion.create(null, document, offset, output, 0, 0);
 		completion.applyTo(document);
 		assertEquals(expected, document.get());
 		assertEquals(expectedRegion, completion.modelRegion());

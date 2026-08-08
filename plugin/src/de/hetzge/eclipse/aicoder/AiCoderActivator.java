@@ -35,6 +35,7 @@ import de.hetzge.eclipse.aicoder.mcp.McpClients;
 // - if suggestion apply makes the editor blank then ask if file should be deleted
 // - tools selection in dialog
 // - additional tools: compile project, get warnings of file/folder
+// - only open suggestions if file is in saved state (from agent task files)
 
 public class AiCoderActivator extends AbstractUIPlugin {
 

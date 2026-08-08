@@ -3,6 +3,7 @@ package de.hetzge.eclipse.aicoder.util;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
 import java.util.List;
 
 import org.eclipse.compare.CompareConfiguration;
@@ -28,43 +29,65 @@ public final class DiffUtils {
 	}
 
 	public static Diff diff(String oldContent, String newContent) {
-		return diff(oldContent.lines().toList(), newContent.lines().toList());
-	}
+		final List<String> oldList = oldContent.lines().toList();
+		final List<String> newList = newContent.lines().toList();
 
-	public static Diff diff(List<String> oldList, List<String> newList) {
+		final List<String> oldListWithLineending = Arrays.asList(oldContent.split("(?<=\\n)")); // not using .lines() here to keep \r\n line endings
+		final List<String> newListWithLineending = Arrays.asList(newContent.split("(?<=\\n)")); // not using .lines() here to keep \r\n line endings
+
 		final int m = oldList.size();
 		final int n = newList.size();
-
-		// Build LCS matrix (O(m*n))
 		final int[][] lcs = new int[m + 1][n + 1];
-		for (int i = 0; i < m; i++) {
-			for (int j = 0; j < n; j++) {
-				lcs[i + 1][j + 1] = oldList.get(i).equals(newList.get(j)) ? lcs[i][j] + 1 : Math.max(lcs[i][j + 1], lcs[i + 1][j]);
+
+		for (int i = m - 1; i >= 0; i--) {
+			for (int j = n - 1; j >= 0; j--) {
+				lcs[i][j] = oldList.get(i).equals(newList.get(j))
+						? lcs[i + 1][j + 1] + 1
+						: Math.max(lcs[i + 1][j], lcs[i][j + 1]);
 			}
 		}
 
-		// Backtrack to produce diff hunks
-		final StringBuilder stringBuilder = new StringBuilder();
-		int i = m, j = n;
+		final StringBuilder patchBuilder = new StringBuilder();
+		final List<Change> changes = new java.util.ArrayList<>();
+		int oldIndex = 0;
+		int newIndex = 0;
 		int added = 0;
 		int removed = 0;
-		while (i > 0 || j > 0) {
-			if (i > 0 && j > 0 && oldList.get(i - 1).equals(newList.get(j - 1))) {
-				stringBuilder.insert(0, " " + oldList.get(i - 1) + "\n");
-				i--;
-				j--;
-			} else if (j > 0 && (i == 0 || lcs[i][j - 1] >= lcs[i - 1][j])) {
-				stringBuilder.insert(0, "+" + newList.get(j - 1) + "\n");
-				j--;
-				added++;
-			} else if (i > 0 && (j == 0 || lcs[i][j - 1] < lcs[i - 1][j])) {
-				stringBuilder.insert(0, "-" + oldList.get(i - 1) + "\n");
-				i--;
-				removed++;
+
+		while (oldIndex < m || newIndex < n) {
+			if (oldIndex < m && newIndex < n && oldList.get(oldIndex).equals(newList.get(newIndex))) {
+				patchBuilder.append(' ').append(oldList.get(oldIndex)).append('\n');
+				oldIndex++;
+				newIndex++;
+				continue;
 			}
+
+			final int startLine = oldIndex;
+			String oldChangeContent = "";
+			String newChangeContent = "";
+
+			while (oldIndex < m || newIndex < n) {
+				if (oldIndex < m && newIndex < n && oldList.get(oldIndex).equals(newList.get(newIndex))) {
+					break;
+				}
+
+				if (newIndex < n && (oldIndex == m || lcs[oldIndex][newIndex + 1] >= lcs[oldIndex + 1][newIndex])) {
+					patchBuilder.append('+').append(newList.get(newIndex)).append('\n');
+					newChangeContent += newListWithLineending.get(newIndex);
+					newIndex++;
+					added++;
+				} else {
+					patchBuilder.append('-').append(oldList.get(oldIndex)).append('\n');
+					oldChangeContent += oldListWithLineending.get(oldIndex);
+					oldIndex++;
+					removed++;
+				}
+			}
+
+			changes.add(new Change(startLine, newChangeContent, oldChangeContent));
 		}
-		final String patch = stringBuilder.toString();
-		return new Diff(patch, added, removed);
+
+		return new Diff(patchBuilder.toString(), changes, added, removed);
 	}
 
 	public static void openDiff(String content, String previousContent) {
@@ -174,7 +197,10 @@ public final class DiffUtils {
 		}
 	}
 
-	public static record Diff(String patch, int added, int removed) {
+	public static record Change(int startLine, String newContent, String oldContent) {
+	}
+
+	public static record Diff(String patch, List<Change> changes, int added, int removed) {
 	}
 
 }
