@@ -6,11 +6,13 @@ import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 
+import de.hetzge.eclipse.aicoder.AiCoderResultView;
 import de.hetzge.eclipse.aicoder.llm.LlmMessage;
 import de.hetzge.eclipse.aicoder.llm.LlmToolCallRequest;
 
@@ -73,6 +75,16 @@ public final class AgentTrajectoryMessageComposite extends Composite {
 
 		if (message.content() != null && !message.content().isBlank()) {
 			createText(bubble, message.content(), background, contentFont);
+
+			if (assistant) {
+				final Button openButton = new Button(bubble, SWT.PUSH);
+				openButton.setText("Open in Result View");
+				openButton.setLayoutData(new GridData(SWT.LEFT, SWT.TOP, false, false));
+				openButton.addListener(SWT.Selection, event -> {
+					AiCoderResultView.setContent(message.content());
+					AiCoderResultView.openView();
+				});
+			}
 		}
 
 		for (final LlmToolCallRequest toolCallRequest : message.toolCallRequest()) {
