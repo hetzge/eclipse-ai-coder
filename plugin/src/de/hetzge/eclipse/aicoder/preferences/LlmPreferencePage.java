@@ -43,6 +43,7 @@ public class LlmPreferencePage extends FieldEditorPreferencePage implements IWor
 		createModelGroup("Quick fix LLM", AiCoderPreferences.QUICK_FIX_PROVIDER_KEY, AiCoderPreferences.QUICK_FIX_MODEL_KEY);
 		createModelGroup("Generate LLM", AiCoderPreferences.GENERATE_PROVIDER_KEY, AiCoderPreferences.GENERATE_MODEL_KEY);
 		createModelGroup("Edit LLM", AiCoderPreferences.EDIT_PROVIDER_KEY, AiCoderPreferences.EDIT_MODEL_KEY);
+		createModelGroup("Query LLM", AiCoderPreferences.QUERY_PROVIDER_KEY, AiCoderPreferences.QUERY_MODEL_KEY);
 		createModelGroup("Next edit LLM", AiCoderPreferences.NEXT_EDIT_PROVIDER_KEY, AiCoderPreferences.NEXT_EDIT_MODEL_KEY);
 		createModelGroup("Rerank LLM", AiCoderPreferences.RERANK_PROVIDER_KEY, AiCoderPreferences.RERANK_MODEL_KEY);
 		createModelGroup("Agent LLM", AiCoderPreferences.AGENT_PROVIDER_KEY, AiCoderPreferences.AGENT_MODEL_KEY);
