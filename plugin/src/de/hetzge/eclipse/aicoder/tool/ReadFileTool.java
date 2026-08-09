@@ -12,6 +12,8 @@ import mjson.Json;
 
 public final class ReadFileTool extends Tool {
 
+	private static final int DEFAULT_MAX_LINES = 2000;
+
 	private static Json prepareDefinition(List<IProject> projects) {
 		return Json.object()
 				.set("name", "read_file")
@@ -31,8 +33,8 @@ public final class ReadFileTool extends Tool {
 												.set("description", "Inclusive 1-indexed line number to end reading. If omitted, reads until max_lines is reached or EOF."))
 										.set("max_lines", Json.object()
 												.set("type", "integer")
-												.set("description", "Maximum lines to return if end_line is not set. Default: 2000")
-												.set("default", 2000))
+												.set("description", "Maximum lines to return if end_line is not set. Default: " + DEFAULT_MAX_LINES)
+												.set("default", DEFAULT_MAX_LINES))
 										.set("include_line_numbers", Json.object()
 												.set("type", "boolean")
 												.set("description", "Whether to prepend each line with its line number (e.g., '42: '). Ignored if byte_offset is set. Default: false")
@@ -57,7 +59,7 @@ public final class ReadFileTool extends Tool {
 		final String pathArg = arguments.at("path").asString();
 		final int startLine = arguments.has("start_line") ? arguments.at("start_line").asInteger() : 1;
 		final Integer endLine = arguments.has("end_line") && !arguments.at("end_line").isNull() ? arguments.at("end_line").asInteger() : null;
-		final int maxLines = arguments.has("max_lines") ? arguments.at("max_lines").asInteger() : 2000;
+		final int maxLines = arguments.has("max_lines") ? arguments.at("max_lines").asInteger() : DEFAULT_MAX_LINES;
 		final boolean includeLineNumbers = arguments.has("include_line_numbers") && arguments.at("include_line_numbers").asBoolean();
 		if (pathArg == null || pathArg.isBlank()) {
 			return "Error: path argument is required.";
@@ -87,6 +89,12 @@ public final class ReadFileTool extends Tool {
 				builder.append(lineNumber).append(": ");
 			}
 			builder.append(lines.get(lineNumber - 1));
+		}
+		if (endLine == null && fromLine <= lines.size() && toLine < lines.size()) {
+			if (builder.length() > 0) {
+				builder.append('\n');
+			}
+			builder.append("[More lines were skipped because max_lines was reached.]");
 		}
 		return builder.toString();
 	}
