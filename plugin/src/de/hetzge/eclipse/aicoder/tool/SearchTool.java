@@ -10,14 +10,13 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.quicksearch.ProjectSearchUtils;
 import de.hetzge.eclipse.aicoder.quicksearch.SearchOptions;
 import de.hetzge.eclipse.aicoder.quicksearch.SearchResult;
 import mjson.Json;
 
 public final class SearchTool extends Tool {
-
-	private static final int MAX_RESULTS = 1000;
 
 	private static Json prepareDefinition(List<IProject> projects) {
 		return Json.object()
@@ -63,6 +62,7 @@ public final class SearchTool extends Tool {
 			return "Error: project argument is required. Available projects: " + this.projects.stream().map(IProject::getName).toList() + ".";
 		}
 		try {
+			final int resultLimit = AiCoderPreferences.getSearchToolResultLimit();
 			final StringBuilder builder = new StringBuilder();
 			int resultCount = 0;
 			boolean skipped = false;
@@ -77,7 +77,7 @@ public final class SearchTool extends Tool {
 						.sorted(Comparator.comparing(it -> it.getPath().toOSString()))
 						.toList();
 				for (final SearchResult result : results) {
-					if (resultCount >= MAX_RESULTS) {
+					if (resultCount >= resultLimit) {
 						skipped = true;
 						continue;
 					}
@@ -104,7 +104,7 @@ public final class SearchTool extends Tool {
 					builder.append('\n');
 				}
 				builder.append("[Part of the result was skipped because the limit of ")
-						.append(MAX_RESULTS)
+						.append(resultLimit)
 						.append(" entries was reached.]");
 			}
 			return builder.toString();

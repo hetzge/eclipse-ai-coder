@@ -54,6 +54,10 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String INCEPTIONLABS_API_KEY_KEY = "de.hetzge.eclipse.aicoder.inceptionlabs_api_key";
 	public static final String OPENROUTER_API_KEY_KEY = "de.hetzge.eclipse.aicoder.openrouter_api_key";
 	public static final String OLLAMA_NUM_CTX_KEY = "de.hetzge.eclipse.aicoder.ollama_num_ctx";
+	public static final String SEARCH_TOOL_RESULT_LIMIT_KEY = "de.hetzge.eclipse.aicoder.search_tool_result_limit";
+	public static final String READ_FILE_DEFAULT_MAX_LINE_COUNT_KEY = "de.hetzge.eclipse.aicoder.read_file_default_max_line_count";
+	public static final String MAX_AGENT_ITERATIONS_KEY = "de.hetzge.eclipse.aicoder.max_agent_iterations";
+	public static final String TOOL_CALL_OUTPUT_LIMIT_KEY = "de.hetzge.eclipse.aicoder.tool_call_output_limit";
 
 	@Override
 	public void initializeDefaultPreferences() {
@@ -97,6 +101,10 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(INCEPTIONLABS_API_KEY_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
 		store.setDefault(OPENROUTER_API_KEY_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
 		store.setDefault(OLLAMA_NUM_CTX_KEY, 128000);
+		store.setDefault(SEARCH_TOOL_RESULT_LIMIT_KEY, 1000);
+		store.setDefault(READ_FILE_DEFAULT_MAX_LINE_COUNT_KEY, 2000);
+		store.setDefault(MAX_AGENT_ITERATIONS_KEY, 200);
+		store.setDefault(TOOL_CALL_OUTPUT_LIMIT_KEY, 200000);
 	}
 
 	public static String getCodestralApiKey() {
@@ -333,5 +341,21 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 
 	public static int getOllamaNumCtx() {
 		return getStore().getInt(OLLAMA_NUM_CTX_KEY);
+	}
+
+	public static int getSearchToolResultLimit() {
+		return getStore().getInt(SEARCH_TOOL_RESULT_LIMIT_KEY);
+	}
+
+	public static int getReadFileDefaultMaxLineCount() {
+		return getStore().getInt(READ_FILE_DEFAULT_MAX_LINE_COUNT_KEY);
+	}
+
+	public static int getMaxAgentIterations() {
+		return getStore().getInt(MAX_AGENT_ITERATIONS_KEY);
+	}
+
+	public static int getToolCallOutputLimit() {
+		return getStore().getInt(TOOL_CALL_OUTPUT_LIMIT_KEY);
 	}
 }

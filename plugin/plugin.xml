@@ -241,6 +241,12 @@
      </page>
      <page
            category="de.hetzge.eclipse.aicoder.preferences"
+           class="de.hetzge.eclipse.aicoder.preferences.AgentPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.agent"
+           name="Agent">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences"
            class="de.hetzge.eclipse.aicoder.preferences.ContextPreferencePage"
            id="de.hetzge.eclipse.aicoder.preferences.context"
            name="Context">

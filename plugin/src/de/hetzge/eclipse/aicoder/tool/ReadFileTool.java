@@ -8,11 +8,10 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import mjson.Json;
 
 public final class ReadFileTool extends Tool {
-
-	private static final int DEFAULT_MAX_LINES = 2000;
 
 	private static Json prepareDefinition(List<IProject> projects) {
 		return Json.object()
@@ -33,8 +32,8 @@ public final class ReadFileTool extends Tool {
 												.set("description", "Inclusive 1-indexed line number to end reading. If omitted, reads until max_lines is reached or EOF."))
 										.set("max_lines", Json.object()
 												.set("type", "integer")
-												.set("description", "Maximum lines to return if end_line is not set. Default: " + DEFAULT_MAX_LINES)
-												.set("default", DEFAULT_MAX_LINES))
+												.set("description", "Maximum lines to return if end_line is not set. Default: " + AiCoderPreferences.getReadFileDefaultMaxLineCount())
+												.set("default", AiCoderPreferences.getReadFileDefaultMaxLineCount()))
 										.set("include_line_numbers", Json.object()
 												.set("type", "boolean")
 												.set("description", "Whether to prepend each line with its line number (e.g., '42: '). Ignored if byte_offset is set. Default: false")
@@ -59,7 +58,7 @@ public final class ReadFileTool extends Tool {
 		final String pathArg = arguments.at("path").asString();
 		final int startLine = arguments.has("start_line") ? arguments.at("start_line").asInteger() : 1;
 		final Integer endLine = arguments.has("end_line") && !arguments.at("end_line").isNull() ? arguments.at("end_line").asInteger() : null;
-		final int maxLines = arguments.has("max_lines") ? arguments.at("max_lines").asInteger() : DEFAULT_MAX_LINES;
+		final int maxLines = arguments.has("max_lines") ? arguments.at("max_lines").asInteger() : AiCoderPreferences.getReadFileDefaultMaxLineCount();
 		final boolean includeLineNumbers = arguments.has("include_line_numbers") && arguments.at("include_line_numbers").asBoolean();
 		if (pathArg == null || pathArg.isBlank()) {
 			return "Error: path argument is required.";

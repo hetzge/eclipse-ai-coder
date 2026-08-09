@@ -37,7 +37,6 @@ import de.hetzge.eclipse.aicoder.mcp.McpClients;
 // - additional tools: compile project, get warnings of file/folder
 // - only open suggestions if file is in saved state (from agent task files)
 // - kind of three way compare (ignore lines in diff with worktree that the agent has not changed, lines that are changed by another agent or the user while the agent run)
-// - limit tool call output size
 
 public class AiCoderActivator extends AbstractUIPlugin {
 
