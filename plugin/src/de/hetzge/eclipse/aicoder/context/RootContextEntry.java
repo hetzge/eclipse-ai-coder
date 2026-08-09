@@ -63,6 +63,7 @@ public class RootContextEntry extends ContextEntry {
 		}
 		factories.add(LastEditsContextEntry.factory());
 		factories.add(ClipboardContextEntry.factory());
+		factories.add(ScratchpadContextEntry.factory());
 		factories.add(FillInMiddleContextEntry.factory(filename, document, offset, config));
 		factories.add(AiRerankContextEntry.factory(document, editorInput, originalInstructions, offset, config));
 		factories.add(CodeViewportMemoryContextEntry.factory(document, offset, config));

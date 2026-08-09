@@ -62,7 +62,8 @@ public final class Context {
 			Map.entry(TypeMemberContextEntry.PREFIX, "Type member (Java)"),
 			Map.entry(PackageContextEntry.PREFIX, "Package (Java)"),
 			Map.entry(AiRerankContextEntry.PREFIX, "AI rerank"),
-			Map.entry(CodeViewportMemoryContextEntry.PREFIX, "Code Viewport Memory"));
+			Map.entry(CodeViewportMemoryContextEntry.PREFIX, "Code Viewport Memory"),
+			Map.entry(ScratchpadContextEntry.PREFIX, "Scratchpad"));
 
 	public static final List<String> DEFAULT_PREFIX_ORDER = List.of(
 			ProjectInformationsContextEntry.PREFIX,
@@ -76,6 +77,7 @@ public final class Context {
 			UserContextEntry.PREFIX,
 			LastEditsContextEntry.PREFIX,
 			ClipboardContextEntry.PREFIX,
+			ScratchpadContextEntry.PREFIX,
 			AiRerankContextEntry.PREFIX,
 			CodeViewportMemoryContextEntry.PREFIX,
 			FillInMiddleContextEntry.PREFIX);

@@ -58,6 +58,8 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String READ_FILE_DEFAULT_MAX_LINE_COUNT_KEY = "de.hetzge.eclipse.aicoder.read_file_default_max_line_count";
 	public static final String MAX_AGENT_ITERATIONS_KEY = "de.hetzge.eclipse.aicoder.max_agent_iterations";
 	public static final String TOOL_CALL_OUTPUT_LIMIT_KEY = "de.hetzge.eclipse.aicoder.tool_call_output_limit";
+	public static final String SCRATCHPAD_CONTENT_KEY = "de.hetzge.eclipse.aicoder.scratchpad_content";
+	public static final String SCRATCHPAD_ENABLED_KEY = "de.hetzge.eclipse.aicoder.scratchpad_enabled";
 
 	@Override
 	public void initializeDefaultPreferences() {
@@ -105,6 +107,8 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(READ_FILE_DEFAULT_MAX_LINE_COUNT_KEY, 2000);
 		store.setDefault(MAX_AGENT_ITERATIONS_KEY, 200);
 		store.setDefault(TOOL_CALL_OUTPUT_LIMIT_KEY, 200000);
+		store.setDefault(SCRATCHPAD_CONTENT_KEY, "");
+		store.setDefault(SCRATCHPAD_ENABLED_KEY, true);
 	}
 
 	public static String getCodestralApiKey() {

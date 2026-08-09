@@ -70,6 +70,18 @@
         id="de.hetzge.eclipse.codestral.commands.abortAllAgentTasks"
         name="Abort All Tasks">
   </command>
+  <command
+        id="de.hetzge.eclipse.aicoder.commands.scratchpadAddPlain"
+        name="Add to Scratchpad (Plain)">
+  </command>
+  <command
+        id="de.hetzge.eclipse.aicoder.commands.scratchpadAddWithPath"
+        name="Add to Scratchpad (With Path)">
+  </command>
+  <command
+        id="de.hetzge.eclipse.aicoder.commands.scratchpadAddWithXmlTag"
+        name="Add to Scratchpad (With XML Tag)">
+  </command>
 	</extension>
 
 	<extension point="org.eclipse.ui.handlers">
@@ -120,6 +132,22 @@
   <handler
         class="de.hetzge.eclipse.aicoder.handler.AbortAllAgentTasksHandler"
         commandId="de.hetzge.eclipse.codestral.commands.abortAllAgentTasks">
+  </handler>
+  <handler
+        class="de.hetzge.eclipse.aicoder.handler.ScratchpadAddToScratchpadHandler"
+        commandId="de.hetzge.eclipse.aicoder.commands.scratchpadAddPlain">
+  </handler>
+  <handler
+        class="de.hetzge.eclipse.aicoder.handler.ScratchpadAddToScratchpadHandler"
+        commandId="de.hetzge.eclipse.aicoder.commands.scratchpadAddWithPath">
+  </handler>
+  <handler
+        class="de.hetzge.eclipse.aicoder.handler.ScratchpadAddToScratchpadHandler"
+        commandId="de.hetzge.eclipse.aicoder.commands.scratchpadAddWithXmlTag">
+  </handler>
+  <handler
+        class="de.hetzge.eclipse.aicoder.handler.ScratchpadAddToScratchpadHandler"
+        commandId="de.hetzge.eclipse.aicoder.commands.scratchpadAddWithMarkdownCode">
   </handler>
 	</extension>
 
@@ -200,6 +228,14 @@
           id="de.hetzge.eclipse.aicoder.AgentTaskTreeView"
           inject="true"
           name="AI Coder Tasks">
+    </view>
+    <view
+          category="de.hetzge.eclipse.aicoder"
+          class="de.hetzge.eclipse.aicoder.ScratchpadView"
+          icon="icons/icon16.png"
+          id="de.hetzge.eclipse.aicoder.ScratchpadView"
+          inject="true"
+          name="AI Coder Scratchpad">
     </view>
  </extension>
  <extension
@@ -372,6 +408,12 @@
            name="Code Viewport Memory">
      </page>
      <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.ScratchpadContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.scratchpad"
+           name="Scratchpad">
+     </page>
+     <page
            category="de.hetzge.eclipse.aicoder.preferences"
            class="de.hetzge.eclipse.aicoder.preferences.ProviderPreferencePage"
            id="de.hetzge.eclipse.aicoder.preferences.provider"
@@ -450,5 +492,89 @@
           id="de.hetzge.eclipse.aicoder.AgentTrajectoryEditor"
           name="AI Coder Trajectory">
     </editor>
+ </extension>
+
+ <extension
+       point="org.eclipse.ui.menus">
+    <menuContribution
+          allPopups="true"
+          locationURI="popup:org.eclipse.ui.textEditorScope?after=additions">
+       <menu
+             id="de.hetzge.eclipse.aicoder.menu.addToScratchpad"
+             label="AI Coder">
+          <menu
+                id="de.hetzge.eclipse.aicoder.menu.addToScratchpad.sub"
+                label="Add to scratchpad">
+             <command
+                   commandId="de.hetzge.eclipse.aicoder.commands.scratchpadAddPlain"
+                   label="Plain"
+                   style="push">
+             </command>
+             <command
+                   commandId="de.hetzge.eclipse.aicoder.commands.scratchpadAddWithPath"
+                   label="With path"
+                   style="push">
+             </command>
+             <command
+                   commandId="de.hetzge.eclipse.aicoder.commands.scratchpadAddWithXmlTag"
+                   label="With XML tag"
+                   style="push">
+             </command>
+             <command
+                   commandId="de.hetzge.eclipse.aicoder.commands.scratchpadAddWithMarkdownCode"
+                   label="With Markdown code"
+                   style="push">
+             </command>
+          </menu>
+       </menu>
+    </menuContribution>
+    <menuContribution
+          allPopups="true"
+          locationURI="popup:org.eclipse.ui.popup.any?after=additions">
+       <menu
+             id="de.hetzge.eclipse.aicoder.menu.addToScratchpadFile"
+             label="AI Coder">
+          <visibleWhen
+                checkEnabled="false">
+             <with
+                   variable="selection">
+                <count
+                      value="+">
+                </count>
+                <iterate
+                      ifEmpty="false"
+                      operator="or">
+                   <adapt
+                         type="org.eclipse.core.resources.IFile">
+                   </adapt>
+                </iterate>
+             </with>
+          </visibleWhen>
+          <menu
+                id="de.hetzge.eclipse.aicoder.menu.addToScratchpadFile.sub"
+                label="Add to scratchpad">
+             <command
+                   commandId="de.hetzge.eclipse.aicoder.commands.scratchpadAddPlain"
+                   label="Plain"
+                   style="push">
+             </command>
+             <command
+                   commandId="de.hetzge.eclipse.aicoder.commands.scratchpadAddWithPath"
+                   label="With path"
+                   style="push">
+             </command>
+             <command
+                   commandId="de.hetzge.eclipse.aicoder.commands.scratchpadAddWithXmlTag"
+                   label="With XML tag"
+                   style="push">
+             </command>
+             <command
+                   commandId="de.hetzge.eclipse.aicoder.commands.scratchpadAddWithMarkdownCode"
+                   label="With Markdown code"
+                   style="push">
+             </command>
+          </menu>
+       </menu>
+    </menuContribution>
  </extension>
 </plugin>

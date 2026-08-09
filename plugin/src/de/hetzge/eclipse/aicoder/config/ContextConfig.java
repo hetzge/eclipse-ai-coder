@@ -21,6 +21,7 @@ import de.hetzge.eclipse.aicoder.context.PackageContextEntry;
 import de.hetzge.eclipse.aicoder.context.ProjectInformationContextEntry;
 import de.hetzge.eclipse.aicoder.context.RootContextEntry;
 import de.hetzge.eclipse.aicoder.context.ScopeContextEntry;
+import de.hetzge.eclipse.aicoder.context.ScratchpadContextEntry;
 import de.hetzge.eclipse.aicoder.context.StickyContextEntry;
 import de.hetzge.eclipse.aicoder.context.SuperContextEntry;
 import de.hetzge.eclipse.aicoder.context.TypeContextEntry;
@@ -58,6 +59,7 @@ public sealed interface ContextConfig {
 		case PackageContextEntry.PREFIX -> new PackageConfig(table, PackageContextEntry.PREFIX);
 		case AiRerankContextEntry.PREFIX -> new AiRerankConfig(table, AiRerankContextEntry.PREFIX);
 		case CodeViewportMemoryContextEntry.PREFIX -> new CodeViewportMemoryConfig(table, CodeViewportMemoryContextEntry.PREFIX);
+		case ScratchpadContextEntry.PREFIX -> new ScratchpadConfig(table, ScratchpadContextEntry.PREFIX);
 		default -> throw new IllegalArgumentException("Unknown context type: " + table.getString("key"));
 		};
 	}
@@ -160,6 +162,9 @@ public sealed interface ContextConfig {
 		public List<String> getBlacklist() {
 			return this.table.getArrayOrEmpty("blacklist").toList().stream().map(String.class::cast).toList();
 		}
+	}
+
+	public record ScratchpadConfig(TomlTable table, String key) implements ContextConfig {
 	}
 
 	public record CodeViewportMemoryConfig(TomlTable table, String key) implements ContextConfig {

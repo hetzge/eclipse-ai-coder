@@ -9,18 +9,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.eclipse.core.filebuffers.FileBuffers;
-import org.eclipse.core.filebuffers.ITextFileBuffer;
-import org.eclipse.core.filebuffers.LocationKind;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IWorkspaceRoot;
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
@@ -31,6 +27,7 @@ import de.hetzge.eclipse.aicoder.history.HistoryType;
 import de.hetzge.eclipse.aicoder.inline.Suggestion;
 import de.hetzge.eclipse.aicoder.quicksearch.SearchResult;
 import de.hetzge.eclipse.aicoder.util.DiffUtils;
+import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 
 public final class FileSystem {
 
@@ -48,7 +45,7 @@ public final class FileSystem {
 
 	public List<Suggestion> toSuggestions(IPath path, HistoryType historyType) throws IOException {
 		final IPath normalizedPath = normalizePath(path);
-		final String oldContent = readReferenceFile(normalizedPath);
+		final String oldContent = EclipseUtils.readContentFromBufferOrFile(this.workspaceRoot, normalizedPath);
 		final String newContent = this.contentByPath.getOrDefault(normalizedPath, oldContent);
 		if (oldContent.equals(newContent)) {
 			return List.of();
@@ -99,7 +96,7 @@ public final class FileSystem {
 
 	public void putFile(IPath path, String content) throws IOException {
 		if (!this.referenceContentByPath.containsKey(path)) {
-			this.referenceContentByPath.put(path, readReferenceFile(path));
+			this.referenceContentByPath.put(path, EclipseUtils.readContentFromBufferOrFile(this.workspaceRoot, path));
 		}
 		this.contentByPath.put(normalizePath(path), content);
 	}
@@ -109,23 +106,7 @@ public final class FileSystem {
 		if (this.contentByPath.containsKey(path)) {
 			return this.contentByPath.getOrDefault(path, "");
 		} else {
-			return readReferenceFile(path);
-		}
-	}
-
-	private String readReferenceFile(IPath path) throws IOException {
-		final IFile file = this.workspaceRoot.getFile(path);
-		if (!file.exists()) {
-			return "";
-		}
-		try {
-			final ITextFileBuffer textFileBuffer = FileBuffers.getTextFileBufferManager().getTextFileBuffer(file.getFullPath(), LocationKind.IFILE);
-			if (textFileBuffer != null) {
-				return textFileBuffer.getDocument().get();
-			}
-			return new String(file.getContents(true).readAllBytes(), file.getCharset());
-		} catch (final CoreException exception) {
-			throw new IOException("Failed to read file: " + path, exception);
+			return EclipseUtils.readContentFromBufferOrFile(this.workspaceRoot, path);
 		}
 	}
 
@@ -152,7 +133,7 @@ public final class FileSystem {
 	}
 
 	public String readWorktreeFile(IPath path) throws IOException {
-		return readReferenceFile(normalizePath(path));
+		return EclipseUtils.readContentFromBufferOrFile(this.workspaceRoot, path);
 	}
 
 	public List<SearchResult> search(String pattern, String filePattern) {

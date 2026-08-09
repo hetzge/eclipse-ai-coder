@@ -62,7 +62,8 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 			Map.entry(TypeMemberContextPreferencePage.CONTEXT_PREFIX, TypeMemberContextPreferencePage.ID),
 			Map.entry(PackageContextPreferencePage.CONTEXT_PREFIX, PackageContextPreferencePage.ID),
 			Map.entry(AiRerankContextPreferencePage.CONTEXT_PREFIX, AiRerankContextPreferencePage.ID),
-			Map.entry(CodeViewportMemoryContextPreferencePage.CONTEXT_PREFIX, CodeViewportMemoryContextPreferencePage.ID));
+			Map.entry(CodeViewportMemoryContextPreferencePage.CONTEXT_PREFIX, CodeViewportMemoryContextPreferencePage.ID),
+			Map.entry(ScratchpadContextPreferencePage.CONTEXT_PREFIX, ScratchpadContextPreferencePage.ID));
 
 	private final Map<CompletionMode, ContextPreferenceSubPage> subPagesByMode;
 	private CCombo modeCombo;

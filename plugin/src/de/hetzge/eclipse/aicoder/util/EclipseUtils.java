@@ -15,10 +15,14 @@ import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.commands.NotEnabledException;
 import org.eclipse.core.commands.NotHandledException;
 import org.eclipse.core.commands.common.NotDefinedException;
+import org.eclipse.core.filebuffers.FileBuffers;
+import org.eclipse.core.filebuffers.ITextFileBuffer;
+import org.eclipse.core.filebuffers.LocationKind;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IAdaptable;
@@ -305,6 +309,22 @@ public class EclipseUtils {
 			PlatformUI.getWorkbench().getActiveWorkbenchWindow().getService(IHandlerService.class).executeCommand(commandId, null);
 		} catch (ExecutionException | NotDefinedException | NotEnabledException | NotHandledException exception) {
 			throw new RuntimeException("Failed to run command: " + commandId, exception);
+		}
+	}
+
+	public static String readContentFromBufferOrFile(IWorkspaceRoot workspaceRoot, IPath path) throws IOException {
+		final IFile file = workspaceRoot.getFile(path);
+		if (!file.exists()) {
+			return "";
+		}
+		try {
+			final ITextFileBuffer textFileBuffer = FileBuffers.getTextFileBufferManager().getTextFileBuffer(file.getFullPath(), LocationKind.IFILE);
+			if (textFileBuffer != null) {
+				return textFileBuffer.getDocument().get();
+			}
+			return new String(file.getContents(true).readAllBytes(), file.getCharset());
+		} catch (final CoreException exception) {
+			throw new IOException("Failed to read file: " + path, exception);
 		}
 	}
 }
