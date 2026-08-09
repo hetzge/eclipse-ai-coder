@@ -34,6 +34,7 @@ public class ScratchpadAddToScratchpadHandler extends AbstractHandler {
 	public static final String ADD_WITH_PATH_COMMAND_ID = "de.hetzge.eclipse.aicoder.commands.scratchpadAddWithPath";
 	public static final String ADD_WITH_XML_TAG_COMMAND_ID = "de.hetzge.eclipse.aicoder.commands.scratchpadAddWithXmlTag";
 	public static final String ADD_WITH_MARKDOWN_CODE_COMMAND_ID = "de.hetzge.eclipse.aicoder.commands.scratchpadAddWithMarkdownCode";
+	public static final String REPLACE_CONTENT_COMMAND_ID = "de.hetzge.eclipse.aicoder.commands.scratchpadReplaceContent";
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
@@ -45,6 +46,35 @@ public class ScratchpadAddToScratchpadHandler extends AbstractHandler {
 		if (items.isEmpty()) {
 			return null;
 		}
+		final String content = buildContent(items, mode);
+		if (content == null || content.isEmpty()) {
+			return null;
+		}
+		if (mode == AddMode.REPLACE) {
+			ScratchpadStorage.setContent(content);
+			ScratchpadView.refreshContentIfOpen();
+		} else {
+			ScratchpadStorage.append(content);
+		}
+		try {
+			ScratchpadView.openView();
+		} catch (final Exception exception) {
+			// View could not be opened, but the content was still added.
+		}
+		return null;
+	}
+
+	private String buildContent(List<ScratchpadItem> items, AddMode mode) throws ExecutionException {
+		if (mode == AddMode.REPLACE) {
+			final StringBuilder builder = new StringBuilder();
+			for (final ScratchpadItem item : items) {
+				if (builder.length() > 0) {
+					builder.append('\n');
+				}
+				builder.append(item.content());
+			}
+			return builder.toString();
+		}
 		final StringBuilder builder = new StringBuilder();
 		for (final ScratchpadItem item : items) {
 			try {
@@ -53,15 +83,7 @@ public class ScratchpadAddToScratchpadHandler extends AbstractHandler {
 				throw new ExecutionException("Failed to append item to scratchpad", exception);
 			}
 		}
-		if (builder.length() > 0) {
-			ScratchpadStorage.append(builder.toString().stripTrailing());
-			try {
-				ScratchpadView.openView();
-			} catch (final Exception exception) {
-				// View could not be opened, but the content was still added.
-			}
-		}
-		return null;
+		return builder.toString().stripTrailing();
 	}
 
 	private AddMode getMode(ExecutionEvent event) {
@@ -73,6 +95,7 @@ public class ScratchpadAddToScratchpadHandler extends AbstractHandler {
 		case ADD_WITH_PATH_COMMAND_ID -> AddMode.WITH_PATH;
 		case ADD_WITH_XML_TAG_COMMAND_ID -> AddMode.WITH_XML_TAG;
 		case ADD_WITH_MARKDOWN_CODE_COMMAND_ID -> AddMode.WITH_MARKDOWN_CODE;
+		case REPLACE_CONTENT_COMMAND_ID -> AddMode.REPLACE;
 		default -> null;
 		};
 	}
@@ -186,6 +209,7 @@ public class ScratchpadAddToScratchpadHandler extends AbstractHandler {
 		case WITH_PATH -> builder.append("\n").append(item.path()).append('\n').append(item.content()).append('\n');
 		case WITH_XML_TAG -> appendXmlTag(builder, item);
 		case WITH_MARKDOWN_CODE -> appendMarkdownCode(builder, item);
+		case REPLACE -> throw new IllegalStateException("Replace content is built separately");
 		}
 	}
 
@@ -246,7 +270,8 @@ public class ScratchpadAddToScratchpadHandler extends AbstractHandler {
 		PLAIN,
 		WITH_PATH,
 		WITH_XML_TAG,
-		WITH_MARKDOWN_CODE
+		WITH_MARKDOWN_CODE,
+		REPLACE
 	}
 
 	private record ScratchpadItem(boolean isFile, String path, String content) {

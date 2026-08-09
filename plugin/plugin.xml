@@ -86,6 +86,10 @@
         id="de.hetzge.eclipse.aicoder.commands.scratchpadAddWithMarkdownCode"
         name="Add to Scratchpad (With Markdown Code)">
   </command>
+  <command
+        id="de.hetzge.eclipse.aicoder.commands.scratchpadReplaceContent"
+        name="Replace scratchpad content">
+  </command>
 	</extension>
 
 	<extension point="org.eclipse.ui.handlers">
@@ -152,6 +156,10 @@
   <handler
         class="de.hetzge.eclipse.aicoder.handler.ScratchpadAddToScratchpadHandler"
         commandId="de.hetzge.eclipse.aicoder.commands.scratchpadAddWithMarkdownCode">
+  </handler>
+  <handler
+        class="de.hetzge.eclipse.aicoder.handler.ScratchpadAddToScratchpadHandler"
+        commandId="de.hetzge.eclipse.aicoder.commands.scratchpadReplaceContent">
   </handler>
 	</extension>
 
@@ -530,6 +538,11 @@
                    style="push">
              </command>
           </menu>
+          <command
+                commandId="de.hetzge.eclipse.aicoder.commands.scratchpadReplaceContent"
+                label="Replace scratchpad content"
+                style="push">
+          </command>
        </menu>
     </menuContribution>
     <menuContribution
@@ -584,6 +597,11 @@
                    style="push">
              </command>
           </menu>
+          <command
+                commandId="de.hetzge.eclipse.aicoder.commands.scratchpadReplaceContent"
+                label="Replace scratchpad content"
+                style="push">
+          </command>
        </menu>
     </menuContribution>
  </extension>
