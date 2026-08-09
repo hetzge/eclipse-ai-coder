@@ -19,11 +19,9 @@ import com.github.f4b6a3.uuid.UuidCreator;
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.llm.LlmMessage;
 import de.hetzge.eclipse.aicoder.llm.LlmRole;
-import de.hetzge.eclipse.aicoder.tool.BuildTool;
 import de.hetzge.eclipse.aicoder.tool.EditFileTool;
 import de.hetzge.eclipse.aicoder.tool.FileSystem;
 import de.hetzge.eclipse.aicoder.tool.ListFilesTool;
-import de.hetzge.eclipse.aicoder.tool.ProblemsTool;
 import de.hetzge.eclipse.aicoder.tool.ReadFileTool;
 import de.hetzge.eclipse.aicoder.tool.SearchTool;
 import de.hetzge.eclipse.aicoder.tool.Tool;
@@ -113,9 +111,11 @@ public final class AgentService {
 							new EditFileTool(projects, fileSystem),
 							new ListFilesTool(projects, fileSystem),
 							new ReadFileTool(projects, fileSystem),
-							new SearchTool(projects, fileSystem),
-							new ProblemsTool(projects),
-							new BuildTool(projects, fileSystem));
+							new SearchTool(projects, fileSystem)
+// TODO disabled until fixed
+//							new ProblemsTool(projects),
+//							new BuildTool(projects, fileSystem)
+					);
 					final List<LlmMessage> result = AgentLoop.execute(monitor, tools, projects, initialMessages, message -> {
 						try {
 							AiCoderActivator.getDefault().getAgentTasksState().appendTrajectory(task.getId(), message);
