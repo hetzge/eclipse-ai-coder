@@ -1,0 +1,38 @@
+title = "AI Coder Handler"
+glob = "**/handler/*Handler.java"
+content = """
+This specification defines how to implement Eclipse AI Coder Handler classes. A Handler is an Eclipse command handler (org.eclipse.core.commands.AbstractHandler) that is registered in plugin.xml and executed when the user triggers a command (menu entry, shortcut, toolbar button). Handlers orchestrate the AI Coder UI and services but keep the actual logic in dedicated controllers and services.
+
+## Rules
+
+- Extend `org.eclipse.core.commands.AbstractHandler`
+- The class name must end with `Handler` and match the file name
+- Override `Object execute(ExecutionEvent event) throws ExecutionException` and return `null` on success
+- Declare `public static final String COMMAND_ID` when the command id is referenced from code (e.g., to look up command state or to share the id with plugin.xml)
+- Log the execution start with `AiCoderActivator.log().info("Execute ... handler")` for traceability
+- Resolve the active editor via `EclipseUtils.getActiveTextEditor().orElseThrow(() -> new ExecutionException("No active text editor"))` when the command operates on an editor
+- Access plugin singletons and services through `AiCoderActivator.getDefault()` (e.g., `getAgentService()`, `getInstructionStorage()`)
+- Keep `execute(...)` thin and delegate to services/controllers (e.g., `InlineCompletionController.setup(textEditor).accept()`)
+- For toggle commands, use `HandlerUtil.toggleCommandState(command)` and the `RegistryToggleState.STATE_ID` state; override `setEnabled(Object evaluationContext)` to synchronize the command state with the corresponding `AiCoderPreferences` value
+- Use `HandlerUtil.getActivePart(event)` or `PlatformUI.getWorkbench()` to resolve views/parts when the command is context-sensitive
+- Run SWT/UI interactions on the UI thread (`Display.getDefault()`) and open dialogs with the active shell
+- Catch and log unexpected exceptions with `AiCoderActivator.log().error(...)`; show user-visible errors via `AiCoderActivator.openErrorDialog(title, message, throwable)`
+- Use `ExecutionException` for missing prerequisites rather than returning silently
+
+## Pattern
+
+```java
+public class ExampleHandler extends AbstractHandler {
+
+	public static final String COMMAND_ID = "de.hetzge.eclipse.aicoder.commands.example";
+
+	@Override
+	public Object execute(ExecutionEvent event) throws ExecutionException {
+		AiCoderActivator.log().info("Execute example handler");
+		final ITextEditor textEditor = EclipseUtils.getActiveTextEditor().orElseThrow(() -> new ExecutionException("No active text editor"));
+		// ... delegate to controller/service
+		return null;
+	}
+}
+```
+"""

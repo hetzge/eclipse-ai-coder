@@ -1,0 +1,59 @@
+title = "AI Coder Preference Page"
+glob = "**/preferences/*PreferencePage.java"
+content = """
+This specification defines how to implement Eclipse AI Coder Preference Page classes. A Preference Page is an Eclipse workbench preference page that lets users configure AI Coder settings. Most pages are field-editor based and store values in the AI Coder preference store; complex pages build a custom SWT UI.
+
+## Rules
+
+- Extend `FieldEditorPreferencePage` for simple field-based settings or `PreferencePage` for custom SWT UI, and implement `IWorkbenchPreferencePage`
+- The class name must end with `PreferencePage` and match the file name
+- In the constructor:
+  - Call `super(GRID)` when extending `FieldEditorPreferencePage`
+  - Set the preference store with `setPreferenceStore(AiCoderActivator.getDefault().getPreferenceStore())`
+  - Call `setDescription(...)` with a short, human-readable summary of the page
+- Implement `init(IWorkbench workbench)` (empty unless page state must be initialized)
+- For field-editor pages, override `createFieldEditors()` and add fields with `addField(...)`:
+  - Use editors such as `StringFieldEditor`, `BooleanFieldEditor`, `IntegerFieldEditor`, and `ComboFieldEditor`
+  - Every field editor must reference a preference key constant from `AiCoderPreferences` (e.g., `AiCoderPreferences.OPENAI_API_KEY_KEY`); never hard-code key strings
+  - Constrain numeric editors with `setValidRange(...)`
+  - Mask secret values (API keys) by calling `getTextControl(getFieldEditorParent()).setEchoChar('*')`
+- Group related settings in `Group` widgets created on `getFieldEditorParent()` and lay them out with `GridData`
+- For complex pages, extend `PreferencePage` directly, override `createContents(Composite parent)` to build the SWT UI, and override `performOk()` / `performDefaults()` to persist and reset values
+- Override `performApply()` when the page must react immediately to Apply (e.g., reset cached LLM models via `LlmModels.INSTANCE.reset()`)
+- Persist and read values exclusively through `AiCoderPreferences` getters/setters so all access stays centralized
+- Keep the page decoupled from business logic; delegate only user-triggered actions to services
+
+## Pattern
+
+```java
+public class ExamplePreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
+
+	public ExamplePreferencePage() {
+		super(GRID);
+		setPreferenceStore(AiCoderActivator.getDefault().getPreferenceStore());
+		setDescription("Example AI Coder settings");
+	}
+
+	@Override
+	public void init(IWorkbench workbench) {
+	}
+
+	@Override
+	protected void createFieldEditors() {
+		final StringFieldEditor apiKeyFieldEditor = new StringFieldEditor(
+				AiCoderPreferences.EXAMPLE_API_KEY_KEY,
+				"API key:",
+				getFieldEditorParent());
+		apiKeyFieldEditor.getTextControl(getFieldEditorParent()).setEchoChar('*');
+		addField(apiKeyFieldEditor);
+
+		final IntegerFieldEditor limitEditor = new IntegerFieldEditor(
+				AiCoderPreferences.EXAMPLE_LIMIT_KEY,
+				"Result limit:",
+				getFieldEditorParent());
+		limitEditor.setValidRange(1, 100000);
+		addField(limitEditor);
+	}
+}
+```
+"""

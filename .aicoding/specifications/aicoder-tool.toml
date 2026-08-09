@@ -1,0 +1,71 @@
+title = "AI Coder Tool"
+glob = "**/tool/*Tool.java"
+content = """
+This specification defines how to implement Eclipse AI Coder Tool classes. A Tool is a class that exposes a function to an AI coding agent within an Eclipse plugin. Tools are called by the LLM to inspect or modify the workspace; each tool defines a JSON Schema describing its parameters and implements an execute method that returns a plain-text result.
+
+## Rules
+
+- Each tool class must extend the abstract `Tool` base class (package `de.hetzge.eclipse.aicoder.tool`) and be declared `public final`
+- The class name must end with `Tool` and match the file name
+- Define a `private static Json prepareDefinition(...)` method that builds the tool's JSON Schema definition:
+  - `name`: a short, snake_case identifier of the tool
+  - `description`: a concise, imperative description of what the tool does; include workspace-relative path examples built with `ToolUtils.createPathPrefixExamples(projects)` when the tool accepts paths
+  - `parameters`: an object with `type` `"object"`, a `properties` map (every property must declare `type` and `description`), and a `required` array
+- The public constructor must accept the tool's dependencies (e.g., `List<IProject>` and a `FileSystem`), call `super(prepareDefinition(...))`, store the dependencies in `private final` fields, and validate them (throw `IllegalArgumentException` when e.g. no project is provided)
+- Implement `execute(IProgressMonitor monitor, Json arguments)`:
+  - Read arguments with `arguments.at(...)` and fall back to safe defaults for optional parameters
+  - Validate required arguments and return `"Error: ..."` strings for expected failures (missing/blank argument, path outside workspace, text not found, etc.)
+  - Return plain text results only; the LLM consumes the output, so do not return markdown or HTML
+  - Catch unexpected exceptions, log them via `AiCoderActivator.log().error(...)`, and return an `"Error: ..."` string with the exception message
+- Respect configured limits from `AiCoderPreferences` (e.g., `AiCoderPreferences.getSearchToolResultLimit()`, `AiCoderPreferences.getReadFileDefaultMaxLineCount()`) and append a `[... was skipped because ...]` notice when truncating results
+- Perform file modifications through the `FileSystem` abstraction (e.g., `readFile`, `putFile`) instead of writing to the workspace directly, so edits can be tracked and reviewed
+- Use `mjson.Json` for both definitions and arguments; never use checked exceptions while building the definition
+- Add `enum` values to string parameters when the accepted values are a closed set (e.g., project names, operation names)
+
+## Pattern
+
+```java
+public final class ExampleTool extends Tool {
+
+	private static Json prepareDefinition(List<IProject> projects) {
+		return Json.object()
+				.set("name", "example")
+				.set("description", "Does something, paths like " + ToolUtils.createPathPrefixExamples(projects))
+				.set("parameters", Json.object()
+						.set("type", "object")
+						.set("properties", Json.object()
+								.set("path", Json.object()
+										.set("type", "string")
+										.set("description", "Workspace-relative path.")))
+						.set("required", Json.array().add("path")));
+	}
+
+	private final List<IProject> projects;
+	private final FileSystem fileSystem;
+
+	public ExampleTool(List<IProject> projects, FileSystem fileSystem) {
+		super(prepareDefinition(projects));
+		this.projects = projects;
+		this.fileSystem = fileSystem;
+		if (this.projects.isEmpty()) {
+			throw new IllegalArgumentException("At least one project must be provided.");
+		}
+	}
+
+	@Override
+	public String execute(IProgressMonitor monitor, Json arguments) {
+		final String pathArg = arguments.at("path").asString();
+		if (pathArg == null || pathArg.isBlank()) {
+			return "Error: path argument is required.";
+		}
+		try {
+			// ... implementation
+			return "Result";
+		} catch (final Exception exception) {
+			AiCoderActivator.log().error("Error executing example tool", exception);
+			return "Error: " + exception.getMessage();
+		}
+	}
+}
+```
+"""
