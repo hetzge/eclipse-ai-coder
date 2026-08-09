@@ -17,6 +17,8 @@ import mjson.Json;
 
 public final class SearchTool extends Tool {
 
+	private static final int MAX_RESULTS = 1000;
+
 	private static Json prepareDefinition(List<IProject> projects) {
 		return Json.object()
 				.set("name", "search")
@@ -57,11 +59,13 @@ public final class SearchTool extends Tool {
 		if (pattern == null || pattern.isBlank()) {
 			return "Error: pattern argument is required.";
 		}
-		if (this.projects.stream().noneMatch(it -> it.getName().equals(projectName))) {
+		if (StringUtils.isNotBlank(projectName) && this.projects.stream().noneMatch(it -> it.getName().equals(projectName))) {
 			return "Error: project argument is required. Available projects: " + this.projects.stream().map(IProject::getName).toList() + ".";
 		}
 		try {
 			final StringBuilder builder = new StringBuilder();
+			int resultCount = 0;
+			boolean skipped = false;
 			for (final IProject project : this.projects) {
 				if (StringUtils.isNotBlank(projectName) && !project.getName().equals(projectName)) {
 					continue;
@@ -73,6 +77,10 @@ public final class SearchTool extends Tool {
 						.sorted(Comparator.comparing(it -> it.getPath().toOSString()))
 						.toList();
 				for (final SearchResult result : results) {
+					if (resultCount >= MAX_RESULTS) {
+						skipped = true;
+						continue;
+					}
 					if (builder.length() > 0) {
 						builder.append('\n');
 					}
@@ -88,7 +96,16 @@ public final class SearchTool extends Tool {
 							.append(result.getColumnEnd())
 							.append(':')
 							.append(result.getLineContent());
+					resultCount++;
 				}
+			}
+			if (skipped) {
+				if (builder.length() > 0) {
+					builder.append('\n');
+				}
+				builder.append("[Part of the result was skipped because the limit of ")
+						.append(MAX_RESULTS)
+						.append(" entries was reached.]");
 			}
 			return builder.toString();
 		} catch (final Exception exception) {
