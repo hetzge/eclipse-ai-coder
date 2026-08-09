@@ -37,6 +37,10 @@ public final class AgentTasksState {
 		}
 	}
 
+	public synchronized Optional<AgentTask> findTask(UUID id) {
+		return this.agentTasks.stream().filter(task -> task.getId().equals(id)).findFirst();
+	}
+
 	public synchronized void saveAgentTask(AgentTask task) throws IOException {
 		AgentStorage.saveAgentTask(task);
 		this.agentTasks.add(task);

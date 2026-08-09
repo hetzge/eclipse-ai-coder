@@ -4,12 +4,13 @@ import java.util.Objects;
 
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.ui.IEditorInput;
+import org.eclipse.ui.IMemento;
 import org.eclipse.ui.IPersistableElement;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
 
-public final class AgentTrajectoryEditorInput implements IEditorInput {
+public final class AgentTrajectoryEditorInput implements IEditorInput, IPersistableElement {
 
 	private final AgentTask agentTask;
 
@@ -19,6 +20,16 @@ public final class AgentTrajectoryEditorInput implements IEditorInput {
 
 	public AgentTask getAgentTask() {
 		return this.agentTask;
+	}
+
+	@Override
+	public void saveState(IMemento memento) {
+		memento.putString("agentTaskId", this.agentTask.getId().toString());
+	}
+
+	@Override
+	public String getFactoryId() {
+		return AgentTrajectoryEditorInputFactory.ID;
 	}
 
 	@Override

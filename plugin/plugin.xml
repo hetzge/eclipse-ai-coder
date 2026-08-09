@@ -636,4 +636,10 @@
        </menu>
     </menuContribution>
  </extension>
+ <extension point="org.eclipse.ui.elementFactories">
+    <factory
+          class="de.hetzge.eclipse.aicoder.agent.AgentTrajectoryEditorInputFactory"
+          id="de.hetzge.eclipse.aicoder.AgentTrajectoryInputFactory">
+    </factory>
+ </extension>
 </plugin>
