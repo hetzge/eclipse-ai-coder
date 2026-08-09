@@ -23,8 +23,7 @@ import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 import de.hetzge.eclipse.aicoder.util.MarkdownUtils;
 
 /**
- * View that renders provided markdown content in a webview and offers a toolbar
- * action to copy the original markdown into the clipboard.
+ * View that renders provided markdown content in a webview and offers a toolbar action to copy the original markdown into the clipboard.
  */
 public class AiCoderResultView extends ViewPart {
 
@@ -89,47 +88,6 @@ public class AiCoderResultView extends ViewPart {
 		MessageDialog.openInformation(shell, "AI Coder Result", "Markdown content copied to the clipboard.");
 	}
 
-	/**
-	 * Sets the markdown content shown by the view. If the view is already open the
-	 * content is updated immediately, otherwise it is stored and rendered once the
-	 * view is opened.
-	 */
-	public static void setContent(String content) {
-		currentMarkdown = content != null ? content : "";
-		EclipseUtils.asyncExec(() -> {
-			findView().ifPresent(AiCoderResultView::renderViewContent);
-		});
-	}
-
-	/**
-	 * Opens the result view and shows the currently set markdown content.
-	 */
-	public static AiCoderResultView openView() throws PartInitException {
-		final IWorkbenchPage activePage = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-		final AiCoderResultView view = (AiCoderResultView) activePage.showView(ID);
-		view.setFocus();
-		return view;
-	}
-
-	/**
-	 * Sets the markdown content and opens the result view.
-	 */
-	public static AiCoderResultView open(String content) throws PartInitException {
-		setContent(content);
-		return openView();
-	}
-
-	public static Optional<AiCoderResultView> findView() {
-		return PlatformUI.getWorkbench().getDisplay().syncCall(() -> {
-			final IWorkbenchPage activePage = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-			return Optional.ofNullable(activePage.findView(ID)).map(AiCoderResultView.class::cast);
-		});
-	}
-
-	private static void renderViewContent(AiCoderResultView view) {
-		view.render(currentMarkdown);
-	}
-
 	private void render(String markdown) {
 		final String content = markdown != null ? markdown : "";
 		if (this.browser != null && !this.browser.isDisposed()) {
@@ -144,7 +102,51 @@ public class AiCoderResultView extends ViewPart {
 		}
 	}
 
-	static String toHtml(String markdown) {
+	/**
+	 * Sets the markdown content shown by the view. If the view is already open the content is updated immediately, otherwise it is stored and rendered once the view is opened.
+	 */
+	public static void setContent(String content) {
+		currentMarkdown = content != null ? content : "";
+		EclipseUtils.asyncExec(() -> {
+			findView().ifPresent(AiCoderResultView::renderViewContent);
+		});
+	}
+
+	/**
+	 * Opens the result view and shows the currently set markdown content.
+	 */
+	public static void openView() {
+		EclipseUtils.asyncExec(() -> {
+			try {
+				final IWorkbenchPage activePage = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+				final AiCoderResultView view = (AiCoderResultView) activePage.showView(ID);
+				view.setFocus();
+			} catch (final PartInitException exception) {
+				throw new RuntimeException("Failed to open view", exception);
+			}
+		});
+	}
+
+	/**
+	 * Sets the markdown content and opens the result view.
+	 */
+	public static void open(String content) throws PartInitException {
+		setContent(content);
+		openView();
+	}
+
+	public static Optional<AiCoderResultView> findView() {
+		return PlatformUI.getWorkbench().getDisplay().syncCall(() -> {
+			final IWorkbenchPage activePage = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+			return Optional.ofNullable(activePage.findView(ID)).map(AiCoderResultView.class::cast);
+		});
+	}
+
+	private static void renderViewContent(AiCoderResultView view) {
+		view.render(currentMarkdown);
+	}
+
+	private static String toHtml(String markdown) {
 		final String body = MarkdownUtils.markdownToHtml(markdown);
 		return """
 				<!DOCTYPE html>

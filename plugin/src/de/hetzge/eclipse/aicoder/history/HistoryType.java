@@ -3,7 +3,7 @@ package de.hetzge.eclipse.aicoder.history;
 import de.hetzge.eclipse.aicoder.CompletionMode;
 
 public enum HistoryType {
-	INLINE, EDIT, QUICK_FIX, GENERATE, NEXT_EDIT, RERANK, AGENT;
+	INLINE, EDIT, QUICK_FIX, GENERATE, NEXT_EDIT, RERANK, AGENT, QUERY;
 
 	public static HistoryType fromCompletionMode(CompletionMode mode) {
 		switch (mode) {
@@ -19,6 +19,8 @@ public enum HistoryType {
 			return NEXT_EDIT;
 		case AGENT:
 			return AGENT;
+		case QUERY:
+			return QUERY;
 		default:
 			throw new IllegalArgumentException("Unexpected value: " + mode);
 		}

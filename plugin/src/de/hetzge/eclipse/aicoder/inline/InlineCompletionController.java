@@ -57,6 +57,7 @@ import org.eclipse.ui.part.FileEditorInput;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
+import de.hetzge.eclipse.aicoder.AiCoderResultView;
 import de.hetzge.eclipse.aicoder.CompletionMode;
 import de.hetzge.eclipse.aicoder.ContextView;
 import de.hetzge.eclipse.aicoder.EditHistoryDiffUtils;
@@ -312,7 +313,7 @@ public final class InlineCompletionController {
 					}
 					if (!isBlank && !isMoved && !isSame) {
 						if (mode == CompletionMode.QUERY) {
-							// TODO open AI Coder Result View
+							AiCoderResultView.open(content);
 						} else if (mode == CompletionMode.EDIT || mode == CompletionMode.QUICK_FIX) {
 							final int newLineCount = (int) content.lines().count();
 							final int oldLineCount = (int) selectionText.lines().count();

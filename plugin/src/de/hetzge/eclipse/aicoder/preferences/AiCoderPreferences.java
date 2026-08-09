@@ -162,6 +162,9 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		case AGENT:
 			setAgentLlmModelOption(llmModelOption);
 			break;
+		case QUERY:
+			setQueryLlmModelOption(llmModelOption);
+			break;
 		default:
 			throw new IllegalArgumentException("Unsupported completion mode: " + mode);
 		}

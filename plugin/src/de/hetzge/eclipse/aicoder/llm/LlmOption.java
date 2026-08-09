@@ -36,6 +36,8 @@ public record LlmOption(
 			return createNextEditModelOptionFromPreferences();
 		case AGENT:
 			return createAgentModelOptionFromPreferences();
+		case QUERY:
+			return createQueryModelOptionFromPreferences();
 		default:
 			throw new IllegalArgumentException("Unsupported completion mode: " + mode);
 		}
