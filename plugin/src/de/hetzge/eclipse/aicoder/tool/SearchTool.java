@@ -6,6 +6,7 @@ import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
@@ -49,7 +50,7 @@ public final class SearchTool extends Tool {
 	}
 
 	@Override
-	public String execute(Json arguments) {
+	public String execute(IProgressMonitor monitor, Json arguments) {
 		final String pattern = arguments.at("pattern").asString();
 		final String filePattern = arguments.at("file_pattern", ".*").asString();
 		final String projectName = arguments.at("project", "").asString();

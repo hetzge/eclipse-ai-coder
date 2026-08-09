@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import mjson.Json;
@@ -52,7 +53,7 @@ public final class ReadFileTool extends Tool {
 	}
 
 	@Override
-	public String execute(Json arguments) {
+	public String execute(IProgressMonitor monitor, Json arguments) {
 		final String pathArg = arguments.at("path").asString();
 		final int startLine = arguments.has("start_line") ? arguments.at("start_line").asInteger() : 1;
 		final Integer endLine = arguments.has("end_line") && !arguments.at("end_line").isNull() ? arguments.at("end_line").asInteger() : null;

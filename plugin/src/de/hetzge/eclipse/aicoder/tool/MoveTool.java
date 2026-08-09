@@ -7,6 +7,7 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 
 import mjson.Json;
@@ -53,7 +54,7 @@ public final class MoveTool extends Tool {
 	}
 
 	@Override
-	public String execute(Json arguments) {
+	public String execute(IProgressMonitor monitor, Json arguments) {
 		final String sourceArg = arguments.at("source").asString();
 		final String operation = arguments.at("operation").asString();
 		final String destinationArg = arguments.has("destination") ? arguments.at("destination").asString() : null;

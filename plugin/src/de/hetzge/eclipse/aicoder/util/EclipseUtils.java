@@ -6,6 +6,8 @@ import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -14,8 +16,10 @@ import org.eclipse.core.commands.NotEnabledException;
 import org.eclipse.core.commands.NotHandledException;
 import org.eclipse.core.commands.common.NotDefinedException;
 import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.core.runtime.IPath;
@@ -52,6 +56,14 @@ import org.eclipse.ui.texteditor.AbstractTextEditor;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 public class EclipseUtils {
+
+	public static List<IMarker> getProblemMarkers(IPath path) throws CoreException {
+		final IResource resource = ResourcesPlugin.getWorkspace().getRoot().findMember(path);
+		if (resource == null) {
+			return List.of();
+		}
+		return Arrays.asList(resource.findMarkers(IMarker.PROBLEM, true, IResource.DEPTH_INFINITE));
+	}
 
 	public static Optional<String> getFilename(IEditorInput editorInput) {
 		if (editorInput instanceof final FileEditorInput fileEditorInput) {

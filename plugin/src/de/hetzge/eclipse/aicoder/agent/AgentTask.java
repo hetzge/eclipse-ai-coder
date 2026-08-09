@@ -21,14 +21,14 @@ public final class AgentTask {
 	private final List<AgentChange> changes;
 
 	public AgentTask(UUID id, String title, AgentRequest request) {
-		this(id, title, request, new ArrayList<>());
+		this(id, title, request, AgentStatus.RUNNING, new ArrayList<>());
 	}
 
-	public AgentTask(UUID id, String title, AgentRequest request, List<AgentChange> changes) {
+	public AgentTask(UUID id, String title, AgentRequest request, AgentStatus status, List<AgentChange> changes) {
 		this.id = id;
 		this.title = title;
 		this.request = request;
-		this.status = AgentStatus.RUNNING;
+		this.status = status;
 		this.changes = changes;
 	}
 
@@ -76,12 +76,13 @@ public final class AgentTask {
 	}
 
 	public static AgentTask fromJson(IWorkspace workspace, Json json) {
+		final AgentStatus status = AgentStatus.valueOf(json.at("status").asString());
 		final AgentTask agentTask = new AgentTask(
 				UUID.fromString(json.at("id").asString()),
 				json.at("title").asString(),
 				AgentRequest.fromJson(workspace, json.at("request")),
+				status == AgentStatus.RUNNING ? AgentStatus.CANCELLED : status,
 				json.at("changes", Json.array()).asJsonList().stream().map(AgentChange::fromJson).toList());
-		agentTask.setStatus(AgentStatus.valueOf(json.at("status").asString()));
 		return agentTask;
 	}
 

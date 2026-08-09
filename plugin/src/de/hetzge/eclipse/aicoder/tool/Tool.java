@@ -1,5 +1,7 @@
 package de.hetzge.eclipse.aicoder.tool;
 
+import org.eclipse.core.runtime.IProgressMonitor;
+
 import mjson.Json;
 
 public abstract class Tool {
@@ -18,6 +20,6 @@ public abstract class Tool {
 		return this.definition.at("name").asString();
 	}
 
-	public abstract String execute(Json arguments);
+	public abstract String execute(IProgressMonitor monitor, Json arguments);
 
 }

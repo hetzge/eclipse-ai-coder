@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import mjson.Json;
@@ -42,7 +43,7 @@ public final class EditFileTool extends Tool {
 	}
 
 	@Override
-	public String execute(Json arguments) {
+	public String execute(IProgressMonitor monitor, Json arguments) {
 		final String pathArg = arguments.at("path").asString();
 		final String oldText = arguments.at("old_text").asString();
 		final String newText = arguments.at("new_text", "").asString();

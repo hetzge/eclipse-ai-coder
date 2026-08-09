@@ -12,6 +12,7 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
 
 import mjson.Json;
 
@@ -49,7 +50,7 @@ public final class ListFilesTool extends Tool {
 	}
 
 	@Override
-	public String execute(Json arguments) {
+	public String execute(IProgressMonitor monitor, Json arguments) {
 		final StringBuilder sb = new StringBuilder();
 		if (arguments.has("project")) {
 			final String projectName = arguments.at("project").asString();

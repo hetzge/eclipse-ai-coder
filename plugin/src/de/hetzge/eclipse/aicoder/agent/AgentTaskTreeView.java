@@ -15,8 +15,8 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
@@ -493,7 +493,7 @@ public final class AgentTaskTreeView extends ViewPart {
 				} else if (agentTask.getStatus() == AgentStatus.SUCCESS) {
 					return AiCoderActivator.getImage(AiCoderImageKey.ACCEPT_ICON);
 				} else if (agentTask.getStatus() == AgentStatus.CANCELLED) {
-					return AiCoderActivator.getImage(AiCoderImageKey.REJECT_ICON);
+					return AiCoderActivator.getImage(AiCoderImageKey.CANCELED_ICON);
 				}
 			}
 			if (element instanceof final AgentChange agentChange) {
@@ -505,7 +505,7 @@ public final class AgentTaskTreeView extends ViewPart {
 		@Override
 		public String getText(Object element) {
 			if (element instanceof final AgentTask agentTask) {
-				return String.format("[%s] %s - %s", agentTask.getStatus(), agentTask.getTitle(), Utils.formatRelativeTime(agentTask.getCreationTime()));
+				return String.format("%s - %s", agentTask.getTitle(), Utils.formatRelativeTime(agentTask.getCreationTime()));
 			} else if (element instanceof final AgentChange agentChange) {
 				return String.format("%s [%s, +%d/-%d]",
 						this.resourceLabels.getText(ResourcesPlugin.getWorkspace().getRoot().getFile(agentChange.path())),

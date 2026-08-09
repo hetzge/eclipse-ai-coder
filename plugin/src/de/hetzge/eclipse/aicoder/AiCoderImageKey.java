@@ -27,6 +27,7 @@ public enum AiCoderImageKey {
 	EDITOR_ICON,
 	ACCEPT_ICON,
 	REJECT_ICON,
+	CANCELED_ICON,
 	RUN_ICON,
 	DIFF_NEW_ICON,
 	DIFF_OLD_ICON,
@@ -61,6 +62,7 @@ public enum AiCoderImageKey {
 			registerImage(registry, AiCoderImageKey.ACCEPT_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.jdt.junit/icons/full/obj16/testok.svg").toURL()));
 			registerImage(registry, AiCoderImageKey.REJECT_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.jdt.junit/icons/full/obj16/testerr.svg").toURL()));
 			registerImage(registry, AiCoderImageKey.RUN_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.debug.ui/icons/full/etool16/run_exc.svg").toURL()));
+			registerImage(registry, AiCoderImageKey.CANCELED_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/obj16/error_tsk.svg").toURL()));
 			registerImage(registry, AiCoderImageKey.DIFF_NEW_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.compare/icons/full/elcl16/copycont_l_co.svg").toURL()));
 			registerImage(registry, AiCoderImageKey.DIFF_OLD_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.compare/icons/full/elcl16/copycont_r_co.svg").toURL()));
 			registerImage(registry, AiCoderImageKey.DIFF_LINE_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.compare/icons/full/elcl16/syncpane_co.svg").toURL()));
