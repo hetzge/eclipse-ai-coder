@@ -1,5 +1,7 @@
 package de.hetzge.eclipse.aicoder.llm;
 
+import org.apache.commons.lang3.StringUtils;
+
 public final class LlmPromptTemplates {
 	private LlmPromptTemplates() {
 	}
@@ -230,20 +232,51 @@ public final class LlmPromptTemplates {
 	public static String querySystemPrompt() {
 		return """
 				You are a software developer assistant.
-				Your task is to answer the given question.
+				Your task is to answer the provided question at the end of the users message.
 				INFORMATIONS PROVIDED TO YOU:
 				- Context: Sourcecode around the edit location, available types, guidelines, ...
+				- Selected code: The code selected by the user
 				- Question: The question to answer
 				""";
 	}
 
-	public static String queryPrompt(String prefix, String suffix, String originalInstructions) {
-		return """
-				CONTEXT:
-				%s<<<QUERY LOCATION>>>%s
-				\n=============================\n
-				QUESTION:
+	public static String queryPrompt(String filePath, String selectedText, String prefix, String suffix, String originalInstructions) {
+		final StringBuilder builder = new StringBuilder();
+		if (!StringUtils.isBlank(prefix) && !StringUtils.isBlank(suffix)) {
+			builder.append("""
+					Context:
+					<CONTEXT>
+					%s<<<SELECTION LOCATION>>>%s
+					</CONTEXT>
+					""".trim().formatted(prefix, suffix))
+					.append("\n");
+		} else if (!StringUtils.isBlank(prefix)) {
+			builder.append("""
+					Context:
+					<CONTEXT>
+					%s
+					</CONTEXT>
+					""".trim().formatted(prefix))
+					.append("\n");
+		}
+		if (!StringUtils.isBlank(selectedText)) {
+			builder.append("""
+					The user has selected the following code in "%s":
+					<SELECTED_CODE>
+					%s
+					</SELECTED_CODE>
+					""".trim().formatted(filePath, selectedText))
+					.append("\n");
+		} else {
+			builder.append("""
+					The user is looking at the file "%s" but has not selected any code.
+					""".trim().formatted(filePath))
+					.append("\n");
+		}
+		builder.append("""
+				Answer the following question:
 				%s
-				""".trim().formatted(prefix, suffix, originalInstructions);
+				""".trim().formatted(originalInstructions));
+		return builder.toString();
 	}
 }

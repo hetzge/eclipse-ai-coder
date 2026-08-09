@@ -78,6 +78,14 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 	}
 
 	@Override
+	public void applyData(Object data) {
+		super.applyData(data);
+		if (data instanceof final CompletionMode mode) {
+			this.modeCombo.select(Arrays.asList(CompletionMode.values()).indexOf(mode));
+		}
+	}
+
+	@Override
 	public void init(IWorkbench workbench) {
 		for (final ContextPreferenceSubPage subPage : this.subPagesByMode.values()) {
 			subPage.init(workbench);
@@ -160,9 +168,13 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 		if (pageId == null) {
 			return;
 		}
-		if (getContainer() instanceof IWorkbenchPreferenceContainer container) {
+		if (getContainer() instanceof final IWorkbenchPreferenceContainer container) {
 			container.openPage(pageId, getSelectedMode());
 		}
+	}
+
+	private static boolean isFillInMiddle(Object element) {
+		return ((ContextTypePositionItem) element).prefix().equals(FillInMiddleContextEntry.PREFIX);
 	}
 
 	public static class ContextPreferenceSubPage {
@@ -213,7 +225,7 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 			this.tableViewer.addCheckStateListener(new ICheckStateListener() {
 				@Override
 				public void checkStateChanged(CheckStateChangedEvent event) {
-					if (((ContextTypePositionItem) event.getElement()).prefix().equals(FillInMiddleContextEntry.PREFIX)) {
+					if (ContextPreferenceSubPage.this.mode == CompletionMode.INLINE && isFillInMiddle(event.getElement())) {
 						Display.getDefault().asyncExec(() -> ContextPreferenceSubPage.this.tableViewer.setChecked(event.getElement(), true));
 					}
 				}
@@ -221,7 +233,6 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 			final Table table = this.tableViewer.getTable();
 			table.setHeaderVisible(true);
 			table.setLinesVisible(true);
-			table.addSelectionListener(SelectionListener.widgetDefaultSelectedAdapter(event -> openSelectedSubPage()));
 
 			final GridData tableData = new GridData(SWT.FILL, SWT.FILL, true, true);
 			tableData.heightHint = 300;
@@ -239,7 +250,7 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 
 				@Override
 				public Color getBackground(Object element) {
-					return ((ContextTypePositionItem) element).prefix().equals(FillInMiddleContextEntry.PREFIX) ? new Color(null, 240, 240, 240) : null;
+					return isFillInMiddle(element) ? new Color(null, 240, 240, 240) : null;
 				}
 			});
 
@@ -254,7 +265,7 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 
 				@Override
 				public Color getBackground(Object element) {
-					return ((ContextTypePositionItem) element).prefix().equals(FillInMiddleContextEntry.PREFIX) ? new Color(null, 240, 240, 240) : null;
+					return isFillInMiddle(element) ? new Color(null, 240, 240, 240) : null;
 				}
 			});
 

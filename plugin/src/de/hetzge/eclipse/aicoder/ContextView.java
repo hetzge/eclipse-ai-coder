@@ -142,6 +142,10 @@ public class ContextView extends ViewPart {
 		menuManager.add(new OpenContextPreferencesAction());
 	}
 
+	public CompletionMode getCurrentMode() {
+		return CompletionMode.values()[this.modeCombo.getSelectionIndex()];
+	}
+
 	private void toggleContextViewPanel(final ContextViewPanel panel) {
 		this.stackLayout.topControl = panel.viewer.getControl().getParent();
 		getSite().setSelectionProvider(panel.viewer);
@@ -719,14 +723,14 @@ public class ContextView extends ViewPart {
 		}
 	}
 
-	private static class OpenContextPreferencesAction extends Action {
+	private class OpenContextPreferencesAction extends Action {
 		private OpenContextPreferencesAction() {
 			super("Context preferences");
 		}
 
 		@Override
 		public void run() {
-			final PreferenceDialog dialog = PreferencesUtil.createPreferenceDialogOn(null, ContextPreferencePage.ID, null, null);
+			final PreferenceDialog dialog = PreferencesUtil.createPreferenceDialogOn(null, ContextPreferencePage.ID, null, getCurrentMode());
 			dialog.open();
 		}
 	}

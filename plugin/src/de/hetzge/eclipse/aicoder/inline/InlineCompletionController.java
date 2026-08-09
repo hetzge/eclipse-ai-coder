@@ -201,10 +201,10 @@ public final class InlineCompletionController {
 		final int lineHeight = widget.getLineHeight();
 		final int defaultLineSpacing = widget.getLineSpacing();
 		final IEditorInput editorInput = this.textEditor.getEditorInput();
-		final String filePath = editorInput.getName();
+		final String filePath = EclipseUtils.getFilename(editorInput).orElseGet(() -> editorInput.getName());
 		final CompletionMode mode = CompletionMode.getMode(this.textViewer, instruction, false, readOnly);
 		final AiCoderHistoryEntry historyEntry = new AiCoderHistoryEntry(HistoryType.fromCompletionMode(mode), filePath, this.textViewer.getDocument().get());
-		this.job = new Job("AI completion") {
+		this.job = new Job("AI") {
 
 			ITextViewer textViewer = InlineCompletionController.this.textViewer;
 			ITextEditor textEditor = InlineCompletionController.this.textEditor;
@@ -255,7 +255,7 @@ public final class InlineCompletionController {
 					final String fileType = EclipseUtils.getFileExtension(this.textEditor.getEditorInput());
 					if (mode == CompletionMode.QUERY) {
 						final String systemPrompt = AiCoderPreferences.getQuerySystemPrompt();
-						prompt = LlmPromptTemplates.queryPrompt(prefix, suffix, originalInstructions);
+						prompt = LlmPromptTemplates.queryPrompt(filePath, selectionText, prefix, suffix, originalInstructions);
 						InlineCompletionController.this.llmResponseFuture = LlmUtils.executeQuery(systemPrompt, prompt);
 					} else if (mode == CompletionMode.EDIT) {
 						final String systemPrompt = AiCoderPreferences.getChangeCodeSystemPrompt();
