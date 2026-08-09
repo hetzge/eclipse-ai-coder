@@ -34,10 +34,10 @@ import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CCombo;
 import org.eclipse.swt.custom.StackLayout;
-import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.dnd.Transfer;
+import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.Image;
@@ -211,15 +211,6 @@ public class ContextView extends ViewPart {
 		toggleAction.setImageDescriptor(AiCoderActivator.getImageDescriptor(AiCoderImageKey.MULTILINE_ICON));
 		toggleAction.setChecked(AiCoderPreferences.isMultilineEnabled());
 		manager.add(toggleAction);
-		final Action copyContextAction = new Action() {
-			@Override
-			public void run() {
-				copyActiveContext();
-			}
-		};
-		copyContextAction.setToolTipText("Copy context");
-		copyContextAction.setImageDescriptor(AiCoderActivator.getImageDescriptor(AiCoderImageKey.COPY_ICON));
-		manager.add(copyContextAction);
 	}
 
 	private void copyActiveContext() {
