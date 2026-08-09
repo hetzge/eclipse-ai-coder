@@ -470,6 +470,18 @@
      </page>
      <page
            category="de.hetzge.eclipse.aicoder.preferences.provider"
+           class="de.hetzge.eclipse.aicoder.preferences.OpenAi2PreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.openai2"
+           name="OpenAI 2">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.provider"
+           class="de.hetzge.eclipse.aicoder.preferences.OpenAi3PreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.openai3"
+           name="OpenAI 3">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.provider"
            class="de.hetzge.eclipse.aicoder.preferences.InceptionlabsPreferencePage"
            id="de.hetzge.eclipse.aicoder.preferences.inceptionlabs"
            name="Inceptionlabs">

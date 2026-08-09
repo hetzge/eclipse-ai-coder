@@ -32,12 +32,16 @@ public enum LlmModels {
 		if (this.options.isEmpty()) {
 			final CompletableFuture<List<LlmOption>> ollamaModels = CompletableFuture.supplyAsync(this::loadOllamaModels);
 			final CompletableFuture<List<LlmOption>> openAiModels = CompletableFuture.supplyAsync(this::loadOpenAiModels);
+			final CompletableFuture<List<LlmOption>> openAi2Models = CompletableFuture.supplyAsync(this::loadOpenAi2Models);
+			final CompletableFuture<List<LlmOption>> openAi3Models = CompletableFuture.supplyAsync(this::loadOpenAi3Models);
 			final CompletableFuture<List<LlmOption>> mistralModels = CompletableFuture.supplyAsync(this::loadMistralModels);
 			final CompletableFuture<List<LlmOption>> inceptionLabsModels = CompletableFuture.supplyAsync(this::loadInceptionLabsModels);
 			final CompletableFuture<List<LlmOption>> openRouterModels = CompletableFuture.supplyAsync(this::loadOpenRouterModels);
-			CompletableFuture.allOf(ollamaModels, openAiModels, mistralModels, inceptionLabsModels, openRouterModels).completeOnTimeout(null, 1, TimeUnit.MINUTES).join();
+			CompletableFuture.allOf(ollamaModels, openAiModels, openAi2Models, openAi3Models, mistralModels, inceptionLabsModels, openRouterModels).completeOnTimeout(null, 1, TimeUnit.MINUTES).join();
 			this.options.addAll(ollamaModels.join());
 			this.options.addAll(openAiModels.join());
+			this.options.addAll(openAi2Models.join());
+			this.options.addAll(openAi3Models.join());
 			this.options.addAll(mistralModels.join());
 			this.options.addAll(inceptionLabsModels.join());
 			this.options.addAll(openRouterModels.join());
@@ -71,9 +75,19 @@ public enum LlmModels {
 	}
 
 	private List<LlmOption> loadOpenAiModels() {
-		final String openAiBaseUrl = AiCoderPreferences.getOpenAiBaseUrl();
-		final String openAiApiKey = AiCoderPreferences.getOpenAiApiKey();
-		return loadOpenAiApiModels(openAiBaseUrl, openAiApiKey).stream()
+		return loadOpenAiModels(LlmProvider.OPENAI, AiCoderPreferences.getOpenAiBaseUrl(), AiCoderPreferences.getOpenAiApiKey());
+	}
+
+	private List<LlmOption> loadOpenAi2Models() {
+		return loadOpenAiModels(LlmProvider.OPENAI_2, AiCoderPreferences.getOpenAi2BaseUrl(), AiCoderPreferences.getOpenAi2ApiKey());
+	}
+
+	private List<LlmOption> loadOpenAi3Models() {
+		return loadOpenAiModels(LlmProvider.OPENAI_3, AiCoderPreferences.getOpenAi3BaseUrl(), AiCoderPreferences.getOpenAi3ApiKey());
+	}
+
+	private List<LlmOption> loadOpenAiModels(LlmProvider provider, String openAiBaseUrl, String openAiApiKey) {
+		return loadOpenAiApiModels(provider, openAiBaseUrl, openAiApiKey).stream()
 				.flatMap(model -> {
 					if (model.modelKey().startsWith("gpt-") || model.modelKey().startsWith("openai/gpt-")) {
 						return Stream.concat(Stream.of(model), LlmUtils.OPENAI_REASONING_SUFFIXES.stream()
@@ -85,7 +99,7 @@ public enum LlmModels {
 				.toList();
 	}
 
-	private List<LlmOption> loadOpenAiApiModels(String openAiBaseUrl, String openAiApiKey) {
+	private List<LlmOption> loadOpenAiApiModels(LlmProvider provider, String openAiBaseUrl, String openAiApiKey) {
 		try {
 			final URL url = URI.create(Utils.joinUriParts(List.of(openAiBaseUrl, "/v1/models"))).toURL();
 			final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -103,7 +117,7 @@ public enum LlmModels {
 			final Json modelsJson = responseJson.at("data");
 			return modelsJson.asJsonList().stream().map(modelJson -> {
 				final String modelName = modelJson.at("id").asString();
-				return new LlmOption(LlmProvider.OPENAI, modelName);
+				return new LlmOption(provider, modelName);
 			}).toList();
 		} catch (final Exception exception) {
 			AiCoderActivator.log().info(String.format("%s while querying openai models (%s): %s -> skip openai models", exception.getClass().getName(), openAiBaseUrl, exception.getMessage()));
@@ -160,7 +174,7 @@ public enum LlmModels {
 			if (openRouterApiKey == null || openRouterApiKey.isBlank()) {
 				return List.of();
 			}
-			return loadOpenAiApiModels(LlmUtils.OPENROUTER_BASE_URL, openRouterApiKey).stream()
+			return loadOpenAiApiModels(LlmProvider.OPENROUTER, LlmUtils.OPENROUTER_BASE_URL, openRouterApiKey).stream()
 					.flatMap(model -> List.of(
 							new LlmOption(LlmProvider.OPENROUTER, model.modelKey()),
 							new LlmOption(LlmProvider.OPENROUTER, model.modelKey() + ":free"),
