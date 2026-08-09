@@ -1,5 +1,8 @@
 package de.hetzge.eclipse.aicoder;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.jface.action.Action;
@@ -24,15 +27,21 @@ import de.hetzge.eclipse.aicoder.util.MarkdownUtils;
 
 /**
  * View that renders provided markdown content in a webview and offers a toolbar action to copy the original markdown into the clipboard.
+ * The last {@value #MAX_OPENED_MARKDOWNS} opened markdowns are kept in a history and can be navigated with the previous/next toolbar actions.
  */
 public class AiCoderResultView extends ViewPart {
 
 	public static final String ID = "de.hetzge.eclipse.aicoder.AiCoderResultView";
 
+	private static final int MAX_OPENED_MARKDOWNS = 20;
+	private static final List<String> openedMarkdowns = new ArrayList<>();
 	private static volatile String currentMarkdown = "";
+	private static int currentMarkdownIndex = -1;
 
 	private Browser browser;
 	private StyledText fallbackText;
+	private Action previousAction;
+	private Action nextAction;
 
 	@Override
 	public void createPartControl(Composite parent) {
@@ -61,11 +70,37 @@ public class AiCoderResultView extends ViewPart {
 	public void dispose() {
 		this.browser = null;
 		this.fallbackText = null;
+		this.previousAction = null;
+		this.nextAction = null;
 		super.dispose();
 	}
 
 	private void contributeToActionBars() {
 		final IToolBarManager toolBarManager = getViewSite().getActionBars().getToolBarManager();
+		final Action previousAction = new Action("Previous") {
+			@Override
+			public void run() {
+				showPrevious();
+			}
+		};
+		previousAction.setToolTipText("Show previous markdown");
+		previousAction.setImageDescriptor(AiCoderActivator.getImageDescriptor(AiCoderImageKey.PREVIOUS_ICON));
+		previousAction.setEnabled(hasPrevious());
+		toolBarManager.add(previousAction);
+		this.previousAction = previousAction;
+
+		final Action nextAction = new Action("Next") {
+			@Override
+			public void run() {
+				showNext();
+			}
+		};
+		nextAction.setToolTipText("Show next markdown");
+		nextAction.setImageDescriptor(AiCoderActivator.getImageDescriptor(AiCoderImageKey.NEXT_ICON));
+		nextAction.setEnabled(hasNext());
+		toolBarManager.add(nextAction);
+		this.nextAction = nextAction;
+
 		final Action copyAction = new Action("Copy") {
 			@Override
 			public void run() {
@@ -106,9 +141,14 @@ public class AiCoderResultView extends ViewPart {
 	 * Sets the markdown content shown by the view. If the view is already open the content is updated immediately, otherwise it is stored and rendered once the view is opened.
 	 */
 	public static void setContent(String content) {
-		currentMarkdown = content != null ? content : "";
+		final String normalizedContent = content != null ? content : "";
+		addToOpenedMarkdowns(normalizedContent);
+		currentMarkdown = normalizedContent;
 		EclipseUtils.asyncExec(() -> {
-			findView().ifPresent(AiCoderResultView::renderViewContent);
+			findView().ifPresent(view -> {
+				view.render(currentMarkdown);
+				view.updateNavigationActions();
+			});
 		});
 	}
 
@@ -142,8 +182,63 @@ public class AiCoderResultView extends ViewPart {
 		});
 	}
 
-	private static void renderViewContent(AiCoderResultView view) {
-		view.render(currentMarkdown);
+	private void showPrevious() {
+		showHistoryEntry(currentMarkdownIndex - 1);
+	}
+
+	private void showNext() {
+		showHistoryEntry(currentMarkdownIndex + 1);
+	}
+
+	private void showHistoryEntry(int index) {
+		if (moveToHistoryIndex(index)) {
+			render(currentMarkdown);
+			updateNavigationActions();
+		}
+	}
+
+	private void updateNavigationActions() {
+		if (this.previousAction != null) {
+			this.previousAction.setEnabled(hasPrevious());
+		}
+		if (this.nextAction != null) {
+			this.nextAction.setEnabled(hasNext());
+		}
+	}
+
+	private static boolean hasPrevious() {
+		return currentMarkdownIndex > 0;
+	}
+
+	private static boolean hasNext() {
+		return currentMarkdownIndex >= 0 && currentMarkdownIndex < openedMarkdowns.size() - 1;
+	}
+
+	private static synchronized void addToOpenedMarkdowns(String content) {
+		if (currentMarkdownIndex >= 0 && currentMarkdownIndex < openedMarkdowns.size()
+				&& Objects.equals(openedMarkdowns.get(currentMarkdownIndex), content)) {
+			return;
+		}
+		// Drop the forward history when a new markdown is opened from a previous position.
+		if (currentMarkdownIndex >= 0 && currentMarkdownIndex < openedMarkdowns.size()) {
+			openedMarkdowns.subList(currentMarkdownIndex + 1, openedMarkdowns.size()).clear();
+		}
+		openedMarkdowns.add(content);
+		if (openedMarkdowns.size() > MAX_OPENED_MARKDOWNS) {
+			// Keep only the last MAX_OPENED_MARKDOWNS opened markdowns.
+			final int removedCount = openedMarkdowns.size() - MAX_OPENED_MARKDOWNS;
+			openedMarkdowns.subList(0, removedCount).clear();
+		}
+		currentMarkdownIndex = openedMarkdowns.size() - 1;
+	}
+
+	private static synchronized boolean moveToHistoryIndex(int index) {
+		if (index < 0 || index >= openedMarkdowns.size()) {
+			return false;
+		}
+		currentMarkdownIndex = index;
+		currentMarkdown = openedMarkdowns.get(index);
+		return true;
 	}
 
 	private static String toHtml(String markdown) {

@@ -39,6 +39,8 @@ public enum AiCoderImageKey {
 	MULTILINE_ICON,
 	VIEWPORT_ICON,
 	SCRATCHPAD_ICON,
+	PREVIOUS_ICON,
+	NEXT_ICON,
 	SEARCH_ICON;
 
 	static void initializeImages(ImageRegistry registry) {
@@ -75,6 +77,8 @@ public enum AiCoderImageKey {
 			registerImage(registry, AiCoderImageKey.MULTILINE_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui.workbench.texteditor/icons/full/etool16/wordwrap.svg").toURL()));
 			registerImage(registry, AiCoderImageKey.VIEWPORT_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/etool16/new_fastview.svg").toURL()));
 			registerImage(registry, AiCoderImageKey.SCRATCHPAD_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui.workbench.texteditor/icons/full/dview16/templates.png").toURL()));
+			registerImage(registry, AiCoderImageKey.PREVIOUS_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/elcl16/backward_nav.svg").toURL()));
+			registerImage(registry, AiCoderImageKey.NEXT_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/elcl16/forward_nav.svg").toURL()));
 			registerImage(registry, AiCoderImageKey.SEARCH_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.search/icons/full/etool16/search.svg").toURL()));
 		} catch (final MalformedURLException exception) {
 			throw new RuntimeException(exception);
