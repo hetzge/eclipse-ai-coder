@@ -30,6 +30,7 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
+import org.eclipse.ui.preferences.IWorkbenchPreferenceContainer;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.CompletionMode;
@@ -41,14 +42,37 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 
 	public static final String ID = "de.hetzge.eclipse.aicoder.preferences.context";
 
+	private static final Map<String, String> SUB_PAGE_ID_BY_CONTEXT_PREFIX = Map.ofEntries(
+			Map.entry(ProjectInformationsContextPreferencePage.CONTEXT_PREFIX, ProjectInformationsContextPreferencePage.ID),
+			Map.entry(OpenEditorsContextPreferencePage.CONTEXT_PREFIX, OpenEditorsContextPreferencePage.ID),
+			Map.entry(ImportsContextPreferencePage.CONTEXT_PREFIX, ImportsContextPreferencePage.ID),
+			Map.entry(SuperContextPreferencePage.CONTEXT_PREFIX, SuperContextPreferencePage.ID),
+			Map.entry(FileTreeContextPreferencePage.CONTEXT_PREFIX, FileTreeContextPreferencePage.ID),
+			Map.entry(StickyContextPreferencePage.CONTEXT_PREFIX, StickyContextPreferencePage.ID),
+			Map.entry(TypeContextPreferencePage.CONTEXT_PREFIX, TypeContextPreferencePage.ID),
+			Map.entry(FillInMiddleContextPreferencePage.CONTEXT_PREFIX, FillInMiddleContextPreferencePage.ID),
+			Map.entry(CustomContextPreferencePage.CONTEXT_PREFIX, CustomContextPreferencePage.ID),
+			Map.entry(ClipboardContextPreferencePage.CONTEXT_PREFIX, ClipboardContextPreferencePage.ID),
+			Map.entry(LastEditsContextPreferencePage.CONTEXT_PREFIX, LastEditsContextPreferencePage.ID),
+			Map.entry(EmptyContextPreferencePage.CONTEXT_PREFIX, EmptyContextPreferencePage.ID),
+			Map.entry(BlacklistedContextPreferencePage.CONTEXT_PREFIX, BlacklistedContextPreferencePage.ID),
+			Map.entry(ScopeContextPreferencePage.CONTEXT_PREFIX, ScopeContextPreferencePage.ID),
+			Map.entry(UserContextPreferencePage.CONTEXT_PREFIX, UserContextPreferencePage.ID),
+			Map.entry(RootContextPreferencePage.CONTEXT_PREFIX, RootContextPreferencePage.ID),
+			Map.entry(TypeMemberContextPreferencePage.CONTEXT_PREFIX, TypeMemberContextPreferencePage.ID),
+			Map.entry(PackageContextPreferencePage.CONTEXT_PREFIX, PackageContextPreferencePage.ID),
+			Map.entry(AiRerankContextPreferencePage.CONTEXT_PREFIX, AiRerankContextPreferencePage.ID),
+			Map.entry(CodeViewportMemoryContextPreferencePage.CONTEXT_PREFIX, CodeViewportMemoryContextPreferencePage.ID));
+
 	private final Map<CompletionMode, ContextPreferenceSubPage> subPagesByMode;
+	private CCombo modeCombo;
 
 	public ContextPreferencePage() {
 		setPreferenceStore(AiCoderActivator.getDefault().getPreferenceStore());
 		setDescription("Configure context");
 		this.subPagesByMode = new HashMap<>();
 		for (final CompletionMode mode : CompletionMode.values()) {
-			this.subPagesByMode.put(mode, new ContextPreferenceSubPage(mode));
+			this.subPagesByMode.put(mode, new ContextPreferenceSubPage(mode, this));
 		}
 	}
 
@@ -68,8 +92,15 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 		layout.verticalSpacing = 0;
 		composite.setLayout(layout);
 
-		final CCombo modeCombo = new CCombo(composite, SWT.DROP_DOWN | SWT.READ_ONLY | SWT.FLAT | SWT.BORDER);
-		modeCombo.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
+		final Composite modeComposite = new Composite(composite, SWT.NONE);
+		modeComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
+		final GridLayout modeLayout = new GridLayout(1, false);
+		modeLayout.marginWidth = 0;
+		modeLayout.marginHeight = 0;
+		modeComposite.setLayout(modeLayout);
+
+		this.modeCombo = new CCombo(modeComposite, SWT.DROP_DOWN | SWT.READ_ONLY | SWT.FLAT | SWT.BORDER);
+		this.modeCombo.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
 
 		final Composite panelContainer = new Composite(composite, SWT.NONE);
 		panelContainer.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
@@ -78,16 +109,16 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 
 		final List<Control> panels = new ArrayList<>();
 		for (final CompletionMode mode : CompletionMode.values()) {
-			modeCombo.add(mode.name());
+			this.modeCombo.add(mode.name());
 			panels.add(this.subPagesByMode.get(mode).createContents(panelContainer));
 		}
 
-		modeCombo.select(0);
+		this.modeCombo.select(0);
 		stackLayout.topControl = panels.get(0);
 		panelContainer.layout();
 
-		modeCombo.addSelectionListener(SelectionListener.widgetSelectedAdapter(event -> {
-			final int index = modeCombo.getSelectionIndex();
+		this.modeCombo.addSelectionListener(SelectionListener.widgetSelectedAdapter(event -> {
+			final int index = this.modeCombo.getSelectionIndex();
 			if (index >= 0 && index < panels.size()) {
 				stackLayout.topControl = panels.get(index);
 				panelContainer.layout();
@@ -112,16 +143,40 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 		return true;
 	}
 
+	private CompletionMode getSelectedMode() {
+		if (this.modeCombo == null) {
+			return CompletionMode.values()[0];
+		}
+		final int index = this.modeCombo.getSelectionIndex();
+		if (index >= 0 && index < CompletionMode.values().length) {
+			return CompletionMode.values()[index];
+		}
+		return CompletionMode.values()[0];
+	}
+
+	private void openSubPreferencePage(String contextPrefix) {
+		final String pageId = SUB_PAGE_ID_BY_CONTEXT_PREFIX.get(contextPrefix);
+		if (pageId == null) {
+			return;
+		}
+		if (getContainer() instanceof IWorkbenchPreferenceContainer container) {
+			container.openPage(pageId, getSelectedMode());
+		}
+	}
+
 	public static class ContextPreferenceSubPage {
 
 		private final CompletionMode mode;
+		private final ContextPreferencePage preferencePage;
 		private CheckboxTableViewer tableViewer;
 		private List<ContextTypePositionItem> contextTypeItems;
 		private Button upButton;
 		private Button downButton;
+		private Button configureButton;
 
-		public ContextPreferenceSubPage(CompletionMode mode) {
+		public ContextPreferenceSubPage(CompletionMode mode, ContextPreferencePage preferencePage) {
 			this.mode = mode;
+			this.preferencePage = preferencePage;
 		}
 
 		public void init(IWorkbench workbench) {
@@ -165,6 +220,7 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 			final Table table = this.tableViewer.getTable();
 			table.setHeaderVisible(true);
 			table.setLinesVisible(true);
+			table.addSelectionListener(SelectionListener.widgetDefaultSelectedAdapter(event -> openSelectedSubPage()));
 
 			final GridData tableData = new GridData(SWT.FILL, SWT.FILL, true, true);
 			tableData.heightHint = 300;
@@ -212,6 +268,11 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 			final Composite buttonComposite = new Composite(composite, SWT.NONE);
 			buttonComposite.setLayout(new GridLayout(1, false));
 			buttonComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, false, false));
+
+			this.configureButton = new Button(buttonComposite, SWT.PUSH);
+			this.configureButton.setText("Configure");
+			this.configureButton.setLayoutData(new GridData(SWT.FILL, SWT.TOP, false, false));
+			this.configureButton.addSelectionListener(SelectionListener.widgetSelectedAdapter(event -> openSelectedSubPage()));
 
 			this.upButton = new Button(buttonComposite, SWT.PUSH);
 			this.upButton.setText("Move Up");
@@ -265,10 +326,21 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 				final int index = this.contextTypeItems.indexOf(selectedItem);
 				this.upButton.setEnabled(index > 0);
 				this.downButton.setEnabled(index < this.contextTypeItems.size() - 1);
+				this.configureButton.setEnabled(true);
 			} else {
 				this.upButton.setEnabled(false);
 				this.downButton.setEnabled(false);
+				this.configureButton.setEnabled(false);
 			}
+		}
+
+		private void openSelectedSubPage() {
+			final IStructuredSelection selection = (IStructuredSelection) this.tableViewer.getSelection();
+			if (selection.isEmpty()) {
+				return;
+			}
+			final ContextTypePositionItem selectedItem = (ContextTypePositionItem) selection.getFirstElement();
+			this.preferencePage.openSubPreferencePage(selectedItem.prefix());
 		}
 
 		public boolean performOk() {

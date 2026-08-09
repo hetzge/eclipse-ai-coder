@@ -252,6 +252,126 @@
            name="Context">
      </page>
      <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.ProjectInformationsContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.project_informations"
+           name="Project informations">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.OpenEditorsContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.open_editors"
+           name="Open editors">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.ImportsContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.imports"
+           name="Imports (Java)">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.SuperContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.super"
+           name="Super (Java)">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.FileTreeContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.file_tree"
+           name="File tree">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.StickyContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.sticky"
+           name="Sticky">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.TypeContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.type"
+           name="Type (Java)">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.FillInMiddleContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.fill_in_middle"
+           name="Fill in middle">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.CustomContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.custom"
+           name="Custom">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.ClipboardContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.clipboard"
+           name="Clipboard">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.LastEditsContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.last_edits"
+           name="Last edits">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.EmptyContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.empty"
+           name="Empty">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.BlacklistedContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.blacklisted"
+           name="Blacklisted">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.ScopeContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.scope"
+           name="Scope (Java)">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.UserContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.user"
+           name="User">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.RootContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.root"
+           name="Root">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.TypeMemberContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.type_member"
+           name="Type member (Java)">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.PackageContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.package"
+           name="Package (Java)">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.AiRerankContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.ai_rerank"
+           name="AI rerank">
+     </page>
+     <page
+           category="de.hetzge.eclipse.aicoder.preferences.context"
+           class="de.hetzge.eclipse.aicoder.preferences.CodeViewportMemoryContextPreferencePage"
+           id="de.hetzge.eclipse.aicoder.preferences.context.code_viewport_memory"
+           name="Code Viewport Memory">
+     </page>
+     <page
            category="de.hetzge.eclipse.aicoder.preferences"
            class="de.hetzge.eclipse.aicoder.preferences.ProviderPreferencePage"
            id="de.hetzge.eclipse.aicoder.preferences.provider"
