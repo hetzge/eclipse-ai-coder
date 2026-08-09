@@ -5,9 +5,12 @@ import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
+
+import org.apache.commons.lang3.StringUtils;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
@@ -87,6 +90,12 @@ public enum LlmModels {
 	}
 
 	private List<LlmOption> loadOpenAiModels(LlmProvider provider, String openAiBaseUrl, String openAiApiKey) {
+		if (StringUtils.isBlank(openAiBaseUrl)) {
+			return List.of();
+		}
+		if (Objects.equals(openAiBaseUrl, "https://api.openai.com") && StringUtils.isBlank(openAiApiKey)) {
+			return List.of();
+		}
 		return loadOpenAiApiModels(provider, openAiBaseUrl, openAiApiKey).stream()
 				.flatMap(model -> {
 					if (model.modelKey().startsWith("gpt-") || model.modelKey().startsWith("openai/gpt-")) {

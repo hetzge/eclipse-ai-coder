@@ -81,9 +81,9 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(OLLAMA_BASE_URL_KEY, "http://localhost:11434");
 		store.setDefault(OPENAI_BASE_URL_KEY, "https://api.openai.com");
 		store.setDefault(OPENAI_API_KEY_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
-		store.setDefault(OPENAI_2_BASE_URL_KEY, "https://api.openai.com");
+		store.setDefault(OPENAI_2_BASE_URL_KEY, "");
 		store.setDefault(OPENAI_2_API_KEY_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
-		store.setDefault(OPENAI_3_BASE_URL_KEY, "https://api.openai.com");
+		store.setDefault(OPENAI_3_BASE_URL_KEY, "");
 		store.setDefault(OPENAI_3_API_KEY_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
 		store.setDefault(FILL_IN_MIDDLE_PROVIDER_KEY, LlmProvider.NONE.name());
 		store.setDefault(FILL_IN_MIDDLE_MODEL_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
