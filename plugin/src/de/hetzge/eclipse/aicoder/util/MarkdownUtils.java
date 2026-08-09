@@ -12,7 +12,7 @@ public final class MarkdownUtils {
 	public static String markdownToHtml(String markdown) {
 		final Parser parser = Parser.builder().build();
 		final Node document = parser.parse(markdown);
-		final HtmlRenderer renderer = HtmlRenderer.builder().build();
+		final HtmlRenderer renderer = HtmlRenderer.builder().escapeHtml(true).build();
 		return renderer.render(document);
 	}
 }

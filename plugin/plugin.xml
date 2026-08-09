@@ -260,6 +260,14 @@
           inject="true"
           name="AI Coder Scratchpad">
     </view>
+    <view
+          category="de.hetzge.eclipse.aicoder"
+          class="de.hetzge.eclipse.aicoder.AiCoderResultView"
+          icon="icons/icon16.png"
+          id="de.hetzge.eclipse.aicoder.AiCoderResultView"
+          inject="true"
+          name="AI Coder Result">
+    </view>
  </extension>
  <extension
        point="org.eclipse.ui.perspectiveExtensions">
