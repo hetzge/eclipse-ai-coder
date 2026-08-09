@@ -3,6 +3,7 @@ package de.hetzge.eclipse.aicoder.agent;
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -13,6 +14,7 @@ import com.github.f4b6a3.uuid.util.UuidComparator;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.llm.LlmMessage;
+import de.hetzge.eclipse.aicoder.llm.LlmRole;
 
 public final class AgentTasksState {
 
@@ -62,6 +64,14 @@ public final class AgentTasksState {
 		for (final AgentTasksStateListener listener : this.listeners) {
 			listener.onAgentTasksChanged(task);
 		}
+	}
+
+	public synchronized Optional<String> loadAgentResultMessage(UUID id) throws IOException {
+		final List<LlmMessage> messages = AgentStorage.loadTrajectory(id);
+		if (messages.isEmpty()) {
+			return Optional.empty();
+		}
+		return messages.reversed().stream().filter(message -> message.role() == LlmRole.ASSISTANT).findFirst().map(LlmMessage::content);
 	}
 
 	public synchronized void loadAndAddTrajectoryListener(UUID agentTaskId, AgentTrajectoryStateListener listener) throws IOException {

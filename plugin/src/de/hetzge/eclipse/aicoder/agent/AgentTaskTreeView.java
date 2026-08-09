@@ -46,6 +46,7 @@ import org.eclipse.ui.part.ViewPart;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
+import de.hetzge.eclipse.aicoder.AiCoderResultView;
 import de.hetzge.eclipse.aicoder.handler.AbortAgentTaskHandler;
 import de.hetzge.eclipse.aicoder.handler.AbortAllAgentTasksHandler;
 import de.hetzge.eclipse.aicoder.history.HistoryType;
@@ -220,6 +221,27 @@ public final class AgentTaskTreeView extends ViewPart {
 		};
 		resetAllAction.setEnabled(!tasks.isEmpty());
 		manager.add(resetAllAction);
+		final Action openInResultViewAction = new Action("Open in result view") {
+			@Override
+			public void run() {
+				try {
+					final Optional<String> resultOptional = AiCoderActivator.getDefault().getAgentTasksState().loadAgentResultMessage(tasks.getLast().getId());
+					if (resultOptional.isPresent()) {
+						final String result = resultOptional.get();
+						try {
+							AiCoderResultView.open(result);
+						} catch (final PartInitException exception) {
+							logAndShowError("Failed to open result view", exception);
+						}
+					} else {
+						ErrorDialog.openError(getSite().getShell(), "Error", "No result found", Status.error("No result found"));
+					}
+				} catch (final IOException exception) {
+					logAndShowError("Failed to load trajectory", exception);
+				}
+			}
+		};
+		manager.add(openInResultViewAction);
 	}
 
 	private void fillFileContextMenu(IMenuManager manager) {
