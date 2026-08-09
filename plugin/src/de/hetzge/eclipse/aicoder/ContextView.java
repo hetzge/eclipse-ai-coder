@@ -35,6 +35,9 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CCombo;
 import org.eclipse.swt.custom.StackLayout;
 import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.dnd.Clipboard;
+import org.eclipse.swt.dnd.TextTransfer;
+import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.Image;
@@ -169,6 +172,14 @@ public class ContextView extends ViewPart {
 	}
 
 	private void fillLocalPullDown(IMenuManager manager) {
+		final Action copyContextAction = new Action("Copy context") {
+			@Override
+			public void run() {
+				copyActiveContext();
+			}
+		};
+		copyContextAction.setImageDescriptor(AiCoderActivator.getImageDescriptor(AiCoderImageKey.COPY_ICON));
+		manager.add(copyContextAction);
 	}
 
 	private void fillLocalToolBar(IToolBarManager manager) {
@@ -200,6 +211,20 @@ public class ContextView extends ViewPart {
 		toggleAction.setImageDescriptor(AiCoderActivator.getImageDescriptor(AiCoderImageKey.MULTILINE_ICON));
 		toggleAction.setChecked(AiCoderPreferences.isMultilineEnabled());
 		manager.add(toggleAction);
+		final Action copyContextAction = new Action() {
+			@Override
+			public void run() {
+				copyActiveContext();
+			}
+		};
+		copyContextAction.setToolTipText("Copy context");
+		copyContextAction.setImageDescriptor(AiCoderActivator.getImageDescriptor(AiCoderImageKey.COPY_ICON));
+		manager.add(copyContextAction);
+	}
+
+	private void copyActiveContext() {
+		final ContextViewPanel panel = getCurrentPanel();
+		panel.copyContextToClipboard(panel.rootContextEntry);
 	}
 
 	public static Optional<ContextView> get() throws CoreException {
@@ -223,6 +248,22 @@ public class ContextView extends ViewPart {
 		public void setRootContextEntry(ContextEntry rootContextEntry) {
 			this.rootContextEntry = rootContextEntry;
 			this.viewer.refresh();
+		}
+
+		public void copyContextToClipboard(ContextEntry entry) {
+			final Shell shell = this.viewer.getControl().getShell();
+			final String label = entry.getLabel();
+			if (!MessageDialog.openConfirm(shell, "Copy context", "Copy the context of '" + label + "' to the clipboard?")) {
+				return;
+			}
+			final ContextContext context = new ContextContext(ContextPreferences.get(this.mode));
+			final String content = ContextEntry.apply(entry, context);
+			final Clipboard clipboard = new Clipboard(shell.getDisplay());
+			try {
+				clipboard.setContents(new Object[] { content }, new Transfer[] { TextTransfer.getInstance() });
+			} finally {
+				clipboard.dispose();
+			}
 		}
 
 		public void createPartControl(Composite parent) {
@@ -393,6 +434,13 @@ public class ContextView extends ViewPart {
 					manager.add(resetAction);
 				}
 
+				final Action copyContextAction = new Action("Copy context") {
+					@Override
+					public void run() {
+						copyContextToClipboard(firstEntry);
+					}
+				};
+
 				final Action blacklistAction = new Action(ContextPreferences.get(this.mode).isBlacklisted(key) ? "Remove from Blacklist" : "Add to Blacklist") {
 					@Override
 					public void run() {
@@ -442,6 +490,7 @@ public class ContextView extends ViewPart {
 					}
 				};
 
+				manager.add(copyContextAction);
 				manager.add(blacklistAction);
 				manager.add(stickyAction);
 				manager.add(previewAction);
