@@ -182,8 +182,8 @@ public class ScratchpadAddToScratchpadHandler extends AbstractHandler {
 
 	private void appendItem(StringBuilder builder, ScratchpadItem item, AddMode mode) throws IOException {
 		switch (mode) {
-		case PLAIN -> builder.append(item.content()).append('\n');
-		case WITH_PATH -> builder.append(item.path()).append('\n').append(item.content()).append('\n');
+		case PLAIN -> builder.append("\n").append(item.content()).append('\n');
+		case WITH_PATH -> builder.append("\n").append(item.path()).append('\n').append(item.content()).append('\n');
 		case WITH_XML_TAG -> appendXmlTag(builder, item);
 		case WITH_MARKDOWN_CODE -> appendMarkdownCode(builder, item);
 		}

@@ -82,6 +82,10 @@
         id="de.hetzge.eclipse.aicoder.commands.scratchpadAddWithXmlTag"
         name="Add to Scratchpad (With XML Tag)">
   </command>
+  <command
+        id="de.hetzge.eclipse.aicoder.commands.scratchpadAddWithMarkdownCode"
+        name="Add to Scratchpad (With Markdown Code)">
+  </command>
 	</extension>
 
 	<extension point="org.eclipse.ui.handlers">
@@ -497,11 +501,11 @@
  <extension
        point="org.eclipse.ui.menus">
     <menuContribution
-          allPopups="true"
-          locationURI="popup:org.eclipse.ui.textEditorScope?after=additions">
+          locationURI="popup:#AbstractTextEditorContext?after=additions">
        <menu
              id="de.hetzge.eclipse.aicoder.menu.addToScratchpad"
-             label="AI Coder">
+             label="AI Coder"
+             icon="icons/icon16.png">
           <menu
                 id="de.hetzge.eclipse.aicoder.menu.addToScratchpad.sub"
                 label="Add to scratchpad">
@@ -533,7 +537,8 @@
           locationURI="popup:org.eclipse.ui.popup.any?after=additions">
        <menu
              id="de.hetzge.eclipse.aicoder.menu.addToScratchpadFile"
-             label="AI Coder">
+             label="AI Coder"
+             icon="icons/icon16.png">
           <visibleWhen
                 checkEnabled="false">
              <with
@@ -544,9 +549,14 @@
                 <iterate
                       ifEmpty="false"
                       operator="or">
-                   <adapt
-                         type="org.eclipse.core.resources.IFile">
-                   </adapt>
+                   <or>
+                      <adapt
+                            type="org.eclipse.core.resources.IFile">
+                      </adapt>
+                      <adapt
+                            type="org.eclipse.jdt.core.ICompilationUnit">
+                      </adapt>
+                   </or>
                 </iterate>
              </with>
           </visibleWhen>
