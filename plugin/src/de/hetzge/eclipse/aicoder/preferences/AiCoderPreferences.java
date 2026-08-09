@@ -20,6 +20,10 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String OLLAMA_BASE_URL_KEY = "de.hetzge.eclipse.aicoder.ollama_base_url";
 	public static final String OPENAI_BASE_URL_KEY = "de.hetzge.eclipse.aicoder.openai_base_url";
 	public static final String OPENAI_API_KEY_KEY = "de.hetzge.eclipse.aicoder.openai_api_key";
+	public static final String OPENAI_2_BASE_URL_KEY = "de.hetzge.eclipse.aicoder.openai2_base_url";
+	public static final String OPENAI_2_API_KEY_KEY = "de.hetzge.eclipse.aicoder.openai2_api_key";
+	public static final String OPENAI_3_BASE_URL_KEY = "de.hetzge.eclipse.aicoder.openai3_base_url";
+	public static final String OPENAI_3_API_KEY_KEY = "de.hetzge.eclipse.aicoder.openai3_api_key";
 	public static final String FILL_IN_MIDDLE_PROVIDER_KEY = "de.hetzge.eclipse.aicoder.fill_in_middle_provider";
 	public static final String FILL_IN_MIDDLE_MODEL_KEY = "de.hetzge.eclipse.aicoder.fill_in_middle_model";
 	public static final String QUICK_FIX_PROVIDER_KEY = "de.hetzge.eclipse.aicoder.quick_fix_provider";
@@ -77,6 +81,10 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(OLLAMA_BASE_URL_KEY, "http://localhost:11434");
 		store.setDefault(OPENAI_BASE_URL_KEY, "https://api.openai.com");
 		store.setDefault(OPENAI_API_KEY_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
+		store.setDefault(OPENAI_2_BASE_URL_KEY, "https://api.openai.com");
+		store.setDefault(OPENAI_2_API_KEY_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
+		store.setDefault(OPENAI_3_BASE_URL_KEY, "https://api.openai.com");
+		store.setDefault(OPENAI_3_API_KEY_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
 		store.setDefault(FILL_IN_MIDDLE_PROVIDER_KEY, LlmProvider.NONE.name());
 		store.setDefault(FILL_IN_MIDDLE_MODEL_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
 		store.setDefault(QUICK_FIX_PROVIDER_KEY, LlmProvider.NONE.name());
@@ -140,6 +148,22 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 
 	public static String getOpenAiApiKey() {
 		return getStore().getString(OPENAI_API_KEY_KEY);
+	}
+
+	public static String getOpenAi2BaseUrl() {
+		return getStore().getString(OPENAI_2_BASE_URL_KEY);
+	}
+
+	public static String getOpenAi2ApiKey() {
+		return getStore().getString(OPENAI_2_API_KEY_KEY);
+	}
+
+	public static String getOpenAi3BaseUrl() {
+		return getStore().getString(OPENAI_3_BASE_URL_KEY);
+	}
+
+	public static String getOpenAi3ApiKey() {
+		return getStore().getString(OPENAI_3_API_KEY_KEY);
 	}
 
 	public static void setLlmModelOption(CompletionMode mode, LlmOption llmModelOption) {

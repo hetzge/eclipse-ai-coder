@@ -5,6 +5,8 @@ public enum LlmProvider {
 	OLLAMA,
 	MISTRAL,
 	OPENAI,
+	OPENAI_2,
+	OPENAI_3,
 	OPENROUTER,
 	INCEPTIONLABS;
 }

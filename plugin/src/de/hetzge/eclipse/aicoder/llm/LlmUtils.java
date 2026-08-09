@@ -94,6 +94,14 @@ public final class LlmUtils {
 			final String urlString = AiCoderPreferences.getOpenAiBaseUrl();
 			final String openAiApiKey = AiCoderPreferences.getOpenAiApiKey();
 			return executeOpenAi(urlString, openAiApiKey, llmModelOption, llmRequest);
+		case OPENAI_2:
+			final String openAi2UrlString = AiCoderPreferences.getOpenAi2BaseUrl();
+			final String openAi2ApiKey = AiCoderPreferences.getOpenAi2ApiKey();
+			return executeOpenAi(openAi2UrlString, openAi2ApiKey, llmModelOption, llmRequest);
+		case OPENAI_3:
+			final String openAi3UrlString = AiCoderPreferences.getOpenAi3BaseUrl();
+			final String openAi3ApiKey = AiCoderPreferences.getOpenAi3ApiKey();
+			return executeOpenAi(openAi3UrlString, openAi3ApiKey, llmModelOption, llmRequest);
 		case OPENROUTER:
 			final String openRouterUrlString = OPENROUTER_BASE_URL;
 			final String openRouterApiKey = AiCoderPreferences.getOpenRouterApiKey();
