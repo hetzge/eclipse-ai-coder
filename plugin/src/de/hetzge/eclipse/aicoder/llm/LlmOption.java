@@ -68,4 +68,8 @@ public record LlmOption(
 	public static LlmOption createAgentModelOptionFromPreferences() {
 		return new LlmOption(AiCoderPreferences.getAgentProvider(), AiCoderPreferences.getAgentModel());
 	}
+
+	public static LlmOption createQueryModelOptionFromPreferences() {
+		return new LlmOption(AiCoderPreferences.getQueryProvider(), AiCoderPreferences.getQueryModel());
+	}
 }

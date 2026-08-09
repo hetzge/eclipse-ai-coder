@@ -20,24 +20,32 @@ import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 
 public class TriggerInstructionHandler extends AbstractHandler {
+
+	private InstructionPopupDialog instructionPopupDialog;
+
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		AiCoderActivator.log().info("Execute trigger instruction handler");
+		if (EclipseUtils.isDialogActive(this.instructionPopupDialog)) {
+			this.instructionPopupDialog.toggleQueryMode();
+			return null;
+		}
 		final InstructionStorage instructionStorage = AiCoderActivator.getDefault().getInstructionStorage();
 		final ITextEditor textEditor = EclipseUtils.getActiveTextEditor().orElseThrow(() -> new ExecutionException("No active text editor"));
 		final List<EditInstruction> instructions = InstructionUtils.resolve(EclipseUtils.getPath(textEditor).orElse(null));
 		final EditInstruction lastInstruction = instructionStorage.getLastInstruction();
-		final CompletionMode mode = CompletionMode.getMode(EclipseUtils.getTextViewer(textEditor), "dummy", false); // TODO !!!!!!!!!!!!!
-		final InstructionPopupDialog instructionPopupDialog = new InstructionPopupDialog(Display.getDefault().getActiveShell(), mode, instructions, lastInstruction.content(), (instruction, llmModelOption) -> {
+		final CompletionMode editCompletionMode = CompletionMode.getMode(EclipseUtils.getTextViewer(textEditor), "dummy", false, false);
+		final CompletionMode readOnlyCompletionMode = CompletionMode.getMode(EclipseUtils.getTextViewer(textEditor), "dummy", false, true);
+		this.instructionPopupDialog = new InstructionPopupDialog(Display.getDefault().getActiveShell(), editCompletionMode, readOnlyCompletionMode, instructions, lastInstruction.content(), (selection) -> {
 			try {
-				instructionStorage.addEditInstruction(instruction.content());
+				instructionStorage.addEditInstruction(selection.instruction().content());
 			} catch (final IOException exception) {
 				AiCoderActivator.log().error("Failed to store instruction.", exception);
 			}
-			AiCoderPreferences.setLlmModelOption(mode, llmModelOption);
-			InlineCompletionController.setup(textEditor).trigger(instruction.content());
+			AiCoderPreferences.setLlmModelOption(selection.readonly() ? readOnlyCompletionMode : editCompletionMode, selection.llmModelOption());
+			InlineCompletionController.setup(textEditor).trigger(selection.instruction().content(), selection.readonly());
 		}, () -> textEditor.setFocus());
-		instructionPopupDialog.open();
+		this.instructionPopupDialog.open();
 		return null;
 	}
 }

@@ -28,27 +28,33 @@ import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 
 public class StartAgentHandler extends AbstractHandler {
 
+	private InstructionPopupDialog instructionPopupDialog;
+
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		AiCoderActivator.log().info("Start agent handler");
+		if (EclipseUtils.isDialogActive(this.instructionPopupDialog)) {
+			this.instructionPopupDialog.toggleQueryMode();
+			return null;
+		}
 		final InstructionStorage instructionStorage = AiCoderActivator.getDefault().getInstructionStorage();
 		final ITextEditor textEditor = EclipseUtils.getActiveTextEditor().orElseThrow(() -> new ExecutionException("No active text editor"));
 		final List<EditInstruction> instructions = InstructionUtils.resolve(EclipseUtils.getPath(textEditor).orElse(null));
 		final EditInstruction lastInstruction = instructionStorage.getLastInstruction();
-		final CompletionMode mode = CompletionMode.AGENT;
-		final InstructionPopupDialog instructionPopupDialog = new InstructionPopupDialog(Display.getDefault().getActiveShell(), mode, instructions, lastInstruction.content(), (instruction, llmModelOption) -> {
+		final CompletionMode completionMode = CompletionMode.AGENT;
+		this.instructionPopupDialog = new InstructionPopupDialog(Display.getDefault().getActiveShell(), completionMode, completionMode, instructions, lastInstruction.content(), selection -> {
 			try {
-				instructionStorage.addEditInstruction(instruction.content());
+				instructionStorage.addEditInstruction(selection.instruction().content());
 			} catch (final IOException exception) {
 				AiCoderActivator.log().error("Failed to store instruction.", exception);
 			}
-			AiCoderPreferences.setLlmModelOption(mode, llmModelOption);
+			AiCoderPreferences.setLlmModelOption(completionMode, selection.llmModelOption());
 			if (EclipseUtils.getActiveTextEditor().get().getEditorInput() instanceof final IFileEditorInput fileEditorInput) {
 				try {
 					final IFile file = fileEditorInput.getFile();
 					final IProject project = file.getProject();
 					final TextSelection textSelection = TextSelection.fromTextEditor(textEditor).orElseThrow(() -> new ExecutionException("No text selection"));
-					final AgentRequest agentRequest = new AgentRequest(List.of(project), llmModelOption, textSelection, instruction.content());
+					final AgentRequest agentRequest = new AgentRequest(List.of(project), selection.llmModelOption(), textSelection, selection.instruction().content(), selection.readonly());
 					AiCoderActivator.getDefault().getAgentService().execute(agentRequest);
 					PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().showView(AgentTaskTreeView.ID);
 				} catch (final IOException | ExecutionException | PartInitException exception) {
@@ -57,7 +63,8 @@ public class StartAgentHandler extends AbstractHandler {
 				}
 			}
 		}, () -> textEditor.setFocus());
-		instructionPopupDialog.open();
+		this.instructionPopupDialog.open();
 		return null;
 	}
+
 }

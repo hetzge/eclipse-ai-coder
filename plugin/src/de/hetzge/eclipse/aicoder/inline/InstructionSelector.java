@@ -3,7 +3,7 @@ package de.hetzge.eclipse.aicoder.inline;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.layout.GridDataFactory;
@@ -31,18 +31,24 @@ import de.hetzge.eclipse.aicoder.llm.LlmOption;
 import de.hetzge.eclipse.aicoder.llm.LlmSelector;
 
 public class InstructionSelector extends Composite {
+	private final CompletionMode editCompletionMode;
+	private final CompletionMode readOnlyCompletionMode;
 	private final Composite inputComposite;
 	private final Text input;
 	private final Table table;
-	private final BiConsumer<EditInstruction, LlmOption> onSelect;
+	private final Consumer<InstructionSelection> onSelect;
 	private final List<EditInstruction> instructions;
 	private final Composite tableComposite;
 	private final Debouncer debouncer;
+	private boolean queryMode;
 	private Button applyButton;
 	private LlmSelector llmSelector;
 
-	public InstructionSelector(Composite parent, CompletionMode mode, List<EditInstruction> instructions, String initial, BiConsumer<EditInstruction, LlmOption> onSelect) {
+	public InstructionSelector(Composite parent, CompletionMode editCompletionMode, CompletionMode readOnlyCompletionMode, List<EditInstruction> instructions, String initial, Consumer<InstructionSelection> onSelect) {
 		super(parent, SWT.NONE);
+		this.editCompletionMode = editCompletionMode;
+		this.readOnlyCompletionMode = readOnlyCompletionMode;
+		this.queryMode = false;
 		this.onSelect = onSelect;
 		this.instructions = instructions;
 		this.debouncer = new Debouncer(getDisplay(), () -> Duration.ofMillis(250L));
@@ -118,7 +124,7 @@ public class InstructionSelector extends Composite {
 				event.doit = false;
 			}
 		}));
-		this.llmSelector = new LlmSelector(this, SWT.NONE, LlmOption.createModelOptionFromPreferences(mode), () -> {
+		this.llmSelector = new LlmSelector(this, SWT.NONE, LlmOption.createModelOptionFromPreferences(editCompletionMode), () -> {
 			updateApplyButton();
 		});
 		this.llmSelector.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.TOP).grab(true, false).create());
@@ -146,14 +152,14 @@ public class InstructionSelector extends Composite {
 			return;
 		}
 		final LlmOption option = optionOptional.get();
-		this.onSelect.accept(new EditInstruction("Custom", "Custom", this.input.getText()), option);
+		this.onSelect.accept(new InstructionSelection(new EditInstruction("Custom", "Custom", this.input.getText()), option, this.queryMode));
 	}
 
 	private void handleTableSelection() {
 		final Optional<LlmOption> llmModelOptionOptional = this.llmSelector.getOption();
 		if (this.table.getSelectionCount() == 1 && llmModelOptionOptional.isPresent()) {
 			final EditInstruction instruction = (EditInstruction) this.table.getSelection()[0].getData();
-			this.onSelect.accept(instruction, llmModelOptionOptional.orElseThrow());
+			this.onSelect.accept(new InstructionSelection(instruction, llmModelOptionOptional.orElseThrow(), this.queryMode));
 		}
 	}
 
@@ -178,12 +184,21 @@ public class InstructionSelector extends Composite {
 	private void updateLayout() {
 		if (this.table.getItemCount() > 0) {
 			this.table.select(0);
-			this.inputComposite.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.FILL).grab(true, false).hint(SWT.DEFAULT, 110).create());
+			this.inputComposite.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.FILL).grab(true, false).hint(SWT.DEFAULT, 250).create());
 			this.tableComposite.setLayoutData(GridDataFactory.fillDefaults().grab(true, true).create());
 		} else {
 			this.inputComposite.setLayoutData(GridDataFactory.fillDefaults().align(SWT.FILL, SWT.FILL).grab(true, true).hint(SWT.DEFAULT, SWT.DEFAULT).create());
 			this.tableComposite.setLayoutData(GridDataFactory.fillDefaults().grab(false, false).hint(0, 0).create());
 		}
 		this.layout();
+	}
+
+	public void toggleQueryMode() {
+		this.queryMode = !this.queryMode;
+		this.applyButton.setImage(this.queryMode ? AiCoderActivator.getImage(AiCoderImageKey.SEARCH_ICON) : AiCoderActivator.getImage(AiCoderImageKey.RUN_ICON));
+		this.llmSelector.setModelOption(LlmOption.createModelOptionFromPreferences(this.queryMode ? this.readOnlyCompletionMode : this.editCompletionMode));
+	}
+
+	public record InstructionSelection(EditInstruction instruction, LlmOption llmModelOption, boolean readonly) {
 	}
 }

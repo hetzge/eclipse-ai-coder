@@ -196,17 +196,28 @@
           sequence="M1+M2+1">
     </key>
     <key
+          commandId="de.hetzge.eclipse.codestral.commands.triggerInstruction"
+          contextId="org.eclipse.ui.contexts.dialogAndWindow"
+          schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+          sequence="M1+M2+1">
+    </key>
+    <key
           commandId="de.hetzge.eclipse.codestral.commands.startAgent"
           contextId="org.eclipse.ui.textEditorScope"
           schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
           sequence="M1+M2+2">
     </key>
+    <key
+          commandId="de.hetzge.eclipse.codestral.commands.startAgent"
+          contextId="org.eclipse.ui.contexts.dialogAndWindow"
+          schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+          sequence="M1+M2+2">
+    </key>
  </extension>
-
 	<extension point="org.eclipse.ui.contexts">
 		<context
 			id="de.hetzge.eclipse.aicoder.inlineCompletionVisible"
-			name="Inline Completion Visible"
+			name="AI Coder: Inline completion visible"
 			description="Inline completion visible"
 			parentId="org.eclipse.ui.textEditorScope">
 		</context>

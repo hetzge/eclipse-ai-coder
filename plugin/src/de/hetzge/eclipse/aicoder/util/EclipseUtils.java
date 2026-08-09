@@ -34,6 +34,7 @@ import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.internal.ui.text.javadoc.JavadocContentAccess2;
 import org.eclipse.jdt.ui.JavaUI;
+import org.eclipse.jface.dialogs.PopupDialog;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextSelection;
@@ -326,5 +327,24 @@ public class EclipseUtils {
 		} catch (final CoreException exception) {
 			throw new IOException("Failed to read file: " + path, exception);
 		}
+	}
+
+	public static boolean isDialogActive(PopupDialog dialog) {
+		if (dialog == null) {
+			return false;
+		}
+		if (dialog.getShell() == null) {
+			return false;
+		}
+		if (dialog.getShell().isDisposed()) {
+			return false;
+		}
+		if (!dialog.getShell().isVisible()) {
+			return false;
+		}
+		if (dialog.getShell().getDisplay().getActiveShell() != dialog.getShell()) {
+			return false;
+		}
+		return true;
 	}
 }

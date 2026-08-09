@@ -107,15 +107,24 @@ public final class AgentService {
 					}
 					final List<IProject> projects = this.request.projects();
 					final FileSystem fileSystem = new FileSystem(projects, projects.get(0).getWorkspace().getRoot());
-					final List<Tool> tools = List.of(
-							new EditFileTool(projects, fileSystem),
-							new ListFilesTool(projects, fileSystem),
-							new ReadFileTool(projects, fileSystem),
-							new SearchTool(projects, fileSystem)
-// TODO disabled until fixed
-//							new ProblemsTool(projects),
-//							new BuildTool(projects, fileSystem)
-					);
+
+					final List<Tool> tools;
+					if (this.request.readonly()) {
+						tools = List.of(
+								new ListFilesTool(projects, fileSystem),
+								new ReadFileTool(projects, fileSystem),
+								new SearchTool(projects, fileSystem));
+					} else {
+						tools = List.of(
+								new EditFileTool(projects, fileSystem),
+								new ListFilesTool(projects, fileSystem),
+								new ReadFileTool(projects, fileSystem),
+								new SearchTool(projects, fileSystem)
+						// TODO disabled until fixed
+						// new ProblemsTool(projects),
+						// new BuildTool(projects, fileSystem)
+						);
+					}
 					final List<LlmMessage> result = AgentLoop.execute(monitor, tools, projects, initialMessages, message -> {
 						try {
 							AiCoderActivator.getDefault().getAgentTasksState().appendTrajectory(task.getId(), message);

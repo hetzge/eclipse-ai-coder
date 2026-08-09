@@ -55,6 +55,10 @@ public final class LlmUtils {
 		return execute(LlmOption.createFillInMiddleModelOptionFromPreferences(), null, prefix, suffix);
 	}
 
+	public static CompletableFuture<LlmResponse> executeQuery(String systemPrompt, String prompt) {
+		return execute(LlmOption.createQueryModelOptionFromPreferences(), systemPrompt, prompt, null);
+	}
+
 	public static CompletableFuture<LlmResponse> executeAgent(LlmOption llmModelOption, LlmRequest llmRequest) {
 		return execute(llmModelOption, llmRequest);
 	}

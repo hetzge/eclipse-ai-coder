@@ -64,7 +64,7 @@ public class AiCoderInstructionsQuickAccessComputer implements IQuickAccessCompu
 		public void execute() {
 			AiCoderActivator.log().info("Execute instruction quick access");
 			final ITextEditor textEditor = EclipseUtils.getActiveTextEditor().orElseThrow();
-			InlineCompletionController.setup(textEditor).trigger(this.instruction.content());
+			InlineCompletionController.setup(textEditor).trigger(this.instruction.content(), false);
 		}
 	}
 }

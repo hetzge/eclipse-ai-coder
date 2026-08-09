@@ -226,4 +226,24 @@ public final class LlmPromptTemplates {
 				</suffix>
 				""".trim().formatted(locations, instructions, prefix, suffix, currentFileName);
 	}
+
+	public static String querySystemPrompt() {
+		return """
+				You are a software developer assistant.
+				Your task is to answer the given question.
+				INFORMATIONS PROVIDED TO YOU:
+				- Context: Sourcecode around the edit location, available types, guidelines, ...
+				- Question: The question to answer
+				""";
+	}
+
+	public static String queryPrompt(String prefix, String suffix, String originalInstructions) {
+		return """
+				CONTEXT:
+				%s<<<QUERY LOCATION>>>%s
+				\n=============================\n
+				QUESTION:
+				%s
+				""".trim().formatted(prefix, suffix, originalInstructions);
+	}
 }

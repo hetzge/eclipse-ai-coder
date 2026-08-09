@@ -56,7 +56,7 @@ public final class InstructionUtils {
 				// Defaults
 				getDefaultEditInstructions().stream(),
 				// History
-				AiCoderActivator.getDefault().getInstructionStorage().getEditInstructions().stream())
+				AiCoderActivator.getDefault().getInstructionStorage().getEditInstructions().reversed().stream())
 				.flatMap(Function.identity())
 				.toList();
 		return distinctByKeyAndSorted(allInstructions);

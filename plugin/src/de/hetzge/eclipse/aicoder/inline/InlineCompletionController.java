@@ -118,6 +118,9 @@ public final class InlineCompletionController {
 				textViewer.addViewportListener(verticalOffset -> {
 					AiCoderActivator.getDefault().getEditorViewMemory().update(textEditor);
 				});
+				textViewer.getTextWidget().addDisposeListener(event -> {
+					controller.abort("Dispose");
+				});
 			});
 			return controller;
 		});
@@ -184,12 +187,12 @@ public final class InlineCompletionController {
 		}
 		this.debouncer.debounce(() -> {
 			if (!EclipseUtils.hasSelection(this.textViewer)) {
-				trigger(null);
+				trigger(null, false);
 			}
 		});
 	}
 
-	public void trigger(String instruction) {
+	public void trigger(String instruction, boolean readOnly) {
 		AiCoderActivator.log().info("Trigger");
 		final long startTime = System.currentTimeMillis();
 		abort("Trigger");
@@ -198,7 +201,7 @@ public final class InlineCompletionController {
 		final int defaultLineSpacing = widget.getLineSpacing();
 		final IEditorInput editorInput = this.textEditor.getEditorInput();
 		final String filePath = editorInput.getName();
-		final CompletionMode mode = CompletionMode.getMode(this.textViewer, instruction, false);
+		final CompletionMode mode = CompletionMode.getMode(this.textViewer, instruction, false, readOnly);
 		final AiCoderHistoryEntry historyEntry = new AiCoderHistoryEntry(HistoryType.fromCompletionMode(mode), filePath, this.textViewer.getDocument().get());
 		this.job = new Job("AI completion") {
 
@@ -249,7 +252,11 @@ public final class InlineCompletionController {
 					final boolean hasSelection = EclipseUtils.hasSelection(this.textViewer);
 					final String selectionText = EclipseUtils.getSelectionText(this.textViewer);
 					final String fileType = EclipseUtils.getFileExtension(this.textEditor.getEditorInput());
-					if (mode == CompletionMode.EDIT) {
+					if (mode == CompletionMode.QUERY) {
+						final String systemPrompt = AiCoderPreferences.getQuerySystemPrompt();
+						prompt = LlmPromptTemplates.queryPrompt(prefix, suffix, originalInstructions);
+						InlineCompletionController.this.llmResponseFuture = LlmUtils.executeQuery(systemPrompt, prompt);
+					} else if (mode == CompletionMode.EDIT) {
 						final String systemPrompt = AiCoderPreferences.getChangeCodeSystemPrompt();
 						final String effectiveInstruction = instruction != null ? instruction : AiCoderPreferences.getQuickFixPrompt();
 						prompt = LlmPromptTemplates.changeCodePrompt(fileType, selectionText, effectiveInstruction, prefix, suffix);
@@ -304,7 +311,9 @@ public final class InlineCompletionController {
 						return Status.CANCEL_STATUS;
 					}
 					if (!isBlank && !isMoved && !isSame) {
-						if (mode == CompletionMode.EDIT || mode == CompletionMode.QUICK_FIX) {
+						if (mode == CompletionMode.QUERY) {
+							// TODO open AI Coder Result View
+						} else if (mode == CompletionMode.EDIT || mode == CompletionMode.QUICK_FIX) {
 							final int newLineCount = (int) content.lines().count();
 							final int oldLineCount = (int) selectionText.lines().count();
 							setup(new Suggestion(
