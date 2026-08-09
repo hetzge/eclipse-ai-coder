@@ -69,21 +69,6 @@ public class GeneralPreferencePage extends FieldEditorPreferencePage implements 
 				"Cleanup code on apply",
 				generalGroup));
 
-		// Context size settings
-		final IntegerFieldEditor maxPrefixSizeEditor = new IntegerFieldEditor(
-				AiCoderPreferences.MAX_PREFIX_SIZE_KEY,
-				"Maximum prefix size (lines):",
-				generalGroup);
-		maxPrefixSizeEditor.setValidRange(0, 10000);
-		addField(maxPrefixSizeEditor);
-
-		final IntegerFieldEditor maxSuffixSizeEditor = new IntegerFieldEditor(
-				AiCoderPreferences.MAX_SUFFIX_SIZE_KEY,
-				"Maximum suffix size (lines):",
-				generalGroup);
-		maxSuffixSizeEditor.setValidRange(0, 10000);
-		addField(maxSuffixSizeEditor);
-
 		final IntegerFieldEditor maxTokensEditor = new IntegerFieldEditor(
 				AiCoderPreferences.MAX_TOKENS_KEY,
 				"Maximum tokens:",

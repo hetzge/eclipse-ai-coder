@@ -26,6 +26,7 @@ import de.hetzge.eclipse.aicoder.AiCoderImageKey;
 import de.hetzge.eclipse.aicoder.config.ContextConfig.AiRerankConfig;
 import de.hetzge.eclipse.aicoder.config.TaskConfig;
 import de.hetzge.eclipse.aicoder.history.AiCoderHistoryEntry;
+import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.history.AiCoderHistoryView;
 import de.hetzge.eclipse.aicoder.history.HistoryType;
 import de.hetzge.eclipse.aicoder.llm.LlmPromptTemplates;
@@ -79,8 +80,8 @@ public class AiRerankContextEntry extends ContextEntry {
 			final String prefix = FillInMiddleContextEntry.getPrefix(document, modelOffset, config);
 			final String suffix = FillInMiddleContextEntry.getSuffix(document, modelOffset, config);
 			final String currentFileName = EclipseUtils.getFilename(editorInput).orElse("Unknown file");
-			final List<String> whitelist = config.getContextConfig(AiRerankContextEntry.PREFIX).map(AiRerankConfig.class::cast).map(AiRerankConfig::getWhitelist).orElse(List.of());
-			final List<String> blacklist = config.getContextConfig(AiRerankContextEntry.PREFIX).map(AiRerankConfig.class::cast).map(AiRerankConfig::getBlacklist).orElse(List.of());
+			final List<String> whitelist = config.getContextConfig(AiRerankContextEntry.PREFIX).map(AiRerankConfig.class::cast).map(AiRerankConfig::getWhitelist).orElseGet(() -> AiCoderPreferences.getAiRerankWhitelist());
+			final List<String> blacklist = config.getContextConfig(AiRerankContextEntry.PREFIX).map(AiRerankConfig.class::cast).map(AiRerankConfig::getBlacklist).orElseGet(() -> AiCoderPreferences.getAiRerankBlacklist());
 			final String instructions = LlmPromptTemplates.rerankPrompt(FileTreeUtils.createResourceTreeString(project, whitelist, blacklist), originalInstructions, prefix, suffix, currentFileName);
 			try {
 				final LlmResponse llmResponse = LlmUtils.executeRerank(systemPrompt, instructions).get(1, TimeUnit.MINUTES);

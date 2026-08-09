@@ -72,11 +72,17 @@ public sealed interface ContextConfig {
 
 	public record FileTreeConfig(TomlTable table, String key) implements ContextConfig {
 		public List<String> getWhitelist() {
-			return this.table.getArrayOrEmpty("whitelist").toList().stream().map(String.class::cast).toList();
+			if (this.table.contains("whitelist")) {
+				return this.table.getArrayOrEmpty("whitelist").toList().stream().map(String.class::cast).toList();
+			}
+			return AiCoderPreferences.getFileTreeWhitelist();
 		}
 
 		public List<String> getBlacklist() {
-			return this.table.getArrayOrEmpty("blacklist").toList().stream().map(String.class::cast).toList();
+			if (this.table.contains("blacklist")) {
+				return this.table.getArrayOrEmpty("blacklist").toList().stream().map(String.class::cast).toList();
+			}
+			return AiCoderPreferences.getFileTreeBlacklist();
 		}
 	}
 
@@ -156,11 +162,17 @@ public sealed interface ContextConfig {
 		}
 
 		public List<String> getWhitelist() {
-			return this.table.getArrayOrEmpty("whitelist").toList().stream().map(String.class::cast).toList();
+			if (this.table.contains("whitelist")) {
+				return this.table.getArrayOrEmpty("whitelist").toList().stream().map(String.class::cast).toList();
+			}
+			return AiCoderPreferences.getAiRerankWhitelist();
 		}
 
 		public List<String> getBlacklist() {
-			return this.table.getArrayOrEmpty("blacklist").toList().stream().map(String.class::cast).toList();
+			if (this.table.contains("blacklist")) {
+				return this.table.getArrayOrEmpty("blacklist").toList().stream().map(String.class::cast).toList();
+			}
+			return AiCoderPreferences.getAiRerankBlacklist();
 		}
 	}
 
@@ -169,7 +181,7 @@ public sealed interface ContextConfig {
 
 	public record CodeViewportMemoryConfig(TomlTable table, String key) implements ContextConfig {
 		public long getMaxLines() {
-			return this.table.getLong("max_lines", () -> 1000L);
+			return this.table.getLong("max_lines", () -> (long) AiCoderPreferences.getCodeViewportMemoryMaxLines());
 		}
 	}
 

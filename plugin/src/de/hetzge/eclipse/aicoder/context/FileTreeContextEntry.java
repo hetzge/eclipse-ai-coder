@@ -14,6 +14,7 @@ import org.eclipse.ui.IFileEditorInput;
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.config.ContextConfig.FileTreeConfig;
 import de.hetzge.eclipse.aicoder.config.TaskConfig;
+import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.util.ContextUtils;
 import de.hetzge.eclipse.aicoder.util.FileTreeUtils;
 
@@ -57,8 +58,8 @@ public class FileTreeContextEntry extends ContextEntry {
 		if (editorInput instanceof final IFileEditorInput fileEditorInput) {
 			final IFile file = fileEditorInput.getFile();
 			final IProject project = file.getProject();
-			final List<String> whitelist = config.getContextConfig(PREFIX).map(FileTreeConfig.class::cast).map(FileTreeConfig::getWhitelist).orElse(List.of());
-			final List<String> blacklist = config.getContextConfig(PREFIX).map(FileTreeConfig.class::cast).map(FileTreeConfig::getBlacklist).orElse(List.of());
+			final List<String> whitelist = config.getContextConfig(PREFIX).map(FileTreeConfig.class::cast).map(FileTreeConfig::getWhitelist).orElseGet(() -> AiCoderPreferences.getFileTreeWhitelist());
+			final List<String> blacklist = config.getContextConfig(PREFIX).map(FileTreeConfig.class::cast).map(FileTreeConfig::getBlacklist).orElseGet(() -> AiCoderPreferences.getFileTreeBlacklist());
 			return new FileTreeContextEntry(project, whitelist, blacklist, Duration.ofMillis(System.currentTimeMillis() - before));
 		}
 		if (editorInput == null) {

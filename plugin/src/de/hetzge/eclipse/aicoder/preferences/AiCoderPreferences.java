@@ -1,6 +1,7 @@
 package de.hetzge.eclipse.aicoder.preferences;
 
 import java.time.Duration;
+import java.util.List;
 
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
 import org.eclipse.jface.preference.IPreferenceStore;
@@ -60,6 +61,11 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String TOOL_CALL_OUTPUT_LIMIT_KEY = "de.hetzge.eclipse.aicoder.tool_call_output_limit";
 	public static final String SCRATCHPAD_CONTENT_KEY = "de.hetzge.eclipse.aicoder.scratchpad_content";
 	public static final String SCRATCHPAD_ENABLED_KEY = "de.hetzge.eclipse.aicoder.scratchpad_enabled";
+	public static final String CODE_VIEWPORT_MEMORY_MAX_LINES_KEY = "de.hetzge.eclipse.aicoder.code_viewport_memory_max_lines";
+	public static final String FILE_TREE_WHITELIST_KEY = "de.hetzge.eclipse.aicoder.file_tree_whitelist";
+	public static final String FILE_TREE_BLACKLIST_KEY = "de.hetzge.eclipse.aicoder.file_tree_blacklist";
+	public static final String AI_RERANK_WHITELIST_KEY = "de.hetzge.eclipse.aicoder.ai_rerank_whitelist";
+	public static final String AI_RERANK_BLACKLIST_KEY = "de.hetzge.eclipse.aicoder.ai_rerank_blacklist";
 
 	@Override
 	public void initializeDefaultPreferences() {
@@ -109,6 +115,11 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(TOOL_CALL_OUTPUT_LIMIT_KEY, 200000);
 		store.setDefault(SCRATCHPAD_CONTENT_KEY, "");
 		store.setDefault(SCRATCHPAD_ENABLED_KEY, true);
+		store.setDefault(CODE_VIEWPORT_MEMORY_MAX_LINES_KEY, 1000);
+		store.setDefault(FILE_TREE_WHITELIST_KEY, "");
+		store.setDefault(FILE_TREE_BLACKLIST_KEY, "");
+		store.setDefault(AI_RERANK_WHITELIST_KEY, "");
+		store.setDefault(AI_RERANK_BLACKLIST_KEY, "");
 	}
 
 	public static String getCodestralApiKey() {
@@ -361,5 +372,36 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 
 	public static int getToolCallOutputLimit() {
 		return getStore().getInt(TOOL_CALL_OUTPUT_LIMIT_KEY);
+	}
+
+	public static int getCodeViewportMemoryMaxLines() {
+		return getStore().getInt(CODE_VIEWPORT_MEMORY_MAX_LINES_KEY);
+	}
+
+	public static List<String> getFileTreeWhitelist() {
+		return getListPreference(FILE_TREE_WHITELIST_KEY);
+	}
+
+	public static List<String> getFileTreeBlacklist() {
+		return getListPreference(FILE_TREE_BLACKLIST_KEY);
+	}
+
+	public static List<String> getAiRerankWhitelist() {
+		return getListPreference(AI_RERANK_WHITELIST_KEY);
+	}
+
+	public static List<String> getAiRerankBlacklist() {
+		return getListPreference(AI_RERANK_BLACKLIST_KEY);
+	}
+
+	private static List<String> getListPreference(String key) {
+		final String value = getStore().getString(key);
+		if (value == null || value.isBlank()) {
+			return List.of();
+		}
+		return java.util.Arrays.stream(value.split(","))
+				.map(String::trim)
+				.filter(entry -> !entry.isEmpty())
+				.toList();
 	}
 }

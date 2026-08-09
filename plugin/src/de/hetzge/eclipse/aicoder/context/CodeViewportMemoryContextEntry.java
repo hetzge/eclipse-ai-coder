@@ -15,6 +15,7 @@ import de.hetzge.eclipse.aicoder.AiCoderImageKey;
 import de.hetzge.eclipse.aicoder.EditorView;
 import de.hetzge.eclipse.aicoder.config.ContextConfig.CodeViewportMemoryConfig;
 import de.hetzge.eclipse.aicoder.config.TaskConfig;
+import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.util.ContextUtils;
 
 // TODO filter by current file ending
@@ -71,7 +72,7 @@ public final class CodeViewportMemoryContextEntry extends ContextEntry {
 			final int maxLines = config.getContextConfig(pathString)
 					.map(CodeViewportMemoryConfig.class::cast)
 					.map(CodeViewportMemoryConfig::getMaxLines)
-					.orElse(1000L)
+					.orElse((long) AiCoderPreferences.getCodeViewportMemoryMaxLines())
 					.intValue();
 			final String report = AiCoderActivator.getDefault().getEditorViewMemory().getReport(pathString, firstLine, lastLine, maxLines);
 			return new CodeViewportMemoryContextEntry(
