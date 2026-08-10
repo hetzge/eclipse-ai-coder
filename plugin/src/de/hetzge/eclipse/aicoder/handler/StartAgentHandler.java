@@ -2,17 +2,18 @@ package de.hetzge.eclipse.aicoder.handler;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
 import org.eclipse.swt.widgets.Display;
-import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
-import org.eclipse.ui.texteditor.ITextEditor;
+import org.eclipse.ui.texteditor.AbstractTextEditor;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.CompletionMode;
@@ -38,8 +39,15 @@ public class StartAgentHandler extends AbstractHandler {
 			return null;
 		}
 		final InstructionStorage instructionStorage = AiCoderActivator.getDefault().getInstructionStorage();
-		final ITextEditor textEditor = EclipseUtils.getActiveTextEditor().orElseThrow(() -> new ExecutionException("No active text editor"));
-		final List<EditInstruction> instructions = InstructionUtils.resolve(EclipseUtils.getPath(textEditor).orElse(null));
+		Optional<IResource> selectedResourceOptional = EclipseUtils.getCurrentSelectedResource();
+		Optional<AbstractTextEditor> activeTextEditorOptional = EclipseUtils.getActiveTextEditor();
+		final TextSelection textSelection = selectedResourceOptional.map(resource -> new TextSelection(resource.getFullPath(), 0, 0, ""))
+				.or(() -> activeTextEditorOptional.flatMap(TextSelection::fromTextEditor))
+				.orElseThrow(() -> new ExecutionException("No text selection"));
+		final IProject project = selectedResourceOptional.map(IResource::getProject)
+				.or(() -> activeTextEditorOptional.map(textEditor -> (IProject) textEditor.getEditorInput().getAdapter(IFile.class).getProject()))
+				.orElseThrow(() -> new ExecutionException("No project"));
+		final List<EditInstruction> instructions = InstructionUtils.resolve(textSelection.path().toPath());
 		final EditInstruction lastInstruction = instructionStorage.getLastInstruction();
 		final CompletionMode completionMode = CompletionMode.AGENT;
 		this.instructionPopupDialog = new InstructionPopupDialog(Display.getDefault().getActiveShell(), completionMode, completionMode, instructions, lastInstruction.content(), selection -> {
@@ -49,20 +57,15 @@ public class StartAgentHandler extends AbstractHandler {
 				AiCoderActivator.log().error("Failed to store instruction.", exception);
 			}
 			AiCoderPreferences.setLlmModelOption(completionMode, selection.llmModelOption());
-			if (EclipseUtils.getActiveTextEditor().get().getEditorInput() instanceof final IFileEditorInput fileEditorInput) {
-				try {
-					final IFile file = fileEditorInput.getFile();
-					final IProject project = file.getProject();
-					final TextSelection textSelection = TextSelection.fromTextEditor(textEditor).orElseThrow(() -> new ExecutionException("No text selection"));
-					final AgentRequest agentRequest = new AgentRequest(List.of(project), selection.llmModelOption(), textSelection, selection.instruction().content(), selection.readonly());
-					AiCoderActivator.getDefault().getAgentService().execute(agentRequest);
-					PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().showView(AgentTaskTreeView.ID);
-				} catch (final IOException | ExecutionException | PartInitException exception) {
-					AiCoderActivator.log().error("Failed to start agent", exception);
-					AiCoderActivator.openErrorDialog("Failed to start agent", exception.getMessage(), exception);
-				}
+			try {
+				final AgentRequest agentRequest = new AgentRequest(List.of(project), selection.llmModelOption(), textSelection, selection.instruction().content(), selection.readonly());
+				AiCoderActivator.getDefault().getAgentService().execute(agentRequest);
+				PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().showView(AgentTaskTreeView.ID);
+			} catch (final IOException | PartInitException exception) {
+				AiCoderActivator.log().error("Failed to start agent", exception);
+				AiCoderActivator.openErrorDialog("Failed to start agent", exception.getMessage(), exception);
 			}
-		}, () -> textEditor.setFocus());
+		}, () -> EclipseUtils.getActiveEditor().ifPresent(editor -> editor.setFocus()));
 		this.instructionPopupDialog.open();
 		return null;
 	}

@@ -90,16 +90,17 @@ public final class AgentService {
 									{{ task }}
 
 									{% if selection_content -%}
-									The user has selected the following code in the file {{ selection_file_path }}:
+									The user has selected the following code in the file "{{ selection_file_path }}" in the project "{{ project }}":
 									```{{ selection_file_extension }}
 									{{ selection_content }}
 									```
 									{% else -%}
-									The user is currently in the file {{ selection_file_path }}.
+									The user is currently in the file/folder "{{ selection_file_path }}" in the project "{{ project }}".
 									{% endif -%}
 									""", Map.ofEntries(
 									Map.entry("task", this.request.instructions()),
-									Map.entry("selection_file_path", this.request.selection().path().toString()),
+									Map.entry("selection_file_path", this.request.selection().path().removeFirstSegments(1).makeRelative().toString()),
+									Map.entry("project", this.request.projects().get(0).getName()),
 									Map.entry("selection_file_extension", fileExtension != null ? fileExtension : ""),
 									Map.entry("selection_content", this.request.selection().content())))));
 					for (final LlmMessage message : initialMessages) {

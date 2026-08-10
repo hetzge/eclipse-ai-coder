@@ -41,6 +41,8 @@ import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.ITextViewerExtension5;
 import org.eclipse.jface.viewers.ISelection;
+import org.eclipse.jface.viewers.ISelectionProvider;
+import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.swt.SwtCallable;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.widgets.Display;
@@ -49,6 +51,7 @@ import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchPart;
+import org.eclipse.ui.IWorkbenchPartSite;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.contexts.IContextService;
@@ -60,8 +63,11 @@ import org.eclipse.ui.part.MultiPageEditorPart;
 import org.eclipse.ui.texteditor.AbstractTextEditor;
 import org.eclipse.ui.texteditor.ITextEditor;
 
-public class EclipseUtils {
+public final class EclipseUtils {
 
+	private EclipseUtils() {
+	}
+	
 	public static List<IMarker> getProblemMarkers(IPath path) throws CoreException {
 		final IResource resource = ResourcesPlugin.getWorkspace().getRoot().findMember(path);
 		if (resource == null) {
@@ -314,6 +320,9 @@ public class EclipseUtils {
 	}
 
 	public static String readContentFromBufferOrFile(IWorkspaceRoot workspaceRoot, IPath path) throws IOException {
+		if(!workspaceRoot.exists(path)) {
+			throw new IOException("Path does not exist: " + path);
+		}
 		final IFile file = workspaceRoot.getFile(path);
 		if (!file.exists()) {
 			return "";
@@ -346,5 +355,48 @@ public class EclipseUtils {
 			return false;
 		}
 		return true;
+	}
+	
+	public static Optional<IResource> getCurrentSelectedResource() {
+		// Get the active workbench part
+		final IWorkbenchPart activePart = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActivePart();
+		if (activePart == null) {
+			return Optional.empty();
+		}
+
+		// Get the site of the active part
+		final IWorkbenchPartSite site = activePart.getSite();
+		if (site == null) {
+			return Optional.empty();
+		}
+
+		// Get the selection provider
+		final ISelectionProvider selectionProvider = site.getSelectionProvider();
+		if (selectionProvider == null) {
+			return Optional.empty();
+		}
+
+		// Get the current selection
+		final ISelection selection = selectionProvider.getSelection();
+		if (!(selection instanceof IStructuredSelection)) {
+			return Optional.empty();
+		}
+
+		// Cast the selection to IStructuredSelection
+		final IStructuredSelection structuredSelection = (IStructuredSelection) selection;
+
+		// Iterate through the selected elements
+		for (final Object element : structuredSelection.toList()) {
+			if (element instanceof IResource) {
+				return Optional.of((IResource) element);
+			} else if (element instanceof IAdaptable) {
+				final IResource resource = ((IAdaptable) element).getAdapter(IResource.class);
+				if (resource != null) {
+					return Optional.of(resource);
+				}
+			}
+		}
+
+		return Optional.empty();
 	}
 }
