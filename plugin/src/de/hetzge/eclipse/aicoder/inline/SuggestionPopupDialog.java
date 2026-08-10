@@ -30,6 +30,11 @@ public final class SuggestionPopupDialog {
 
 	private static final int TOOLBAR_HEIGHT = 24;
 
+	// On macOS the line height reported by a StyledText can be a little smaller
+	// than the actually rendered line height, which caused the last suggestion
+	// line to be clipped (e.g. only 3/4 of a one line suggestion was visible).
+	private static final int EXTRA_HEIGHT = 5;
+
 	public static final int ACCEPT_RETURN_CODE = 10;
 	public static final int REJECT_RETURN_CODE = 20;
 
@@ -197,11 +202,11 @@ public final class SuggestionPopupDialog {
 	}
 
 	public Point getDefaultSize() {
-		return calculateSize(this.parentTextViewer, this.suggestion, this.styledTextViewer.getLineCount());
+		return calculateSize();
 	}
 
 	public Point getDefaultLocation(Point initialSize) {
-		return calculateLocation(this.parentTextViewer, this.suggestion);
+		return calculateLocation();
 	}
 
 	public void updateSizeAndLocation() {
@@ -212,8 +217,8 @@ public final class SuggestionPopupDialog {
 		if (textWidget.isDisposed()) {
 			return;
 		}
-		final Point size = calculateSize(this.parentTextViewer, this.suggestion, this.styledTextViewer.getLineCount());
-		final Point displayLocation = calculateLocation(this.parentTextViewer, this.suggestion);
+		final Point size = calculateSize();
+		final Point displayLocation = calculateLocation();
 		final Point location = textWidget.toControl(displayLocation);
 		this.container.setBounds(location.x + 40, location.y, Math.max(1, size.x), Math.max(1, size.y)); // TODO 40
 		this.container.layout(true, true);
@@ -232,22 +237,27 @@ public final class SuggestionPopupDialog {
 		return this.returnCode;
 	}
 
-	private static Point calculateSize(ITextViewer parentTextViewer, Suggestion suggestion, int lineCount) {
-		final StyledText textWidget = parentTextViewer.getTextWidget();
-		final int widgetOffset = EclipseUtils.getWidgetOffset(parentTextViewer, suggestion.modelOffset());
+	private Point calculateSize() {
+		final StyledText textWidget = this.parentTextViewer.getTextWidget();
+		final int widgetOffset = EclipseUtils.getWidgetOffset(this.parentTextViewer, this.suggestion.modelOffset());
 		final Point location = textWidget.getLocationAtOffset(widgetOffset);
 		final int width = textWidget.getSize().x - location.x - 24;
-		final int height = (lineCount + 2) * textWidget.getLineHeight();
+		// Use the line height of the suggestion text itself instead of the parent
+		// editor line height. On macOS these can differ and the parent value can
+		// be too small, which made the last suggestion line get clipped.
+		final int lineHeight = this.styledTextViewer.getLineHeight();
+		final int lineCount = this.styledTextViewer.getLineCount();
+		final int height = (lineCount + 2) * lineHeight + Math.max(EXTRA_HEIGHT, lineHeight / 4);
 		return new Point(Math.max(1, width), Math.max(1, height));
 	}
 
-	private static Point calculateLocation(ITextViewer parentTextViewer, Suggestion suggestion) {
-		final StyledText textWidget = parentTextViewer.getTextWidget();
-		final int widgetOffset = EclipseUtils.getWidgetOffset(parentTextViewer, suggestion.modelOffset());
+	private Point calculateLocation() {
+		final StyledText textWidget = this.parentTextViewer.getTextWidget();
+		final int widgetOffset = EclipseUtils.getWidgetOffset(this.parentTextViewer, this.suggestion.modelOffset());
 		final Point location = textWidget.getLocationAtOffset(widgetOffset);
 		final int lineHeight = textWidget.getLineHeight();
-		final int offset = lineHeight * (2 + suggestion.newLines());
-		return textWidget.toDisplay(new Point(location.x - 2, location.y + (suggestion.oldLines() == 0 ? -offset : 0) - 2));
+		final int offset = lineHeight * (2 + this.suggestion.newLines());
+		return textWidget.toDisplay(new Point(location.x - 2, location.y + (this.suggestion.oldLines() == 0 ? -offset : 0) - 2));
 	}
 
 	private final class PaintListenerImplementation implements PaintListener {
