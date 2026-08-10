@@ -17,6 +17,7 @@ public final class MoveTool extends Tool {
 
 	public static final Json DEFINITION = Json.object()
 			.set("name", "move")
+			.set("type", "function") // for responses api
 			.set("description", "Renames, moves, copies, or deletes files and directories.")
 			.set("parameters", Json.object()
 					.set("type", "object")

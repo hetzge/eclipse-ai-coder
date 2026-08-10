@@ -16,6 +16,7 @@ public final class ReadFileTool extends Tool {
 	private static Json prepareDefinition(List<IProject> projects) {
 		return Json.object()
 				.set("name", "read_file")
+				.set("type", "function") // for responses api
 				.set("description", "Reads a file from the project")
 				.set("parameters", Json.object()
 						.set("type", "object")
@@ -55,7 +56,7 @@ public final class ReadFileTool extends Tool {
 
 	@Override
 	public String execute(IProgressMonitor monitor, Json arguments) {
-		final String pathArg = arguments.at("path").asString();
+		final String pathArg = arguments.at("path", "").asString();
 		final int startLine = arguments.has("start_line") ? arguments.at("start_line").asInteger() : 1;
 		final Integer endLine = arguments.has("end_line") && !arguments.at("end_line").isNull() ? arguments.at("end_line").asInteger() : null;
 		final int maxLines = arguments.has("max_lines") ? arguments.at("max_lines").asInteger() : AiCoderPreferences.getReadFileDefaultMaxLineCount();

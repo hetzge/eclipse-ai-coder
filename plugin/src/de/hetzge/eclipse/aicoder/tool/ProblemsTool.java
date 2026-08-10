@@ -16,6 +16,7 @@ public final class ProblemsTool extends Tool {
 	private static Json prepareDefinition(List<IProject> projects) {
 		return Json.object()
 				.set("name", "problems")
+				.set("type", "function") // for responses api
 				.set("description", "Gets all problem markers for a file or folder.")
 				.set("parameters", Json.object()
 						.set("type", "object")

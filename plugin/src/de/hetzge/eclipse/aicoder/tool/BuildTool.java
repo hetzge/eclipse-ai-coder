@@ -14,6 +14,7 @@ public final class BuildTool extends Tool {
 	private static Json prepareDefinition(List<IProject> projects) {
 		return Json.object()
 				.set("name", "build")
+				.set("type", "function") // for responses api
 				.set("description", "Builds the project with the modified source files.")
 				.set("parameters", Json.object()
 						.set("type", "object")

@@ -21,6 +21,7 @@ public final class SearchTool extends Tool {
 	private static Json prepareDefinition(List<IProject> projects) {
 		return Json.object()
 				.set("name", "search")
+				.set("type", "function") // for responses api
 				.set("description", "Searches the project for pattern in the source code")
 				.set("parameters", Json.object()
 						.set("type", "object")
@@ -52,7 +53,7 @@ public final class SearchTool extends Tool {
 
 	@Override
 	public String execute(IProgressMonitor monitor, Json arguments) {
-		final String pattern = arguments.at("pattern").asString();
+		final String pattern = arguments.at("pattern", "").asString();
 		final String filePattern = arguments.at("file_pattern", ".*").asString();
 		final String projectName = arguments.at("project", "").asString();
 		if (pattern == null || pattern.isBlank()) {

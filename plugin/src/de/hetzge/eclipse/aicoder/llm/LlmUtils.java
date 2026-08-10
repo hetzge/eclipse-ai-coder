@@ -408,7 +408,11 @@ public final class LlmUtils {
 		}).toList());
 		if (!llmRequest.toolDefinitions().isEmpty()) {
 			body.set("tools", llmRequest.toolDefinitions().stream()
-					.map(toolDefinition -> Json.object().set("type", "function").set("function", toolDefinition.json()))
+					.map(toolDefinition -> Json.object()
+							.set("type", "function")
+							.set("name", toolDefinition.json().at("name").asString())
+							.set("description", toolDefinition.json().at("description"))
+							.set("parameters", toolDefinition.json().at("parameters")))
 					.toList());
 		}
 		final URI uri = URI.create(Utils.joinUriParts(List.of(urlString, "/v1/responses")));
@@ -455,7 +459,9 @@ public final class LlmUtils {
 										toolCallJson.at("call_id").asString(),
 										"function",
 										toolCallJson.at("name").asString(),
-										Json.read(toolCallJson.at("arguments").asString())))
+										toolCallJson.at("arguments").isString()
+												? Json.read(toolCallJson.at("arguments").asString())
+												: toolCallJson.at("arguments")))
 								.toList();
 						final String reasoning = outputs.stream()
 								.filter(item -> item != null

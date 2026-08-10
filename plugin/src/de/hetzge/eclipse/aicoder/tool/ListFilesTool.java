@@ -21,6 +21,7 @@ public final class ListFilesTool extends Tool {
 	private static Json prepareDefinition(List<IProject> projects) {
 		return Json.object()
 				.set("name", "list_files")
+				.set("type", "function") // for responses api
 				.set("description", "Lists files in the project")
 				.set("parameters", Json.object()
 						.set("type", "object")

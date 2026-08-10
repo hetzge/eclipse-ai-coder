@@ -17,6 +17,7 @@ public final class CreateFileTool extends Tool {
 	private static Json prepareDefinition(List<IProject> projects) {
 		return Json.object()
 				.set("name", "create_file")
+				.set("type", "function") // for responses api
 				.set("description", "Creates a new file with the given content at a workspace-relative path, paths like " + ToolUtils.createPathPrefixExamples(projects))
 				.set("parameters", Json.object()
 						.set("type", "object")

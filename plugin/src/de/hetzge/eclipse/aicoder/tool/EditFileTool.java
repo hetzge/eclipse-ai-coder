@@ -14,6 +14,7 @@ public final class EditFileTool extends Tool {
 	private static Json prepareDefinition(List<IProject> projects) {
 		return Json.object()
 				.set("name", "edit_file")
+				.set("type", "function") // for responses api
 				.set("description", "Edits a file in the project by replacing old text with new text. The old text must appear exactly once in the file.")
 				.set("parameters", Json.object()
 						.set("type", "object")
