@@ -275,6 +275,11 @@ public final class LlmUtils {
 	}
 
 	private static CompletableFuture<LlmResponse> executeOpenAi(String urlString, String openAiApiKey, LlmOption llmModelOption, LlmRequest llmRequest) {
+		final String modelKeyLower = llmModelOption.modelKey().toLowerCase();
+		if (urlString.startsWith("https://api.openai.com") && modelKeyLower.contains("-codex") || modelKeyLower.startsWith("gpt-")) {
+			return executeOpenAiResponseApi(urlString, openAiApiKey, llmModelOption, llmRequest);
+		}
+
 		final boolean isFillInTheMiddle = llmRequest.suffix() != null;
 		final boolean isPseudoFim = isFillInTheMiddle && AiCoderPreferences.isEnablePseduoFim();
 		final String reasoningSuffix = OPENAI_REASONING_SUFFIXES.stream()
@@ -354,6 +359,125 @@ public final class LlmUtils {
 						} else {
 							toolCallRequests = List.of();
 						}
+						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
+						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, duration, false);
+					} else {
+						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
+						return new LlmResponse(llmModelOption, "", "", response.body(), List.of(), 0, 0, duration, true);
+					}
+				});
+	}
+
+	private static CompletableFuture<LlmResponse> executeOpenAiResponseApi(String urlString, String openAiApiKey, LlmOption llmModelOption, LlmRequest llmRequest) {
+		final String reasoningSuffix = OPENAI_REASONING_SUFFIXES.stream()
+				.filter(it -> llmModelOption.modelKey().endsWith(it))
+				.findFirst()
+				.orElse(null);
+		final String model = reasoningSuffix != null
+				? llmModelOption.modelKey().substring(0, llmModelOption.modelKey().length() - reasoningSuffix.length())
+				: llmModelOption.modelKey();
+		final Json body = Json.object()
+				.set("model", model);
+		if (reasoningSuffix != null) {
+			body.set("reasoning", Json.object().set("effort", reasoningSuffix.substring(1)));
+		}
+		body.set("input", llmRequest.messages().stream().flatMap(message -> {
+			if (message.toolCallId() != null) {
+				return List.of(Json.object()
+						.set("type", "function_call_output")
+						.set("call_id", message.toolCallId())
+						.set("output", message.content())).stream();
+			} else if (message.toolCallRequest() != null && !message.toolCallRequest().isEmpty()) {
+				return message.toolCallRequest().stream().map(toolCallRequest -> Json.object()
+						.set("type", "function_call")
+						.set("call_id", toolCallRequest.id())
+						.set("name", toolCallRequest.functionName())
+						.set("arguments", toolCallRequest.arguments().toString()));
+			} else {
+				final Json messageJson = Json.object()
+						.set("type", "message")
+						.set("role", message.role().name().toLowerCase())
+						.set("content", Json.array(Json.object()
+								.set("type", message.role() == LlmRole.ASSISTANT ? "output_text" : "input_text")
+								.set("text", message.content())));
+				if (StringUtils.isNotBlank(message.reasoning())) {
+					messageJson.set("reasoning_content", message.reasoning());
+				}
+				return List.of(messageJson).stream();
+			}
+		}).toList());
+		if (!llmRequest.toolDefinitions().isEmpty()) {
+			body.set("tools", llmRequest.toolDefinitions().stream()
+					.map(toolDefinition -> Json.object().set("type", "function").set("function", toolDefinition.json()))
+					.toList());
+		}
+		final URI uri = URI.create(Utils.joinUriParts(List.of(urlString, "/v1/responses")));
+		final long beforeTimestamp = System.currentTimeMillis();
+		final HttpRequest request = HttpRequest.newBuilder()
+				.uri(uri)
+				.header("Content-Type", "application/json")
+				.header("Accept", "application/json")
+				.header("Authorization", "Bearer " + openAiApiKey)
+				.timeout(AiCoderPreferences.getTimeout())
+				.POST(HttpRequest.BodyPublishers.ofString(body.toString()))
+				.build();
+		return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+				.thenApply(response -> {
+					final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
+					if (response.statusCode() == 200) {
+						final String responseBody = response.body();
+						final Json responseJson = Json.read(responseBody);
+						final List<Json> outputs = responseJson.at("output").isArray()
+								? responseJson.at("output").asJsonList()
+								: List.of();
+						final String content = outputs.stream()
+								.filter(item -> item != null && item.has("type") && "message".equals(item.at("type").asString()))
+								.findFirst()
+								.map(item -> item.has("content") ? item.at("content") : null)
+								.filter(itemContent -> itemContent != null)
+								.map(itemContent -> itemContent.asJsonList().stream()
+										.filter(contentItem -> contentItem != null && contentItem.has("type") && "output_text".equals(contentItem.at("type").asString()))
+										.findFirst()
+										.map(contentItem -> contentItem.has("text") ? contentItem.at("text").asString() : null)
+										.orElse(null))
+								.orElseGet(() -> outputs.stream()
+										.filter(item -> item != null && item.has("content"))
+										.findFirst()
+										.map(item -> item.at("content").asJsonList().stream()
+												.filter(contentItem -> contentItem != null && contentItem.has("text"))
+												.findFirst()
+												.map(contentItem -> contentItem.at("text").asString())
+												.orElse(null))
+										.orElse(""));
+						final List<LlmToolCallRequest> toolCallRequests = outputs.stream()
+								.filter(item -> item != null && item.has("type") && "function_call".equals(item.at("type").asString()))
+								.map(toolCallJson -> new LlmToolCallRequest(
+										toolCallJson.at("call_id").asString(),
+										"function",
+										toolCallJson.at("name").asString(),
+										Json.read(toolCallJson.at("arguments").asString())))
+								.toList();
+						final String reasoning = outputs.stream()
+								.filter(item -> item != null
+										&& item.has("type")
+										&& "reasoning".equals(item.at("type").asString()))
+								.findFirst()
+								.map(item -> {
+									if (item.has("summary")) {
+										final List<String> summaryTexts = item.at("summary").asJsonList().stream()
+												.filter(s -> s != null
+														&& s.has("type")
+														&& "summary_text".equals(s.at("type").asString())
+														&& s.has("text"))
+												.map(s -> s.at("text").asString())
+												.toList();
+										return String.join("\n", summaryTexts);
+									}
+									return "";
+								})
+								.orElse("");
+						final int inputTokens = responseJson.at("usage").at("input_tokens", 0).asInteger();
+						final int outputTokens = responseJson.at("usage").at("output_tokens", 0).asInteger();
 						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
 						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, duration, false);
 					} else {
