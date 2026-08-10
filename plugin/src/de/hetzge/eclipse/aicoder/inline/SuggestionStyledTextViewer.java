@@ -55,6 +55,10 @@ public final class SuggestionStyledTextViewer {
 		return this.styledText.getLineCount();
 	}
 
+	public int getLineHeight() {
+		return this.styledText.getLineHeight();
+	}
+
 	public void setupLineDiff() {
 		this.styledText.setText("");
 		final List<String> diffLines = DiffUtils.diff(this.originalContent, this.suggestion.content()).patch().lines().toList();
