@@ -490,6 +490,9 @@ public final class InlineCompletionController {
 	}
 
 	public void setup(List<Suggestion> suggestions) {
+		if (this.suggestionControllers != null) {
+			abort("Setup new suggestions");
+		}
 		setup0(suggestions.stream()
 				.map(suggestion -> new SuggestionController(suggestion, new SuggestionPopupDialog(this.textViewer, suggestion)))
 				.toList());
@@ -568,8 +571,8 @@ public final class InlineCompletionController {
 				}
 				AiCoderActivator.log().info(String.format("Close suggestion popup dialog (reason: '%s')", reason));
 				suggestionController.suggestionPopupDialog.close();
-				this.suggestionControllers = null;
 			}
+			this.suggestionControllers = null;
 			this.textEditor.setFocus();
 			AiCoderHistoryView.get().ifPresent(AiCoderHistoryView::refresh);
 			this.paintListener.resetMetrics();
@@ -589,7 +592,7 @@ public final class InlineCompletionController {
 	private void redraw() {
 		Display.getDefault().syncExec(() -> {
 			final StyledText textWidget = this.textViewer.getTextWidget();
-			if(textWidget == null) {
+			if (textWidget == null) {
 				return;
 			}
 			final Font currentFont = textWidget.getFont();
