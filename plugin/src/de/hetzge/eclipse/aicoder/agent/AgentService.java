@@ -19,6 +19,7 @@ import com.github.f4b6a3.uuid.UuidCreator;
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.llm.LlmMessage;
 import de.hetzge.eclipse.aicoder.llm.LlmRole;
+import de.hetzge.eclipse.aicoder.tool.CreateFileTool;
 import de.hetzge.eclipse.aicoder.tool.EditFileTool;
 import de.hetzge.eclipse.aicoder.tool.FileSystem;
 import de.hetzge.eclipse.aicoder.tool.ListFilesTool;
@@ -59,15 +60,33 @@ public final class AgentService {
 		abort(id);
 	}
 
+	public void delete(UUID id) {
+		final AgentTaskJob job = this.jobById.get(id);
+		if (job != null) {
+			job.delete();
+		}
+		try {
+			AiCoderActivator.getDefault().getAgentTasksState().deleteAgentTask(id);
+		} catch (final IOException exception) {
+			AiCoderActivator.log().error("Failed to delete agent task", exception);
+		}
+	}
+
 	private final class AgentTaskJob extends Job {
 
 		private final String title;
 		private final AgentRequest request;
+		private volatile boolean deleted;
 
 		public AgentTaskJob(String title, AgentRequest request) {
 			super("Agent: " + title);
 			this.title = title;
 			this.request = request;
+		}
+
+		public void delete() {
+			this.deleted = true;
+			cancel();
 		}
 
 		@Override
@@ -117,6 +136,7 @@ public final class AgentService {
 								new SearchTool(projects, fileSystem));
 					} else {
 						tools = List.of(
+								new CreateFileTool(projects, fileSystem),
 								new EditFileTool(projects, fileSystem),
 								new ListFilesTool(projects, fileSystem),
 								new ReadFileTool(projects, fileSystem),
@@ -127,38 +147,48 @@ public final class AgentService {
 						);
 					}
 					final List<LlmMessage> result = AgentLoop.execute(monitor, request.llmOption(), tools, projects, initialMessages, message -> {
-						try {
-							AiCoderActivator.getDefault().getAgentTasksState().appendTrajectory(task.getId(), message);
-							task.setChanges(fileSystem.toAgentChanges());
-							AgentStorage.saveAgentTask(task);
-							fileSystem.persist(AgentStorage.getFileSystemPath(task.getId()).toPath());
-							AiCoderActivator.getDefault().getAgentTasksState().fireAgentTasksChanged(task);
-						} catch (final Exception exception) {
-							throw new RuntimeException("Failed to append trajectory", exception);
+						if (!AgentTaskJob.this.deleted) {
+							try {
+								AiCoderActivator.getDefault().getAgentTasksState().appendTrajectory(task.getId(), message);
+								task.setChanges(fileSystem.toAgentChanges());
+								AgentStorage.saveAgentTask(task);
+								fileSystem.persist(AgentStorage.getFileSystemPath(task.getId()).toPath());
+								AiCoderActivator.getDefault().getAgentTasksState().fireAgentTasksChanged(task);
+							} catch (final Exception exception) {
+								throw new RuntimeException("Failed to append trajectory", exception);
+							}
 						}
 					});
 					AiCoderActivator.log().info("Agent task completed with " + result.size() + " messages");
-					task.setStatus(AgentStatus.SUCCESS);
-					AgentStorage.saveAgentTask(task);
+					if (!AgentTaskJob.this.deleted) {
+						task.setStatus(AgentStatus.SUCCESS);
+						AgentStorage.saveAgentTask(task);
+					}
 				} catch (final CancellationException exception) {
 					AiCoderActivator.log().info("Agent task aborted");
-					task.setStatus(AgentStatus.CANCELLED);
-					AgentStorage.saveAgentTask(task);
+					if (!AgentTaskJob.this.deleted) {
+						task.setStatus(AgentStatus.CANCELLED);
+						AgentStorage.saveAgentTask(task);
+					}
 				} catch (final Exception exception) {
 					AiCoderActivator.log().error("Failed to execute agent task", exception);
-					task.setStatus(AgentStatus.ERROR);
-					AgentStorage.saveAgentTask(task);
+					if (!AgentTaskJob.this.deleted) {
+						task.setStatus(AgentStatus.ERROR);
+						AgentStorage.saveAgentTask(task);
+					}
 				} finally {
 					AgentService.this.jobById.remove(task.getId());
-					if (task.getStatus() == AgentStatus.RUNNING) {
-						task.setStatus(AgentStatus.ERROR);
-						try {
-							AgentStorage.saveAgentTask(task);
-						} catch (final IOException innerException) {
-							AiCoderActivator.log().error("Failed to save agent task", innerException);
+					if (!AgentTaskJob.this.deleted) {
+						if (task.getStatus() == AgentStatus.RUNNING) {
+							task.setStatus(AgentStatus.ERROR);
+							try {
+								AgentStorage.saveAgentTask(task);
+							} catch (final IOException innerException) {
+								AiCoderActivator.log().error("Failed to save agent task", innerException);
+							}
 						}
+						AiCoderActivator.getDefault().getAgentTasksState().fireAgentTasksChanged(task);
 					}
-					AiCoderActivator.getDefault().getAgentTasksState().fireAgentTasksChanged(task);
 				}
 				return Status.OK_STATUS;
 			} catch (final IOException exception) {

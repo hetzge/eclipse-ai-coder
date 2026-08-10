@@ -3,10 +3,13 @@ package de.hetzge.eclipse.aicoder.agent;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -49,6 +52,20 @@ public final class AgentStorage {
 				.filter(Optional::isPresent)
 				.map(Optional::get)
 				.toList();
+	}
+
+	public static void deleteAgentTask(UUID id) throws IOException {
+		Files.deleteIfExists(getTaskPath(id).toPath());
+		Files.deleteIfExists(getTrajectoryFilePath(id).toPath());
+		final IPath fileSystemPath = getFileSystemPath(id);
+		final Path fileSystemFolder = fileSystemPath.toPath();
+		if (Files.exists(fileSystemFolder)) {
+			try (final Stream<Path> paths = Files.walk(fileSystemFolder)) {
+				for (final Path path : paths.sorted(Comparator.reverseOrder()).toList()) {
+					Files.delete(path);
+				}
+			}
+		}
 	}
 
 	public static void appendTrajectory(UUID id, LlmMessage message) throws IOException {

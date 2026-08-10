@@ -51,6 +51,16 @@ public final class AgentTasksState {
 		return List.copyOf(this.agentTasks);
 	}
 
+	public synchronized void deleteAgentTask(UUID id) throws IOException {
+		final Optional<AgentTask> taskOptional = findTask(id);
+		AgentStorage.deleteAgentTask(id);
+		if (taskOptional.isPresent()) {
+			final AgentTask task = taskOptional.get();
+			this.agentTasks.remove(task);
+			fireAgentTasksChanged(task);
+		}
+	}
+
 	public synchronized void appendTrajectory(UUID id, LlmMessage message) throws IOException {
 		AgentStorage.appendTrajectory(id, message);
 		fireAgentTrajectoryChanged(id, message);

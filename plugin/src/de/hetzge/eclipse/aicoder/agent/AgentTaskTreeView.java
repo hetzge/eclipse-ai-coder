@@ -26,6 +26,7 @@ import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.dialogs.ErrorDialog;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ILabelProviderListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -191,6 +192,16 @@ public final class AgentTaskTreeView extends ViewPart {
 		};
 		abortAllTasksAction.setEnabled(hasRunningTasks());
 		manager.add(abortAllTasksAction);
+		final Action deleteTaskAction = new Action("Delete Task(s)") {
+			@Override
+			public void run() {
+				deleteSelectedTasks();
+			}
+		};
+		deleteTaskAction.setEnabled(!getSelectedAgentTasks().isEmpty());
+		deleteTaskAction.setToolTipText("Delete the selected agent task(s)");
+		deleteTaskAction.setImageDescriptor(AiCoderActivator.getImageDescriptor(AiCoderImageKey.BLACKLIST_ICON));
+		manager.add(deleteTaskAction);
 		manager.add(new Separator());
 		if (this.treeViewer.getSelection() instanceof final IStructuredSelection selection) {
 			final Object firstElement = selection.getFirstElement();
@@ -286,6 +297,24 @@ public final class AgentTaskTreeView extends ViewPart {
 				}
 			};
 			manager.add(compareReferenceAction);
+		}
+	}
+
+	private void deleteSelectedTasks() {
+		final List<AgentTask> tasks = getSelectedAgentTasks();
+		if (tasks.isEmpty()) {
+			return;
+		}
+		final String message = tasks.size() == 1
+				? "Delete the selected task?"
+				: "Delete the " + tasks.size() + " selected tasks?";
+		final boolean confirmed = MessageDialog.openConfirm(getViewSite().getShell(), "Delete Task(s)", message);
+		if (!confirmed) {
+			return;
+		}
+		final AgentService agentService = AiCoderActivator.getDefault().getAgentService();
+		for (final AgentTask task : tasks) {
+			agentService.delete(task.getId());
 		}
 	}
 
