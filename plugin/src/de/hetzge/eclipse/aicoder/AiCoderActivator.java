@@ -60,19 +60,7 @@ public class AiCoderActivator extends AbstractUIPlugin {
 		this.editorViewMemory = new EditorViewMemory(1000);
 		this.configManager = new ConfigManager();
 		this.agentTasksState = new AgentTasksState();
-		final Job loadAgentTasksJob = new Job("Load agent tasks") {
-			@Override
-			protected IStatus run(IProgressMonitor monitor) {
-				try {
-					AiCoderActivator.getDefault().getAgentTasksState().load();
-					return Status.OK_STATUS;
-				} catch (final Exception exception) {
-					return new Status(IStatus.ERROR, PLUGIN_ID, "Failed to load agent tasks", exception);
-				}
-			}
-		};
-		loadAgentTasksJob.schedule();
-		loadAgentTasksJob.join(); // TODO
+		AiCoderActivator.getDefault().getAgentTasksState().load();
 		this.agentService = new AgentService();
 		McpClients.INSTANCE.reload(() -> {
 			log().info("MCP clients loaded: " + McpClients.INSTANCE.getMcpStatusCountsString());

@@ -34,7 +34,7 @@ public final class AgentLoop {
 	private AgentLoop() {
 	}
 
-	public static List<LlmMessage> execute(IProgressMonitor monitor, List<Tool> tools, List<IProject> projects, List<LlmMessage> initialMessages, Consumer<LlmMessage> messageConsumer) {
+	public static List<LlmMessage> execute(IProgressMonitor monitor, LlmOption llmModelOption, List<Tool> tools, List<IProject> projects, List<LlmMessage> initialMessages, Consumer<LlmMessage> messageConsumer) {
 		if (projects.isEmpty()) {
 			throw new IllegalArgumentException("At least one project must be provided.");
 		}
@@ -42,7 +42,6 @@ public final class AgentLoop {
 				.stream()
 				.map(it -> new LlmToolDefinition(it.getDefinition()))
 				.toList();
-		final LlmOption llmModelOption = LlmOption.createEditModelOptionFromPreferences(); // TODO
 		final List<LlmMessage> messages = new ArrayList<>(initialMessages);
 		final int maxIterations = AiCoderPreferences.getMaxAgentIterations();
 		final int toolCallOutputLimit = AiCoderPreferences.getToolCallOutputLimit();
@@ -69,7 +68,7 @@ public final class AgentLoop {
 				}
 				final Tool tool = toolOptional.get();
 				final String toolResponse = truncateToolResponse(tool.execute(monitor, toolCallRequest.arguments()), toolCallOutputLimit);
-				final LlmMessage toolResponseMessage = new LlmMessage(LlmRole.TOOL, response.getReasoning(), toolResponse, toolCallRequest.id(), List.of());
+				final LlmMessage toolResponseMessage = new LlmMessage(LlmRole.TOOL, "", toolResponse, toolCallRequest.id(), List.of());
 				messages.add(toolResponseMessage);
 				messageConsumer.accept(toolResponseMessage);
 			}

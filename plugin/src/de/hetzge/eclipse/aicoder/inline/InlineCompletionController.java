@@ -589,6 +589,9 @@ public final class InlineCompletionController {
 	private void redraw() {
 		Display.getDefault().syncExec(() -> {
 			final StyledText textWidget = this.textViewer.getTextWidget();
+			if(textWidget == null) {
+				return;
+			}
 			final Font currentFont = textWidget.getFont();
 			textWidget.setFont(currentFont); // triggers full layout re‑computation
 		});

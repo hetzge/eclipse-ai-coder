@@ -77,16 +77,16 @@ public final class AgentService {
 				try {
 					AgentService.this.jobById.put(task.getId(), this);
 					AiCoderActivator.getDefault().getAgentTasksState().saveAgentTask(task);
+					String fileExtension = this.request.selection().path().getFileExtension();
 					final List<LlmMessage> initialMessages = List.of(
 							// TODO prompt preferences
 							new LlmMessage(LlmRole.SYSTEM, """
-									You are an AI coding assistant that implements tasks.
+									You are an AI coding assistant.
 									You operate in an Eclipse IDE workspace. You have access to the following projects: ${PROJECTS}
-									First understand the task. Then plan the implementation.
-									Use the available tools to implement the task.
+									Use the available tools to implement the request.
 									""".replace("${PROJECTS}", this.request.projects().stream().map(it -> it.getName()).collect(Collectors.joining(", ")))),
 							new LlmMessage(LlmRole.USER, JinjaUtils.applyTemplate("""
-									Implement this task:
+									User request:
 									{{ task }}
 
 									{% if selection_content -%}
@@ -100,7 +100,7 @@ public final class AgentService {
 									""", Map.ofEntries(
 									Map.entry("task", this.request.instructions()),
 									Map.entry("selection_file_path", this.request.selection().path().toString()),
-									Map.entry("selection_file_extension", this.request.selection().path().getFileExtension()),
+									Map.entry("selection_file_extension", fileExtension != null ? fileExtension : ""),
 									Map.entry("selection_content", this.request.selection().content())))));
 					for (final LlmMessage message : initialMessages) {
 						AiCoderActivator.getDefault().getAgentTasksState().appendTrajectory(task.getId(), message);
@@ -125,7 +125,7 @@ public final class AgentService {
 						// new BuildTool(projects, fileSystem)
 						);
 					}
-					final List<LlmMessage> result = AgentLoop.execute(monitor, tools, projects, initialMessages, message -> {
+					final List<LlmMessage> result = AgentLoop.execute(monitor, request.llmOption(), tools, projects, initialMessages, message -> {
 						try {
 							AiCoderActivator.getDefault().getAgentTasksState().appendTrajectory(task.getId(), message);
 							task.setChanges(fileSystem.toAgentChanges());

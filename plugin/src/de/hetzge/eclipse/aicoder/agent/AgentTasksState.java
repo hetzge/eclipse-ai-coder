@@ -47,7 +47,7 @@ public final class AgentTasksState {
 		fireAgentTasksChanged(task);
 	}
 
-	public List<AgentTask> getAgentTasks() {
+	public synchronized List<AgentTask> getAgentTasks() {
 		return List.copyOf(this.agentTasks);
 	}
 

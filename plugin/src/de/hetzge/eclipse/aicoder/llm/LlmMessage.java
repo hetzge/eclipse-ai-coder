@@ -14,10 +14,6 @@ public record LlmMessage(LlmRole role, String reasoning, String content, String 
 		this(role, reasoning, content, null, List.of());
 	}
 
-	public LlmMessage(LlmRole role, String reasoning, String content, String toolCallId) {
-		this(role, reasoning, content, toolCallId, List.of());
-	}
-
 	public LlmMessage(LlmRole role, String reasoning, String content, List<LlmToolCallRequest> toolCallRequest) {
 		this(role, reasoning, content, null, toolCallRequest);
 	}

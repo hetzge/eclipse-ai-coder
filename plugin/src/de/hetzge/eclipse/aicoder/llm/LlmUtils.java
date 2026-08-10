@@ -533,7 +533,7 @@ public final class LlmUtils {
 								.set("type", toolCallRequest.type())
 								.set("function", Json.object()
 										.set("name", toolCallRequest.functionName())
-										.set("arguments", toolCallRequest.arguments())))
+										.set("arguments", toolCallRequest.arguments().toString())))
 						.toArray()));
 			}
 			if (StringUtils.isNotBlank(message.reasoning())) {
