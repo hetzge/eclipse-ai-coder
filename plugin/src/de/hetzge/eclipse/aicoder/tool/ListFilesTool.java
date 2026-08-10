@@ -85,7 +85,9 @@ public final class ListFilesTool extends Tool {
 
 		// Determine the container within the project
 		final IPath projectPrefix = IPath.fromOSString(project.getName());
-		final IPath requestedPath = pathArg.isEmpty() ? projectPrefix : IPath.fromOSString(pathArg);
+		final IPath requestedPath = pathArg.isEmpty() || pathArg.trim().equals(".")
+				? projectPrefix
+				: IPath.fromOSString(pathArg);
 		// The path should be under the project
 		if (!projectPrefix.isPrefixOf(requestedPath)) {
 			return "Error: Path must be within the project " + project.getName() + ".";
