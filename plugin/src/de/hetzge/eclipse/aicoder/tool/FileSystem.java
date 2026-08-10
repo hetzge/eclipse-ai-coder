@@ -96,7 +96,10 @@ public final class FileSystem {
 
 	public void putFile(IPath path, String content) throws IOException {
 		if (!this.referenceContentByPath.containsKey(path)) {
-			this.referenceContentByPath.put(path, EclipseUtils.readContentFromBufferOrFile(this.workspaceRoot, path));
+			if (this.workspaceRoot.exists(path)) {
+				this.referenceContentByPath.put(path, EclipseUtils.readContentFromBufferOrFile(this.workspaceRoot, path));
+			}
+			// else: the file does not exist yet, keep the reference absent so it is tracked as created.
 		}
 		this.contentByPath.put(normalizePath(path), content);
 	}
