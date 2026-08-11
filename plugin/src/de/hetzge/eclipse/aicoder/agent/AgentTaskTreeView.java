@@ -39,6 +39,8 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.ui.IActionBars;
+import org.eclipse.ui.IPartListener;
+import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
@@ -70,6 +72,7 @@ public final class AgentTaskTreeView extends ViewPart {
 	private Action syncWithResultAction;
 	private Action abortAllTasksAction;
 	private boolean syncWithResult = false;
+	private IPartListener partListener;
 
 	public AgentTaskTreeView() {
 		this.agentTasksStateListener = new AgentTasksStateListener();
@@ -111,6 +114,31 @@ public final class AgentTaskTreeView extends ViewPart {
 		hookContextMenu();
 		updateActionEnablement();
 		AiCoderActivator.getDefault().getAgentTasksState().addListener(this.agentTasksStateListener);
+		this.partListener = new IPartListener() {
+			@Override
+			public void partActivated(IWorkbenchPart part) {
+				if (AgentTaskTreeView.this.syncWithResult && part instanceof final AgentTrajectoryEditor trajectoryEditor) {
+					showResult(trajectoryEditor.getAgentTask());
+				}
+			}
+
+			@Override
+			public void partBroughtToTop(IWorkbenchPart part) {
+			}
+
+			@Override
+			public void partClosed(IWorkbenchPart part) {
+			}
+
+			@Override
+			public void partDeactivated(IWorkbenchPart part) {
+			}
+
+			@Override
+			public void partOpened(IWorkbenchPart part) {
+			}
+		};
+		getSite().getPage().addPartListener(this.partListener);
 		new Job("Refresh agent task tree") {
 			@Override
 			protected IStatus run(IProgressMonitor monitor) {
@@ -536,6 +564,9 @@ public final class AgentTaskTreeView extends ViewPart {
 	@Override
 	public void dispose() {
 		super.dispose();
+		if (this.partListener != null) {
+			getSite().getPage().removePartListener(this.partListener);
+		}
 		AiCoderActivator.getDefault().getAgentTasksState().removeListener(this.agentTasksStateListener);
 	}
 
