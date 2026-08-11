@@ -14,6 +14,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 
+import de.hetzge.eclipse.aicoder.quicksearch.FilePatternUtils;
 import mjson.Json;
 
 public final class ListFilesTool extends Tool {
@@ -31,7 +32,7 @@ public final class ListFilesTool extends Tool {
 										.set("description", "The path to list files from (relative to workspace root, as example " + ToolUtils.createPathPrefixExamples(projects) + ")."))
 								.set("file_pattern", Json.object()
 										.set("type", "string")
-										.set("description", "The regex pattern to search for in file names."))
+										.set("description", "A regular-expression or filename glob pattern to search for in file names (for example, *.xml or .*\\\\.xml)."))
 								.set("max_results", Json.object()
 										.set("type", "integer")
 										.set("description", "The maximum number of results to return. Default: 100.")))
@@ -82,7 +83,7 @@ public final class ListFilesTool extends Tool {
 		final String filePatternStr = arguments.at("file_pattern", ".*").asString();
 		final int maxResults = arguments.at("max_results", 100).asInteger();
 
-		final Pattern filePattern = Pattern.compile(filePatternStr);
+		final Pattern filePattern = compileFilePattern(filePatternStr);
 
 		// Determine the container within the project
 		final IPath projectPrefix = IPath.fromOSString(project.getName());
@@ -169,6 +170,10 @@ public final class ListFilesTool extends Tool {
 			sb.append(type).append(path.makeRelativeTo(project.getWorkspace().getRoot().getFullPath()));
 		}
 		return sb.toString();
+	}
+
+	private static Pattern compileFilePattern(String pattern) {
+		return FilePatternUtils.compile(pattern);
 	}
 
 	private void collectResources(IContainer container, Pattern filePattern, List<IResource> result) {

@@ -28,7 +28,7 @@ public final class SearchTool extends Tool {
 						.set("properties", Json.object()
 								.set("pattern", Json.object()
 										.set("type", "string")
-										.set("description", "The regex pattern to search for."))
+										.set("description", "The regex pattern to search for and an optional regular-expression or filename glob pattern to filter by file names."))
 								.set("file_pattern", Json.object()
 										.set("type", "string")
 										.set("description", "The regex pattern to filter by file names."))

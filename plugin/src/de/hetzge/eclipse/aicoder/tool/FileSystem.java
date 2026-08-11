@@ -25,6 +25,7 @@ import de.hetzge.eclipse.aicoder.agent.AgentChangeType;
 import de.hetzge.eclipse.aicoder.history.AiCoderHistoryEntry;
 import de.hetzge.eclipse.aicoder.history.HistoryType;
 import de.hetzge.eclipse.aicoder.inline.Suggestion;
+import de.hetzge.eclipse.aicoder.quicksearch.FilePatternUtils;
 import de.hetzge.eclipse.aicoder.quicksearch.SearchResult;
 import de.hetzge.eclipse.aicoder.util.DiffUtils;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
@@ -142,7 +143,7 @@ public final class FileSystem {
 	public List<SearchResult> search(String pattern, String filePattern) {
 		final List<SearchResult> results = new ArrayList<>();
 		final Pattern regexPattern = Pattern.compile(pattern);
-		final Pattern regexFilePattern = Pattern.compile(filePattern);
+		final Pattern regexFilePattern = FilePatternUtils.compile(filePattern);
 		for (final Map.Entry<IPath, String> entry : this.contentByPath.entrySet()) {
 			if (entry.getValue().isBlank()) {
 				continue;
@@ -206,6 +207,9 @@ public final class FileSystem {
 	}
 
 	private IPath normalizePath(IPath path) {
+		if (path == null || path.isEmpty() || path.segmentCount() < 2) {
+			throw new IllegalArgumentException("Path must include project and resource name: " + path);
+		}
 		if (isAvailableProjectPath(path)) {
 			return path.makeRelative();
 		}

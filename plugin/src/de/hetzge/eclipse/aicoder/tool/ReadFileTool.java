@@ -70,7 +70,7 @@ public final class ReadFileTool extends Tool {
 		String content;
 		try {
 			content = this.fileSystem.readFile(IPath.fromOSString(pathArg));
-		} catch (final IOException exception) {
+		} catch (final IOException | IllegalArgumentException exception) {
 			AiCoderActivator.log().error("Error reading file: " + pathArg, exception);
 			return "Error reading file: " + exception.getMessage();
 		}

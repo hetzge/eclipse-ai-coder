@@ -128,7 +128,7 @@ public final class SearchOptions {
 
 		public Builder filePattern(String filePattern) {
 			if (filePattern != null && !filePattern.isEmpty()) {
-				this.filePattern = Pattern.compile(filePattern);
+				this.filePattern = FilePatternUtils.compile(filePattern);
 			}
 			return this;
 		}

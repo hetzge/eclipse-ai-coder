@@ -165,7 +165,7 @@ public final class LlmUtils {
 					messageJson.set("thinking", message.reasoning());
 				}
 				return messageJson;
-			}));
+			}).toList());
 		}
 		final URI uri = URI.create(Utils.joinUriParts(List.of(urlString, isFillInTheMiddle ? "/api/generate" : "/api/chat")));
 		final long beforeTimestamp = System.currentTimeMillis();
