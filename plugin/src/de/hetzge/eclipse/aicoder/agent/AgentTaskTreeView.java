@@ -21,6 +21,7 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.action.Action;
+import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.action.MenuManager;
@@ -39,6 +40,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.ui.IActionBars;
 import org.eclipse.ui.IWorkbenchActionConstants;
+import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.IDE;
@@ -65,7 +67,9 @@ public final class AgentTaskTreeView extends ViewPart {
 	private final AgentTasksStateListener agentTasksStateListener;
 	private TreeViewer treeViewer;
 	private Action abortTaskAction;
+	private Action syncWithResultAction;
 	private Action abortAllTasksAction;
+	private boolean syncWithResult = false;
 
 	public AgentTaskTreeView() {
 		this.agentTasksStateListener = new AgentTasksStateListener();
@@ -98,7 +102,10 @@ public final class AgentTaskTreeView extends ViewPart {
 				ErrorDialog.openError(getSite().getShell(), "Error", "Failed to open agent task editor", Status.error(exception.getMessage(), exception));
 			}
 		});
-		this.treeViewer.addSelectionChangedListener(event -> updateActionEnablement());
+		this.treeViewer.addSelectionChangedListener(event -> {
+			updateActionEnablement();
+			syncSelection();
+		});
 		createActions();
 		contributeToActionBars();
 		hookContextMenu();
@@ -154,6 +161,20 @@ public final class AgentTaskTreeView extends ViewPart {
 		};
 		this.abortAllTasksAction.setToolTipText("Abort all running agent tasks");
 		this.abortAllTasksAction.setImageDescriptor(AiCoderActivator.getImageDescriptor(AiCoderImageKey.REJECT_ICON));
+
+		this.syncWithResultAction = new Action("Sync with Result", IAction.AS_CHECK_BOX) {
+			@Override
+			public void run() {
+				AgentTaskTreeView.this.syncWithResult = isChecked();
+				setChecked(AgentTaskTreeView.this.syncWithResult);
+				if (AgentTaskTreeView.this.syncWithResult) {
+					syncSelection();
+				}
+			}
+		};
+		this.syncWithResultAction.setToolTipText("Sync selection with agent editor and result view");
+		this.syncWithResultAction.setImageDescriptor(AiCoderActivator.getImageDescriptor(AiCoderImageKey.SYNC_ICON));
+		this.syncWithResultAction.setChecked(this.syncWithResult);
 	}
 
 	private void contributeToActionBars() {
@@ -162,6 +183,8 @@ public final class AgentTaskTreeView extends ViewPart {
 	}
 
 	private void fillLocalToolBar(IToolBarManager manager) {
+		manager.add(this.syncWithResultAction);
+		manager.add(new Separator());
 		manager.add(this.abortTaskAction);
 		manager.add(this.abortAllTasksAction);
 	}
@@ -428,6 +451,65 @@ public final class AgentTaskTreeView extends ViewPart {
 		AiCoderActivator.log().error(message, exception);
 		final String detail = exception.getMessage() != null ? exception.getMessage() : exception.toString();
 		ErrorDialog.openError(getSite().getShell(), "Error", message, Status.error(detail, exception));
+	}
+
+	private void syncSelection() {
+		if (!this.syncWithResult) {
+			return;
+		}
+		final Object firstElement;
+		if (this.treeViewer.getSelection() instanceof final IStructuredSelection structuredSelection) {
+			firstElement = structuredSelection.getFirstElement();
+		} else {
+			return;
+		}
+		final AgentTask agentTask;
+		if (firstElement instanceof final AgentTask task) {
+			agentTask = task;
+		} else if (firstElement instanceof final AgentChange agentChange) {
+			agentTask = findTask(agentChange).orElse(null);
+		} else {
+			return;
+		}
+		if (agentTask == null) {
+			return;
+		}
+		openTrajectoryEditor(agentTask);
+		showResult(agentTask);
+	}
+
+	private void openTrajectoryEditor(AgentTask agentTask) {
+		try {
+			final AgentTrajectoryEditorInput input = new AgentTrajectoryEditorInput(agentTask);
+			final IWorkbenchPage activePage = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+			// Only open if not already the active editor to avoid focus stealing on every selection
+			if (!(activePage.getActiveEditor() instanceof final AgentTrajectoryEditor trajectoryEditor) || !trajectoryEditor.getAgentTask().equals(agentTask)) {
+				activePage.openEditor(input, AgentTrajectoryEditor.ID);
+			}
+		} catch (final PartInitException exception) {
+			AiCoderActivator.log().error("Failed to open agent trajectory editor", exception);
+		}
+	}
+
+	private void showResult(AgentTask agentTask) {
+		new Job("Load agent result") {
+			@Override
+			protected IStatus run(IProgressMonitor monitor) {
+				try {
+					final Optional<String> resultOptional = AiCoderActivator.getDefault().getAgentTasksState().loadAgentResultMessage(agentTask.getId());
+					if (resultOptional.isPresent()) {
+						try {
+							AiCoderResultView.show(resultOptional.get());
+						} catch (final PartInitException exception) {
+							AiCoderActivator.log().error("Failed to open result view", exception);
+						}
+					}
+					return Status.OK_STATUS;
+				} catch (final IOException exception) {
+					return Status.error("Failed to load agent result", exception);
+				}
+			}
+		}.schedule();
 	}
 
 	private void updateActionEnablement() {

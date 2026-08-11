@@ -175,6 +175,28 @@ public class AiCoderResultView extends ViewPart {
 		openView();
 	}
 
+	/**
+	 * Sets the markdown content shown by the view without adding it to the navigation history. If the view is already open the content is updated immediately, otherwise it is stored and rendered once the view is opened.
+	 */
+	public static void showContent(String content) {
+		final String normalizedContent = content != null ? content : "";
+		currentMarkdown = normalizedContent;
+		EclipseUtils.asyncExec(() -> {
+			findView().ifPresent(view -> {
+				view.render(currentMarkdown);
+				view.updateNavigationActions();
+			});
+		});
+	}
+
+	/**
+	 * Sets the markdown content and opens the result view without adding it to the navigation history.
+	 */
+	public static void show(String content) throws PartInitException {
+		showContent(content);
+		openView();
+	}
+
 	public static Optional<AiCoderResultView> findView() {
 		return PlatformUI.getWorkbench().getDisplay().syncCall(() -> {
 			final IWorkbenchPage activePage = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();

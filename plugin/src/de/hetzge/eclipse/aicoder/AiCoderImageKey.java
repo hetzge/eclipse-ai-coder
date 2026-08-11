@@ -41,7 +41,8 @@ public enum AiCoderImageKey {
 	SCRATCHPAD_ICON,
 	PREVIOUS_ICON,
 	NEXT_ICON,
-	SEARCH_ICON;
+	SEARCH_ICON,
+	SYNC_ICON;
 
 	static void initializeImages(ImageRegistry registry) {
 		try {
@@ -80,6 +81,7 @@ public enum AiCoderImageKey {
 			registerImage(registry, AiCoderImageKey.PREVIOUS_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/elcl16/backward_nav.svg").toURL()));
 			registerImage(registry, AiCoderImageKey.NEXT_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/elcl16/forward_nav.svg").toURL()));
 			registerImage(registry, AiCoderImageKey.SEARCH_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.search/icons/full/etool16/search.svg").toURL()));
+			registerImage(registry, AiCoderImageKey.SYNC_ICON, ImageDescriptor.createFromURL(URI.create("platform:/plugin/org.eclipse.ui/icons/full/elcl16/synced.svg").toURL()));
 		} catch (final MalformedURLException exception) {
 			throw new RuntimeException(exception);
 		}
