@@ -42,6 +42,7 @@ import org.eclipse.ui.IActionBars;
 import org.eclipse.ui.IPartListener;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkbenchActionConstants;
+import org.eclipse.ui.IEditorReference;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
@@ -72,6 +73,7 @@ public final class AgentTaskTreeView extends ViewPart {
 	private Action syncWithResultAction;
 	private Action abortAllTasksAction;
 	private boolean syncWithResult = false;
+	private boolean syncingSelection = false;
 	private IPartListener partListener;
 
 	public AgentTaskTreeView() {
@@ -117,7 +119,7 @@ public final class AgentTaskTreeView extends ViewPart {
 		this.partListener = new IPartListener() {
 			@Override
 			public void partActivated(IWorkbenchPart part) {
-				if (AgentTaskTreeView.this.syncWithResult && part instanceof final AgentTrajectoryEditor trajectoryEditor) {
+				if (AgentTaskTreeView.this.syncWithResult && !AgentTaskTreeView.this.syncingSelection && part instanceof final AgentTrajectoryEditor trajectoryEditor) {
 					showResult(trajectoryEditor.getAgentTask());
 				}
 			}
@@ -502,20 +504,19 @@ public final class AgentTaskTreeView extends ViewPart {
 		if (agentTask == null) {
 			return;
 		}
+		this.syncingSelection = true;
 		openTrajectoryEditor(agentTask);
 		showResult(agentTask);
+		this.syncingSelection = false;
 	}
 
 	private void openTrajectoryEditor(AgentTask agentTask) {
-		try {
-			final AgentTrajectoryEditorInput input = new AgentTrajectoryEditorInput(agentTask);
-			final IWorkbenchPage activePage = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-			// Only open if not already the active editor to avoid focus stealing on every selection
-			if (!(activePage.getActiveEditor() instanceof final AgentTrajectoryEditor trajectoryEditor) || !trajectoryEditor.getAgentTask().equals(agentTask)) {
-				activePage.openEditor(input, AgentTrajectoryEditor.ID);
-			}
-		} catch (final PartInitException exception) {
-			AiCoderActivator.log().error("Failed to open agent trajectory editor", exception);
+		final AgentTrajectoryEditorInput input = new AgentTrajectoryEditorInput(agentTask);
+		final IWorkbenchPage activePage = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+		// Only switch to the editor if it is already open, do not open a new editor on single click selection
+		final IEditorReference[] references = activePage.findEditors(input, AgentTrajectoryEditor.ID, IWorkbenchPage.MATCH_INPUT);
+		if (references.length > 0) {
+			activePage.activate(references[0].getEditor(true));
 		}
 	}
 

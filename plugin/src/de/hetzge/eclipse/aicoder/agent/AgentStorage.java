@@ -89,6 +89,29 @@ public final class AgentStorage {
 				.toList();
 	}
 
+	/**
+	 * Efficiently loads only the content of the last assistant message from the trajectory file.
+	 * This avoids parsing the entire trajectory just to find the result message.
+	 */
+	public static Optional<String> loadLastAssistantMessageContent(UUID id) throws IOException {
+		final IPath trajectoryFilePath = getTrajectoryFilePath(id);
+		if (!Files.exists(trajectoryFilePath.toPath())) {
+			return Optional.empty();
+		}
+		final List<String> lines = Files.readAllLines(trajectoryFilePath.toPath(), StandardCharsets.UTF_8);
+		for (int i = lines.size() - 1; i >= 0; i--) {
+			final String line = lines.get(i);
+			if (line.isBlank()) {
+				continue;
+			}
+			final Json json = Json.read(line);
+			if (json.has("role") && "ASSISTANT".equals(json.at("role").asString())) {
+				return Optional.of(json.at("content").asString());
+			}
+		}
+		return Optional.empty();
+	}
+
 	private static IPath getTrajectoryFilePath(final UUID id) {
 		return getTrajectoriesPath().append(id.toString() + ".trajectory");
 	}

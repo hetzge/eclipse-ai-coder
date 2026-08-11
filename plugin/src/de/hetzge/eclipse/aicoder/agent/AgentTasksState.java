@@ -14,7 +14,6 @@ import com.github.f4b6a3.uuid.util.UuidComparator;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.llm.LlmMessage;
-import de.hetzge.eclipse.aicoder.llm.LlmRole;
 
 public final class AgentTasksState {
 
@@ -81,11 +80,7 @@ public final class AgentTasksState {
 	}
 
 	public synchronized Optional<String> loadAgentResultMessage(UUID id) throws IOException {
-		final List<LlmMessage> messages = AgentStorage.loadTrajectory(id);
-		if (messages.isEmpty()) {
-			return Optional.empty();
-		}
-		return messages.reversed().stream().filter(message -> message.role() == LlmRole.ASSISTANT).findFirst().map(LlmMessage::content);
+		return AgentStorage.loadLastAssistantMessageContent(id);
 	}
 
 	public synchronized void loadAndAddTrajectoryListener(UUID agentTaskId, AgentTrajectoryStateListener listener) throws IOException {
