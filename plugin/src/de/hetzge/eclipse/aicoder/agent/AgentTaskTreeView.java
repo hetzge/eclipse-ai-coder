@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -44,8 +45,10 @@ import org.eclipse.ui.IPartListener;
 import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchPart;
+import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.handlers.HandlerUtil;
 import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.model.WorkbenchLabelProvider;
 import org.eclipse.ui.part.ViewPart;
@@ -55,6 +58,7 @@ import de.hetzge.eclipse.aicoder.AiCoderImageKey;
 import de.hetzge.eclipse.aicoder.AiCoderResultView;
 import de.hetzge.eclipse.aicoder.handler.AbortAgentTaskHandler;
 import de.hetzge.eclipse.aicoder.handler.AbortAllAgentTasksHandler;
+import de.hetzge.eclipse.aicoder.handler.RerunAgentTaskHandler;
 import de.hetzge.eclipse.aicoder.history.HistoryType;
 import de.hetzge.eclipse.aicoder.inline.InlineCompletionController;
 import de.hetzge.eclipse.aicoder.inline.Suggestion;
@@ -229,6 +233,15 @@ public final class AgentTaskTreeView extends ViewPart {
 	}
 
 	private void fillContextMenu(IMenuManager manager) {
+		final Action rerunTaskAction = new Action("Rerun Task(s)") {
+			@Override
+			public void run() {
+				EclipseUtils.executeCommand(RerunAgentTaskHandler.COMMAND_ID);
+			}
+		};
+		rerunTaskAction.setEnabled(!getSelectedAgentTasks().isEmpty());
+		manager.add(rerunTaskAction);
+
 		final Action abortTaskAction = new Action("Abort Task(s)") {
 			@Override
 			public void run() {
@@ -258,9 +271,9 @@ public final class AgentTaskTreeView extends ViewPart {
 		manager.add(new Separator());
 		if (this.treeViewer.getSelection() instanceof final IStructuredSelection selection) {
 			final Object firstElement = selection.getFirstElement();
-			if (firstElement instanceof final AgentTask agentTask) {
+			if (firstElement instanceof AgentTask) {
 				fillTaskContextMenu(manager);
-			} else if (firstElement instanceof final AgentChange agentChange) {
+			} else if (firstElement instanceof AgentChange) {
 				fillFileContextMenu(manager);
 			}
 		}
@@ -580,6 +593,18 @@ public final class AgentTaskTreeView extends ViewPart {
 			AgentTaskTreeView.this.treeViewer.refresh();
 			updateActionEnablement();
 		});
+	}
+
+	public static AgentTaskTreeView resolveTreeView(ExecutionEvent event) {
+		final IWorkbenchPart activePart = HandlerUtil.getActivePart(event);
+		if (activePart instanceof AgentTaskTreeView) {
+			return (AgentTaskTreeView) activePart;
+		}
+		final IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+		if (window != null && window.getActivePage() != null) {
+			return (AgentTaskTreeView) window.getActivePage().findView(ID);
+		}
+		return null;
 	}
 
 	private class AgentTasksStateListener implements AgentTasksState.AgentTasksStateListener {

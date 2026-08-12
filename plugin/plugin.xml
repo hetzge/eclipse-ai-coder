@@ -67,6 +67,10 @@
         name="Abort Task(s)">
   </command>
   <command
+        id="de.hetzge.eclipse.codestral.commands.rerunAgentTask"
+        name="Rerun Task(s)">
+  </command>
+  <command
         id="de.hetzge.eclipse.codestral.commands.abortAllAgentTasks"
         name="Abort All Tasks">
   </command>
@@ -140,6 +144,10 @@
   <handler
         class="de.hetzge.eclipse.aicoder.handler.AbortAllAgentTasksHandler"
         commandId="de.hetzge.eclipse.codestral.commands.abortAllAgentTasks">
+  </handler>
+  <handler
+        class="de.hetzge.eclipse.aicoder.handler.RerunAgentTaskHandler"
+        commandId="de.hetzge.eclipse.codestral.commands.rerunAgentTask">
   </handler>
   <handler
         class="de.hetzge.eclipse.aicoder.handler.ScratchpadAddToScratchpadHandler"

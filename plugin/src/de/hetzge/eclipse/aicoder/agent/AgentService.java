@@ -3,6 +3,7 @@ package de.hetzge.eclipse.aicoder.agent;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,6 +42,22 @@ public final class AgentService {
 		final String title = request.instructions().substring(0, Math.min(50, request.instructions().length())).replaceAll("\\s+", " ");
 		final AgentTaskJob job = new AgentTaskJob(title, request);
 		job.schedule();
+	}
+
+	public void rerun(UUID id) {
+		abort(id);
+		final Optional<AgentTask> taskOptional = AiCoderActivator.getDefault().getAgentTasksState().findTask(id);
+		if (!taskOptional.isPresent()) {
+			AiCoderActivator.log().warn("Agent task not found: " + id);
+			return;
+		}
+		final AgentTask task = taskOptional.get();
+		try {
+			execute(task.getRequest());
+		} catch (final IOException exception) {
+			AiCoderActivator.log().error("Failed to rerun agent task", exception);
+			AiCoderActivator.openErrorDialog("Failed to rerun agent task", "Failed to rerun agent task", exception);
+		}
 	}
 
 	public void abort(UUID id) {
@@ -96,7 +113,7 @@ public final class AgentService {
 				try {
 					AgentService.this.jobById.put(task.getId(), this);
 					AiCoderActivator.getDefault().getAgentTasksState().saveAgentTask(task);
-					String fileExtension = this.request.selection().path().getFileExtension();
+					final String fileExtension = this.request.selection().path().getFileExtension();
 					final List<LlmMessage> initialMessages = List.of(
 							// TODO prompt preferences
 							new LlmMessage(LlmRole.SYSTEM, """
@@ -146,7 +163,7 @@ public final class AgentService {
 						// new BuildTool(projects, fileSystem)
 						);
 					}
-					final List<LlmMessage> result = AgentLoop.execute(monitor, request.llmOption(), tools, projects, initialMessages, message -> {
+					final List<LlmMessage> result = AgentLoop.execute(monitor, this.request.llmOption(), tools, projects, initialMessages, message -> {
 						if (!AgentTaskJob.this.deleted) {
 							try {
 								AiCoderActivator.getDefault().getAgentTasksState().appendTrajectory(task.getId(), message);
