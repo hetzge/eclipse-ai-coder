@@ -62,5 +62,12 @@ public class AgentPreferencePage extends FieldEditorPreferencePage implements IW
 				agentGroup);
 		toolCallOutputLimitEditor.setValidRange(1, 10000000);
 		addField(toolCallOutputLimitEditor);
+
+		final IntegerFieldEditor trajectoryFontSizeEditor = new IntegerFieldEditor(
+				AiCoderPreferences.TRAJECTORY_FONT_SIZE_KEY,
+				"Trajectory font size:",
+				agentGroup);
+		trajectoryFontSizeEditor.setValidRange(1, 100);
+		addField(trajectoryFontSizeEditor);
 	}
 }

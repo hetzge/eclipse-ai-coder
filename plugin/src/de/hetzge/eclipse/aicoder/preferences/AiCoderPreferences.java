@@ -74,6 +74,7 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String FILE_TREE_BLACKLIST_KEY = "de.hetzge.eclipse.aicoder.file_tree_blacklist";
 	public static final String AI_RERANK_WHITELIST_KEY = "de.hetzge.eclipse.aicoder.ai_rerank_whitelist";
 	public static final String AI_RERANK_BLACKLIST_KEY = "de.hetzge.eclipse.aicoder.ai_rerank_blacklist";
+	public static final String TRAJECTORY_FONT_SIZE_KEY = "de.hetzge.eclipse.aicoder.trajectory_font_size";
 
 	@Override
 	public void initializeDefaultPreferences() {
@@ -134,6 +135,7 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(FILE_TREE_BLACKLIST_KEY, "");
 		store.setDefault(AI_RERANK_WHITELIST_KEY, "");
 		store.setDefault(AI_RERANK_BLACKLIST_KEY, "");
+		store.setDefault(TRAJECTORY_FONT_SIZE_KEY, 10);
 	}
 
 	public static String getCodestralApiKey() {
@@ -457,5 +459,9 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 				.map(String::trim)
 				.filter(entry -> !entry.isEmpty())
 				.toList();
+	}
+
+	public static int getTrajectoryFontSize() {
+		return getStore().getInt(TRAJECTORY_FONT_SIZE_KEY);
 	}
 }

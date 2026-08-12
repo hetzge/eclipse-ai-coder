@@ -15,6 +15,7 @@ import org.eclipse.swt.widgets.Text;
 import de.hetzge.eclipse.aicoder.AiCoderResultView;
 import de.hetzge.eclipse.aicoder.llm.LlmMessage;
 import de.hetzge.eclipse.aicoder.llm.LlmToolCallRequest;
+import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 
 public final class AgentTrajectoryMessageComposite extends Composite {
 
@@ -25,9 +26,10 @@ public final class AgentTrajectoryMessageComposite extends Composite {
 		final boolean assistant = "ASSISTANT".equals(message.role().name());
 		final Color background = new Color(Display.getDefault(), assistant ? 232 : 245, assistant ? 241 : 247, assistant ? 255 : 250);
 		final Color accent = new Color(Display.getDefault(), assistant ? 70 : 110, assistant ? 110 : 120, assistant ? 180 : 130);
-		final Font roleFont = new Font(Display.getDefault(), new FontData("Segoe UI", 9, SWT.BOLD));
-		final Font contentFont = new Font(Display.getDefault(), new FontData("Segoe UI", 10, SWT.NORMAL));
-		final Font reasoningFont = new Font(Display.getDefault(), new FontData("Segoe UI", 9, SWT.ITALIC));
+		final int fontSize = AiCoderPreferences.getTrajectoryFontSize();
+		final Font roleFont = new Font(Display.getDefault(), new FontData("Segoe UI", fontSize, SWT.BOLD));
+		final Font contentFont = new Font(Display.getDefault(), new FontData("Segoe UI", fontSize, SWT.NORMAL));
+		final Font reasoningFont = new Font(Display.getDefault(), new FontData("Segoe UI", (int) Math.round(fontSize * 0.8), SWT.ITALIC));
 
 		addDisposeListener(event -> {
 			background.dispose();
