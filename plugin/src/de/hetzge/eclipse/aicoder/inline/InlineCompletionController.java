@@ -545,6 +545,7 @@ public final class InlineCompletionController {
 	}
 
 	public void abort(String reason) {
+		boolean redraw = false;
 		if (this.abortDisabled) {
 			return;
 		}
@@ -576,6 +577,7 @@ public final class InlineCompletionController {
 			this.textEditor.setFocus();
 			AiCoderHistoryView.get().ifPresent(AiCoderHistoryView::refresh);
 			this.paintListener.resetMetrics();
+			redraw = true;
 		}
 		if (this.completion != null) {
 			AiCoderActivator.log().info(String.format("Unset completions (reason: '%s')", reason));
@@ -585,12 +587,15 @@ public final class InlineCompletionController {
 			this.completion = null;
 			AiCoderHistoryView.get().ifPresent(AiCoderHistoryView::refresh);
 			this.paintListener.resetMetrics();
+			redraw = true;
 		}
-		redraw();
+		if (redraw) {
+			redraw();
+		}
 	}
 
 	private void redraw() {
-		Display.getDefault().syncExec(() -> {
+		Display.getDefault().asyncExec(() -> {
 			final StyledText textWidget = this.textViewer.getTextWidget();
 			if (textWidget == null) {
 				return;
