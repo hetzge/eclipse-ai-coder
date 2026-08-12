@@ -190,7 +190,7 @@ public final class AgentTaskTreeView extends ViewPart {
 			}
 		};
 		this.abortAllTasksAction.setToolTipText("Abort all running agent tasks");
-		this.abortAllTasksAction.setImageDescriptor(AiCoderActivator.getImageDescriptor(AiCoderImageKey.REJECT_ICON));
+		this.abortAllTasksAction.setImageDescriptor(AiCoderActivator.getImageDescriptor(AiCoderImageKey.CANCELED_ICON));
 
 		this.syncWithResultAction = new Action("Sync with Result", IAction.AS_CHECK_BOX) {
 			@Override
