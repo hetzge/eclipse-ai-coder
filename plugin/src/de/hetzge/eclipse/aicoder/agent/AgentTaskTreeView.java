@@ -39,11 +39,11 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.ui.IActionBars;
-import org.eclipse.ui.IPartListener;
-import org.eclipse.ui.IWorkbenchPart;
-import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.IEditorReference;
+import org.eclipse.ui.IPartListener;
+import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.IDE;
@@ -670,7 +670,7 @@ public final class AgentTaskTreeView extends ViewPart {
 		@Override
 		public String getText(Object element) {
 			if (element instanceof final AgentTask agentTask) {
-				return String.format("%s - %s", agentTask.getTitle(), Utils.formatRelativeTime(agentTask.getCreationTime()));
+				return String.format("%s | %s", agentTask.getTitle(), Utils.formatRelativeTime(agentTask.getCreationTime()));
 			} else if (element instanceof final AgentChange agentChange) {
 				return String.format("%s [%s, +%d/-%d]",
 						this.resourceLabels.getText(ResourcesPlugin.getWorkspace().getRoot().getFile(agentChange.path())),

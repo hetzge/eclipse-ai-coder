@@ -35,6 +35,13 @@ public class AgentPreferencePage extends FieldEditorPreferencePage implements IW
 		searchToolResultLimitEditor.setValidRange(1, 100000);
 		addField(searchToolResultLimitEditor);
 
+		final IntegerFieldEditor searchToolLineContentLengthEditor = new IntegerFieldEditor(
+				AiCoderPreferences.SEARCH_TOOL_LINE_CONTENT_LENGTH_KEY,
+				"Search tool line content length limit (in characters):",
+				agentGroup);
+		searchToolLineContentLengthEditor.setValidRange(1, 100000);
+		addField(searchToolLineContentLengthEditor);
+
 		final IntegerFieldEditor readFileDefaultMaxLineCountEditor = new IntegerFieldEditor(
 				AiCoderPreferences.READ_FILE_DEFAULT_MAX_LINE_COUNT_KEY,
 				"Read file default max line count:",

@@ -68,6 +68,12 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 	private final Map<CompletionMode, ContextPreferenceSubPage> subPagesByMode;
 	private CCombo modeCombo;
 
+	private List<Control> panels;
+
+	private StackLayout stackLayout;
+
+	private Composite panelContainer;
+
 	public ContextPreferencePage() {
 		setPreferenceStore(AiCoderActivator.getDefault().getPreferenceStore());
 		setDescription("Configure context");
@@ -82,6 +88,7 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 		super.applyData(data);
 		if (data instanceof final CompletionMode mode) {
 			this.modeCombo.select(Arrays.asList(CompletionMode.values()).indexOf(mode));
+			updateBody(this.modeCombo.getSelectionIndex());
 		}
 	}
 
@@ -111,30 +118,33 @@ public class ContextPreferencePage extends PreferencePage implements IWorkbenchP
 		this.modeCombo = new CCombo(modeComposite, SWT.DROP_DOWN | SWT.READ_ONLY | SWT.FLAT | SWT.BORDER);
 		this.modeCombo.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
 
-		final Composite panelContainer = new Composite(composite, SWT.NONE);
-		panelContainer.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
-		final StackLayout stackLayout = new StackLayout();
-		panelContainer.setLayout(stackLayout);
+		this.panelContainer = new Composite(composite, SWT.NONE);
+		this.panelContainer.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
+		this.stackLayout = new StackLayout();
+		this.panelContainer.setLayout(this.stackLayout);
 
-		final List<Control> panels = new ArrayList<>();
+		this.panels = new ArrayList<>();
 		for (final CompletionMode mode : CompletionMode.values()) {
 			this.modeCombo.add(mode.name());
-			panels.add(this.subPagesByMode.get(mode).createContents(panelContainer));
+			this.panels.add(this.subPagesByMode.get(mode).createContents(this.panelContainer));
 		}
 
 		this.modeCombo.select(0);
-		stackLayout.topControl = panels.get(0);
-		panelContainer.layout();
+		this.stackLayout.topControl = this.panels.get(0);
+		this.panelContainer.layout();
 
 		this.modeCombo.addSelectionListener(SelectionListener.widgetSelectedAdapter(event -> {
-			final int index = this.modeCombo.getSelectionIndex();
-			if (index >= 0 && index < panels.size()) {
-				stackLayout.topControl = panels.get(index);
-				panelContainer.layout();
-			}
+			updateBody(this.modeCombo.getSelectionIndex());
 		}));
 
 		return composite;
+	}
+
+	private void updateBody(int index) {
+		if (index >= 0 && index < this.panels.size()) {
+			this.stackLayout.topControl = this.panels.get(index);
+			this.panelContainer.layout();
+		}
 	}
 
 	@Override

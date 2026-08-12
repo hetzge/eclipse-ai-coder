@@ -85,6 +85,10 @@ public final class SearchTool extends Tool {
 					if (builder.length() > 0) {
 						builder.append('\n');
 					}
+					final int lineContentLength = AiCoderPreferences.getSearchToolLineContentLength();
+					final String lineContent = result.getLineContent().length() > lineContentLength
+							? result.getLineContent().substring(0, lineContentLength) + "..."
+							: result.getLineContent();
 					builder
 							.append(project.getName())
 							.append(':')
@@ -96,7 +100,7 @@ public final class SearchTool extends Tool {
 							.append(':')
 							.append(result.getColumnEnd())
 							.append(':')
-							.append(result.getLineContent());
+							.append(lineContent);
 					resultCount++;
 				}
 			}
