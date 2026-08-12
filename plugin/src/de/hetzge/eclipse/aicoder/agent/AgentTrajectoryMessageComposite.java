@@ -29,7 +29,7 @@ public final class AgentTrajectoryMessageComposite extends Composite {
 		final int fontSize = AiCoderPreferences.getTrajectoryFontSize();
 		final Font roleFont = new Font(Display.getDefault(), new FontData("Segoe UI", fontSize, SWT.BOLD));
 		final Font contentFont = new Font(Display.getDefault(), new FontData("Segoe UI", fontSize, SWT.NORMAL));
-		final Font reasoningFont = new Font(Display.getDefault(), new FontData("Segoe UI", (int) Math.round(fontSize * 0.8), SWT.ITALIC));
+		final Font reasoningFont = new Font(Display.getDefault(), new FontData("Segoe UI", fontSize, SWT.ITALIC));
 
 		addDisposeListener(event -> {
 			background.dispose();
