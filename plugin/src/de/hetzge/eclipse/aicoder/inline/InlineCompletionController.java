@@ -855,6 +855,9 @@ public final class InlineCompletionController {
 
 		public void resetMetrics() {
 			final StyledText widget = InlineCompletionController.this.textViewer.getTextWidget();
+			if (widget == null) {
+				return;
+			}
 			final StyleRange[] styleRanges = widget.getStyleRanges();
 			for (final StyleRange styleRange : styleRanges) {
 				if (this.modifiedMetrics.contains(styleRange.metrics)) {
