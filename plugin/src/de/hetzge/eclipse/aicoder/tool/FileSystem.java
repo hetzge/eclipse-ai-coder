@@ -96,13 +96,14 @@ public final class FileSystem {
 	}
 
 	public void putFile(IPath path, String content) throws IOException {
-		if (!this.referenceContentByPath.containsKey(path)) {
+		final IPath normalizedPath = normalizePath(path);
+		if (!this.referenceContentByPath.containsKey(normalizedPath)) {
 			if (this.workspaceRoot.exists(path)) {
-				this.referenceContentByPath.put(path, EclipseUtils.readContentFromBufferOrFile(this.workspaceRoot, path));
+				this.referenceContentByPath.put(normalizedPath, EclipseUtils.readContentFromBufferOrFile(this.workspaceRoot, path));
 			}
 			// else: the file does not exist yet, keep the reference absent so it is tracked as created.
 		}
-		this.contentByPath.put(normalizePath(path), content);
+		this.contentByPath.put(normalizedPath, content);
 	}
 
 	public String readFile(IPath path) throws IOException {
@@ -198,10 +199,16 @@ public final class FileSystem {
 		for (final Path path : Files.walk(folder).filter(Files::isRegularFile).toList()) {
 			if (path.getFileName().toString().endsWith(".original")) {
 				final IPath relativePath = IPath.fromPath(path.getParent().relativize(path)).removeFileExtension();
-				this.referenceContentByPath.put(relativePath, Files.readString(path));
+				// Normalize the path to ensure consistent key representation across persist/load cycles
+				final String normalizedSegmentString = relativePath.toPortableString();
+				final IPath normalizedPath = IPath.fromPortableString(normalizedSegmentString);
+				this.referenceContentByPath.put(normalizedPath, Files.readString(path));
 			} else {
 				final IPath relativePath = IPath.fromPath(folder.relativize(path));
-				this.contentByPath.put(relativePath, Files.readString(path));
+				// Normalize the path to ensure consistent key representation across persist/load cycles
+				final String normalizedSegmentString = relativePath.toPortableString();
+				final IPath normalizedPath = IPath.fromPortableString(normalizedSegmentString);
+				this.contentByPath.put(normalizedPath, Files.readString(path));
 			}
 		}
 	}
