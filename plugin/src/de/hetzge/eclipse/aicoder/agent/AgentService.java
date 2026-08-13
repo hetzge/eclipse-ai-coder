@@ -20,6 +20,7 @@ import com.github.f4b6a3.uuid.UuidCreator;
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.llm.LlmMessage;
 import de.hetzge.eclipse.aicoder.llm.LlmRole;
+import de.hetzge.eclipse.aicoder.trajectory.MessageTrajectoryEntry;
 import de.hetzge.eclipse.aicoder.tool.CreateFileTool;
 import de.hetzge.eclipse.aicoder.tool.EditFileTool;
 import de.hetzge.eclipse.aicoder.tool.FileSystem;
@@ -140,7 +141,7 @@ public final class AgentService {
 									Map.entry("selection_file_extension", fileExtension != null ? fileExtension : ""),
 									Map.entry("selection_content", this.request.selection().content())))));
 					for (final LlmMessage message : initialMessages) {
-						AiCoderActivator.getDefault().getAgentTasksState().appendTrajectory(task.getId(), message);
+						AiCoderActivator.getDefault().getAgentTasksState().appendTrajectory(task.getId(), new MessageTrajectoryEntry(message));
 					}
 					final List<IProject> projects = this.request.projects();
 					final FileSystem fileSystem = new FileSystem(projects, projects.get(0).getWorkspace().getRoot());
@@ -166,7 +167,7 @@ public final class AgentService {
 					final List<LlmMessage> result = AgentLoop.execute(monitor, this.request.llmOption(), tools, projects, initialMessages, message -> {
 						if (!AgentTaskJob.this.deleted) {
 							try {
-								AiCoderActivator.getDefault().getAgentTasksState().appendTrajectory(task.getId(), message);
+								AiCoderActivator.getDefault().getAgentTasksState().appendTrajectory(task.getId(), new MessageTrajectoryEntry(message));
 								task.setChanges(fileSystem.toAgentChanges());
 								AgentStorage.saveAgentTask(task);
 								fileSystem.persist(AgentStorage.getFileSystemPath(task.getId()).toPath());

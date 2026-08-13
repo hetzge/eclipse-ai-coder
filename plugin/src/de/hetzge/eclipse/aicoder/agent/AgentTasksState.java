@@ -13,7 +13,7 @@ import org.eclipse.core.runtime.ListenerList;
 import com.github.f4b6a3.uuid.util.UuidComparator;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
-import de.hetzge.eclipse.aicoder.llm.LlmMessage;
+import de.hetzge.eclipse.aicoder.trajectory.TrajectoryEntry;
 
 public final class AgentTasksState {
 
@@ -60,9 +60,9 @@ public final class AgentTasksState {
 		}
 	}
 
-	public synchronized void appendTrajectory(UUID id, LlmMessage message) throws IOException {
-		AgentStorage.appendTrajectory(id, message);
-		fireAgentTrajectoryChanged(id, message);
+	public synchronized void appendTrajectory(UUID id, TrajectoryEntry entry) throws IOException {
+		AgentStorage.appendTrajectory(id, entry);
+		fireAgentTrajectoryChanged(id, entry);
 	}
 
 	public synchronized void addListener(AgentTasksStateListener listener) {
@@ -84,17 +84,17 @@ public final class AgentTasksState {
 	}
 
 	public synchronized void loadAndAddTrajectoryListener(UUID agentTaskId, AgentTrajectoryStateListener listener) throws IOException {
-		final List<LlmMessage> messages = AgentStorage.loadTrajectory(agentTaskId);
-		for (final LlmMessage message : messages) {
-			listener.onAgentTrajectoryChanged(agentTaskId, message);
+		final List<TrajectoryEntry> entries = AgentStorage.loadTrajectory(agentTaskId);
+		for (final TrajectoryEntry entry : entries) {
+			listener.onAgentTrajectoryChanged(agentTaskId, entry);
 		}
 		addTrajectoryListener(agentTaskId, listener);
 	}
 
 	public synchronized void addTrajectoryListener(UUID agentTaskId, AgentTrajectoryStateListener listener) {
-		this.trajectoryListeners.add((id, message) -> {
+		this.trajectoryListeners.add((id, entry) -> {
 			if (id.equals(agentTaskId)) {
-				listener.onAgentTrajectoryChanged(id, message);
+				listener.onAgentTrajectoryChanged(id, entry);
 			}
 		});
 	}
@@ -103,9 +103,9 @@ public final class AgentTasksState {
 		this.trajectoryListeners.remove(listener);
 	}
 
-	private void fireAgentTrajectoryChanged(UUID id, LlmMessage message) {
+	private void fireAgentTrajectoryChanged(UUID id, TrajectoryEntry entry) {
 		for (final AgentTrajectoryStateListener listener : this.trajectoryListeners) {
-			listener.onAgentTrajectoryChanged(id, message);
+			listener.onAgentTrajectoryChanged(id, entry);
 		}
 	}
 
@@ -116,6 +116,6 @@ public final class AgentTasksState {
 
 	@FunctionalInterface
 	public static interface AgentTrajectoryStateListener {
-		void onAgentTrajectoryChanged(UUID agentTaskId, LlmMessage message);
+		void onAgentTrajectoryChanged(UUID agentTaskId, TrajectoryEntry entry);
 	}
 }

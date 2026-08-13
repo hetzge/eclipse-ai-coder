@@ -20,6 +20,9 @@ import org.eclipse.ui.part.EditorPart;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.llm.LlmMessage;
+import de.hetzge.eclipse.aicoder.trajectory.ErrorTrajectoryEntry;
+import de.hetzge.eclipse.aicoder.trajectory.MessageTrajectoryEntry;
+import de.hetzge.eclipse.aicoder.trajectory.TrajectoryEntry;
 
 public final class AgentTrajectoryEditor extends EditorPart {
 
@@ -107,16 +110,22 @@ public final class AgentTrajectoryEditor extends EditorPart {
 
 	private class AgentTrajectoryStateListener implements AgentTasksState.AgentTrajectoryStateListener {
 		@Override
-		public void onAgentTrajectoryChanged(UUID id, LlmMessage message) {
-			Display.getDefault().asyncExec(() -> {
-				final AgentTrajectoryMessageComposite messageComposite = new AgentTrajectoryMessageComposite(AgentTrajectoryEditor.this.parentComposite, message);
-				messageComposite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
-				AgentTrajectoryEditor.this.parentComposite.layout(true, true);
-				AgentTrajectoryEditor.this.parentComposite.pack();
-				final int width = AgentTrajectoryEditor.this.scrollComposite.getClientArea().width;
-				final int height = AgentTrajectoryEditor.this.parentComposite.computeSize(width, SWT.DEFAULT).y;
-				AgentTrajectoryEditor.this.scrollComposite.setMinSize(Math.max(1, width), Math.max(1, height));
-			});
+		public void onAgentTrajectoryChanged(UUID id, TrajectoryEntry entry) {
+			if (entry instanceof MessageTrajectoryEntry messageEntry) {
+				final LlmMessage message = messageEntry.message();
+				Display.getDefault().asyncExec(() -> addComposite(new AgentTrajectoryMessageComposite(AgentTrajectoryEditor.this.parentComposite, message)));
+			} else if (entry instanceof ErrorTrajectoryEntry errorEntry) {
+				Display.getDefault().asyncExec(() -> addComposite(new AgentTrajectoryErrorComposite(AgentTrajectoryEditor.this.parentComposite, errorEntry.message())));
+			}
 		}
+	}
+
+	private void addComposite(Composite composite) {
+		composite.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
+		this.parentComposite.layout(true, true);
+		this.parentComposite.pack();
+		final int width = this.scrollComposite.getClientArea().width;
+		final int height = this.parentComposite.computeSize(width, SWT.DEFAULT).y;
+		this.scrollComposite.setMinSize(Math.max(1, width), Math.max(1, height));
 	}
 }

@@ -19,7 +19,9 @@ import org.eclipse.core.runtime.Platform;
 import com.github.f4b6a3.uuid.util.UuidComparator;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
-import de.hetzge.eclipse.aicoder.llm.LlmMessage;
+import de.hetzge.eclipse.aicoder.llm.LlmRole;
+import de.hetzge.eclipse.aicoder.trajectory.MessageTrajectoryEntry;
+import de.hetzge.eclipse.aicoder.trajectory.TrajectoryEntry;
 import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
 import mjson.Json;
 
@@ -68,24 +70,26 @@ public final class AgentStorage {
 		}
 	}
 
-	public static void appendTrajectory(UUID id, LlmMessage message) throws IOException {
+	public static void appendTrajectory(UUID id, TrajectoryEntry entry) throws IOException {
 		final IPath trajectoryFilePath = getTrajectoryFilePath(id);
 		Files.createDirectories(trajectoryFilePath.toPath().getParent());
 		Files.writeString(trajectoryFilePath.toPath(),
-				message.toJson().toString() + "\n",
+				entry.toJson().toString() + "\n",
 				StandardCharsets.UTF_8,
 				StandardOpenOption.CREATE,
 				StandardOpenOption.APPEND);
 	}
 
-	public static List<LlmMessage> loadTrajectory(UUID id) throws IOException {
+	public static List<TrajectoryEntry> loadTrajectory(UUID id) throws IOException {
 		final IPath trajectoryFilePath = getTrajectoryFilePath(id);
 		if (!Files.exists(trajectoryFilePath.toPath())) {
 			return List.of();
 		}
 		return Files.readAllLines(trajectoryFilePath.toPath(), StandardCharsets.UTF_8)
 				.stream()
-				.map(it -> LlmMessage.fromJson(Json.read(it)))
+				.map(it -> TrajectoryEntry.fromJson(Json.read(it)))
+				.filter(Optional::isPresent)
+				.map(Optional::get)
 				.toList();
 	}
 
@@ -105,8 +109,9 @@ public final class AgentStorage {
 				continue;
 			}
 			final Json json = Json.read(line);
-			if (json.has("role") && "ASSISTANT".equals(json.at("role").asString())) {
-				return Optional.of(json.at("content").asString());
+			final Optional<MessageTrajectoryEntry> entry = MessageTrajectoryEntry.fromJson(json);
+			if (entry.isPresent() && entry.get().message().role() == LlmRole.ASSISTANT) {
+				return Optional.of(entry.get().message().content());
 			}
 		}
 		return Optional.empty();
