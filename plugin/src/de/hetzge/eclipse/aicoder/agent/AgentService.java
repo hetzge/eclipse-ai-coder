@@ -20,7 +20,6 @@ import com.github.f4b6a3.uuid.UuidCreator;
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.llm.LlmMessage;
 import de.hetzge.eclipse.aicoder.llm.LlmRole;
-import de.hetzge.eclipse.aicoder.trajectory.MessageTrajectoryEntry;
 import de.hetzge.eclipse.aicoder.tool.CreateFileTool;
 import de.hetzge.eclipse.aicoder.tool.EditFileTool;
 import de.hetzge.eclipse.aicoder.tool.FileSystem;
@@ -28,7 +27,10 @@ import de.hetzge.eclipse.aicoder.tool.ListFilesTool;
 import de.hetzge.eclipse.aicoder.tool.ReadFileTool;
 import de.hetzge.eclipse.aicoder.tool.SearchTool;
 import de.hetzge.eclipse.aicoder.tool.Tool;
+import de.hetzge.eclipse.aicoder.trajectory.ErrorTrajectoryEntry;
+import de.hetzge.eclipse.aicoder.trajectory.MessageTrajectoryEntry;
 import de.hetzge.eclipse.aicoder.util.JinjaUtils;
+import de.hetzge.eclipse.aicoder.util.Utils;
 
 public final class AgentService {
 
@@ -190,6 +192,7 @@ public final class AgentService {
 					}
 				} catch (final Exception exception) {
 					AiCoderActivator.log().error("Failed to execute agent task", exception);
+					AiCoderActivator.getDefault().getAgentTasksState().appendTrajectory(task.getId(), new ErrorTrajectoryEntry(Utils.getStacktraceString(exception)));
 					if (!AgentTaskJob.this.deleted) {
 						task.setStatus(AgentStatus.ERROR);
 						AgentStorage.saveAgentTask(task);
