@@ -79,7 +79,7 @@ public class FillInMiddleContextEntry extends ContextEntry {
 		try {
 			final int lastLine = calculateLastLine(document, modelOffset, config);
 			final int lineOffset = modelOffset;
-			final int length = document.getLineOffset(lastLine) - modelOffset;
+			final int length = document.getLineOffset(lastLine) + document.getLineLength(lastLine) - modelOffset;
 			return document.get(lineOffset, length);
 		} catch (final BadLocationException exception) {
 			throw new CoreException(Status.error("Failed to get suffix", exception));
