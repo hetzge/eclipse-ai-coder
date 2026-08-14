@@ -65,7 +65,7 @@ public final class LlmUtils {
 
 	private static CompletableFuture<LlmResponse> execute(LlmOption llmModelOption, String systemPrompt, String prompt, String suffix) {
 		final List<LlmMessage> messages;
-		if (StringUtils.isBlank(suffix)) {
+		if (suffix == null) {
 			messages = List.of(
 					new LlmMessage(LlmRole.SYSTEM, "", systemPrompt, List.of()),
 					new LlmMessage(LlmRole.USER, "", prompt, List.of()));
