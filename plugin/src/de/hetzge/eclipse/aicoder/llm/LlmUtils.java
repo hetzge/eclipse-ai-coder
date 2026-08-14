@@ -198,8 +198,7 @@ public final class LlmUtils {
 						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
 						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, duration, false);
 					} else {
-						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
-						return new LlmResponse(llmModelOption, "", "", response.body(), List.of(), 0, 0, duration, true);
+						throw new RuntimeException(String.format("Error: %s (%s)", response.body(), response.statusCode()));
 					}
 				});
 	}
@@ -268,8 +267,7 @@ public final class LlmUtils {
 						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
 						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, duration, false);
 					} else {
-						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
-						return new LlmResponse(llmModelOption, "", "", response.body(), List.of(), 0, 0, duration, true);
+						throw new RuntimeException(String.format("Error: %s (%s)", response.body(), response.statusCode()));
 					}
 				});
 	}
@@ -362,8 +360,7 @@ public final class LlmUtils {
 						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
 						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, duration, false);
 					} else {
-						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
-						return new LlmResponse(llmModelOption, "", "", response.body(), List.of(), 0, 0, duration, true);
+						throw new RuntimeException(String.format("Error: %s (%s)", response.body(), response.statusCode()));
 					}
 				});
 	}
@@ -487,8 +484,7 @@ public final class LlmUtils {
 						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
 						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, duration, false);
 					} else {
-						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
-						return new LlmResponse(llmModelOption, "", "", response.body(), List.of(), 0, 0, duration, true);
+						throw new RuntimeException(String.format("Error: %s (%s)", response.body(), response.statusCode()));
 					}
 				});
 	}
@@ -570,8 +566,7 @@ public final class LlmUtils {
 						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
 						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, duration, false);
 					} else {
-						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
-						return new LlmResponse(llmModelOption, "", "", response.body(), List.of(), 0, 0, duration, true);
+						throw new RuntimeException(String.format("Error: %s (%s)", response.body(), response.statusCode()));
 					}
 				});
 	}
@@ -619,8 +614,7 @@ public final class LlmUtils {
 						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
 						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, List.of(), inputTokens, outputTokens, duration, false);
 					} else {
-						AiCoderActivator.log().log(new Status(IStatus.WARNING, AiCoderActivator.PLUGIN_ID, String.format("Error: %s (%s)", response.body(), response.statusCode())));
-						return new LlmResponse(llmModelOption, "", "", response.body(), List.of(), 0, 0, duration, true);
+						throw new RuntimeException(String.format("Error: %s (%s)", response.body(), response.statusCode()));
 					}
 				});
 	}
