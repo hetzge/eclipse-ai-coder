@@ -242,7 +242,7 @@
           icon="icons/icon16.png"
           id="de.hetzge.eclipse.aicoder.ContextView"
           inject="true"
-          name="AI Coder Context">
+          name="Context">
     </view>
     <view
           category="de.hetzge.eclipse.aicoder"
@@ -250,7 +250,7 @@
           icon="icons/icon16.png"
           id="de.hetzge.eclipse.aicoder.AiCoderHistoryView"
           inject="true"
-          name="AI Coder History">
+          name="History">
     </view>
     <view
           category="de.hetzge.eclipse.aicoder"
@@ -258,7 +258,7 @@
           icon="icons/icon16.png"
           id="de.hetzge.eclipse.aicoder.AgentTaskTreeView"
           inject="true"
-          name="AI Coder Tasks">
+          name="Tasks">
     </view>
     <view
           category="de.hetzge.eclipse.aicoder"
@@ -266,7 +266,7 @@
           icon="icons/icon16.png"
           id="de.hetzge.eclipse.aicoder.ScratchpadView"
           inject="true"
-          name="AI Coder Scratchpad">
+          name="Scratchpad">
     </view>
     <view
           category="de.hetzge.eclipse.aicoder"
@@ -274,7 +274,7 @@
           icon="icons/icon16.png"
           id="de.hetzge.eclipse.aicoder.AiCoderResultView"
           inject="true"
-          name="AI Coder Result">
+          name="Result">
     </view>
  </extension>
  <extension
