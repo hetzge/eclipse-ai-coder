@@ -32,7 +32,7 @@ public final class ContextPreferences {
 	static {
 		contextPreferencesByMode = new HashMap<>();
 		for (final CompletionMode mode : CompletionMode.values()) {
-			final ContextPreferences preferences = new ContextPreferences(PREFERENCES_PREFERENCE_NODE + "." + mode.name());
+			final ContextPreferences preferences = new ContextPreferences(mode, PREFERENCES_PREFERENCE_NODE + "." + mode.name());
 			preferences.loadPreferences();
 			contextPreferencesByMode.put(mode, preferences);
 		}
@@ -42,6 +42,7 @@ public final class ContextPreferences {
 		return contextPreferencesByMode.get(mode);
 	}
 
+	private final CompletionMode mode;
 	private final String qualifier;
 	private final Set<ContextEntryKey> blacklist;
 	private final Set<ContextEntryKey> stickylist;
@@ -49,7 +50,8 @@ public final class ContextPreferences {
 	private final List<CustomContextEntryData> customContextDataEntries;
 	private final List<ContextTypePositionItem> contextTypePositions;
 
-	private ContextPreferences(String qualifier) {
+	private ContextPreferences(CompletionMode mode, String qualifier) {
+		this.mode = mode;
 		this.qualifier = qualifier;
 		this.blacklist = new HashSet<>();
 		this.stickylist = new HashSet<>();
@@ -93,7 +95,7 @@ public final class ContextPreferences {
 	}
 
 	private void savePreferences() {
-		final Preferences preferences = InstanceScope.INSTANCE.getNode(PREFERENCES_PREFERENCE_NODE);
+		final Preferences preferences = InstanceScope.INSTANCE.getNode(this.qualifier);
 
 		// Save blacklist
 		final String blacklistString = this.blacklist.stream()
@@ -211,7 +213,7 @@ public final class ContextPreferences {
 	}
 
 	public void setContextTypeEnabled(String contextKey, boolean enabled) {
-		if (contextKey.startsWith(FillInMiddleContextEntry.PREFIX)) {
+		if (this.mode == CompletionMode.INLINE && contextKey.startsWith(FillInMiddleContextEntry.PREFIX)) {
 			return; // FIM must be always enabled
 		}
 		this.contextTypePositions.replaceAll(item -> contextKey.startsWith(item.prefix()) ? item.withEnabled(enabled) : item);
