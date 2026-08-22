@@ -2,6 +2,7 @@ package de.hetzge.eclipse.aicoder.tool;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IPath;
@@ -23,7 +24,7 @@ public final class ReadFileTool extends Tool {
 						.set("properties", Json.object()
 								.set("path", Json.object()
 										.set("type", "string")
-										.set("description", "Local file path (relative to workspace root, as example " + ToolUtils.createPathPrefixExamples(projects) + ")"))
+										.set("description", "Local file path (relative to workspace root, as example " + ToolUtils.createPathPrefixExamples(projects) + "). If only one project is configured, the project prefix can be omitted."))
 								.set("start_line", Json.object()
 										.set("type", "integer")
 										.set("description", "1-indexed line number to begin reading. Default: 1")
@@ -64,12 +65,17 @@ public final class ReadFileTool extends Tool {
 		if (pathArg == null || pathArg.isBlank()) {
 			return "Error: path argument is required.";
 		}
-		if (this.projects.stream().noneMatch(it -> pathArg.startsWith(it.getName()))) {
+		// Be tolerant: if only one project is configured, a missing project prefix in the path is ignored
+		final Optional<IPath> pathOptional = this.projects.stream()
+				.map(project -> ToolUtils.resolvePath(pathArg, project, this.projects))
+				.flatMap(Optional::stream)
+				.findFirst();
+		if (pathOptional.isEmpty()) {
 			return "Error: path ('" + pathArg + "') must be relative to the workspace (as example " + ToolUtils.createPathPrefixExamples(this.projects) + ").";
 		}
 		String content;
 		try {
-			content = this.fileSystem.readFile(IPath.fromOSString(pathArg));
+			content = this.fileSystem.readFile(pathOptional.get());
 		} catch (final IOException | IllegalArgumentException exception) {
 			AiCoderActivator.log().error("Error reading file: " + pathArg, exception);
 			return "Error reading file: " + exception.getMessage();

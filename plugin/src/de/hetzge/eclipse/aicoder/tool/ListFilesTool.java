@@ -29,7 +29,7 @@ public final class ListFilesTool extends Tool {
 						.set("properties", Json.object()
 								.set("path", Json.object()
 										.set("type", "string")
-										.set("description", "The path to list files from (relative to workspace root, as example " + ToolUtils.createPathPrefixExamples(projects) + ")."))
+										.set("description", "The path to list files from (relative to workspace root, as example " + ToolUtils.createPathPrefixExamples(projects) + "). If only one project is configured, the project prefix can be omitted."))
 								.set("file_pattern", Json.object()
 										.set("type", "string")
 										.set("description", "A regular-expression or filename glob pattern to search for in file names (for example, *.xml or .*\\\\.xml)."))
@@ -86,14 +86,13 @@ public final class ListFilesTool extends Tool {
 		final Pattern filePattern = compileFilePattern(filePatternStr);
 
 		// Determine the container within the project
-		final IPath projectPrefix = IPath.fromOSString(project.getName());
-		final IPath requestedPath = pathArg.isEmpty() || pathArg.trim().equals(".")
-				? projectPrefix
-				: IPath.fromOSString(pathArg);
-		// The path should be under the project
-		if (!projectPrefix.isPrefixOf(requestedPath)) {
+		// Be tolerant: if only one project is configured, a missing project prefix in the path is ignored
+		final Optional<IPath> requestedPathOptional = ToolUtils.resolvePath(pathArg, project, this.projects);
+		if (requestedPathOptional.isEmpty()) {
 			return "Error: Path must be within the project " + project.getName() + ".";
 		}
+		final IPath requestedPath = requestedPathOptional.get();
+		final IPath projectPrefix = IPath.fromOSString(project.getName());
 		final IPath relativePath = requestedPath.removeFirstSegments(projectPrefix.segmentCount());
 		final IContainer container;
 		if (relativePath.isEmpty()) {
