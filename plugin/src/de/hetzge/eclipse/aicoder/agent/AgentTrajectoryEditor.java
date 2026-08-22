@@ -11,7 +11,6 @@ import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.ScrolledComposite;
 import org.eclipse.swt.layout.GridData;
-import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
@@ -61,8 +60,10 @@ public final class AgentTrajectoryEditor extends EditorPart {
 	@Override
 	public void createPartControl(Composite parent) {
 		this.scrollComposite = new ScrolledComposite(parent, SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
-		this.scrollComposite.setExpandVertical(false);
-		this.scrollComposite.setExpandHorizontal(false);
+		// Let the ScrolledComposite manage the content size: the content is at least as large as the
+		// given min size, so the scroll range always matches the computed trajectory height exactly.
+		this.scrollComposite.setExpandHorizontal(true);
+		this.scrollComposite.setExpandVertical(true);
 
 		this.parentComposite = new Composite(this.scrollComposite, SWT.NONE);
 		// Absolute positioning: each visible entry is placed at its fixed vertical offset.
@@ -133,8 +134,11 @@ public final class AgentTrajectoryEditor extends EditorPart {
 		final int width = Math.max(1, this.scrollComposite.getClientArea().width);
 		if (width != this.measuredWidth) {
 			// The viewport width changed: discard all cached heights and re-measure everything.
+			// All vertical offsets shift, so force a rebuild of the visible slice below.
 			this.measuredWidth = width;
 			this.heights.clear();
+			this.lastStartIndex = -1;
+			this.lastEndIndex = -1;
 			for (final TrajectoryEntry entry : this.entries) {
 				this.heights.add(measureEntry(entry));
 			}
@@ -152,7 +156,6 @@ public final class AgentTrajectoryEditor extends EditorPart {
 		}
 
 		// The whole trajectory occupies this much space so the scrollbar is correct.
-		this.parentComposite.setSize(width, totalHeight);
 		this.scrollComposite.setMinSize(Math.max(1, width), totalHeight);
 
 		final int originY = this.scrollComposite.getOrigin().y;
@@ -209,27 +212,34 @@ public final class AgentTrajectoryEditor extends EditorPart {
 	}
 
 	private int measureEntry(final TrajectoryEntry entry) {
-		final Composite probe = new Composite(this.parentComposite, SWT.NONE);
-		probe.setLayout(new GridLayout(1, false));
-
-		final Composite child;
-		if (entry instanceof final MessageTrajectoryEntry messageEntry) {
-			child = new AgentTrajectoryMessageComposite(probe, messageEntry.message());
-		} else if (entry instanceof final ErrorTrajectoryEntry errorEntry) {
-			child = new AgentTrajectoryErrorComposite(probe, errorEntry.message());
-		} else {
-			probe.dispose();
+		if (this.measuredWidth <= 0) {
 			return 0;
 		}
 
-		child.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
-		probe.setSize(this.measuredWidth, 1000);
-		probe.layout(true, true);
+		// The probe is only a temporary parent. It must NOT apply a layout with margins,
+		// otherwise the entry is measured at a smaller width than it is rendered with
+		// (measuredWidth - margins), which makes the cached heights drift from the real
+		// layout and the total height ends up too small to scroll to the end.
+		final Composite probe = new Composite(this.parentComposite, SWT.NONE);
 
-		final int height = child.getSize().y;
-		child.dispose();
-		probe.dispose();
-		return height;
+		try {
+			final Composite child;
+			if (entry instanceof final MessageTrajectoryEntry messageEntry) {
+				child = new AgentTrajectoryMessageComposite(probe, messageEntry.message());
+			} else if (entry instanceof final ErrorTrajectoryEntry errorEntry) {
+				child = new AgentTrajectoryErrorComposite(probe, errorEntry.message());
+			} else {
+				return 0;
+			}
+
+			child.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
+
+			// Measure at exactly the width that is later used for rendering, with an
+			// unconstrained height so wrapped text is fully taken into account.
+			return child.computeSize(this.measuredWidth, SWT.DEFAULT).y;
+		} finally {
+			probe.dispose();
+		}
 	}
 
 	private Composite createComposite(final Composite parent, final TrajectoryEntry entry) {
