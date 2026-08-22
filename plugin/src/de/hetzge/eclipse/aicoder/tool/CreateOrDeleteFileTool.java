@@ -1,6 +1,7 @@
 package de.hetzge.eclipse.aicoder.tool;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IProject;
@@ -55,11 +56,16 @@ public final class CreateOrDeleteFileTool extends Tool {
 		if (pathArg == null || pathArg.isBlank()) {
 			return "Error: path argument is required.";
 		}
-		if (this.projects.stream().noneMatch(it -> pathArg.startsWith(it.getName()))) {
+		// Be tolerant: if only one project is configured, a missing project prefix in the path is ignored
+		final Optional<IPath> pathOptional = this.projects.stream()
+				.map(project -> ToolUtils.resolvePath(pathArg, project, this.projects))
+				.flatMap(Optional::stream)
+				.findFirst();
+		if (pathOptional.isEmpty()) {
 			return "Error: path ('" + pathArg + "') must be relative to the workspace (as example " + ToolUtils.createPathPrefixExamples(this.projects) + ").";
 		}
+		final IPath path = pathOptional.get();
 		try {
-			final IPath path = IPath.fromOSString(pathArg);
 			final IWorkspaceRoot workspaceRoot = this.projects.get(0).getWorkspace().getRoot();
 			final IResource resource = workspaceRoot.findMember(path);
 			if (resource != null && resource.exists() && resource instanceof IContainer) {

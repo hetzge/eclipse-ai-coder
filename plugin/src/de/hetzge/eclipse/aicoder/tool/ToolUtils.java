@@ -28,7 +28,11 @@ public final class ToolUtils {
 		if (pathArgument == null || pathArgument.isBlank() || pathArgument.trim().equals(".")) {
 			return Optional.of(projectPrefix);
 		}
-		final IPath requestedPath = IPath.fromOSString(pathArgument);
+		final String cleanedPathArgument = cleanPathArgument(pathArgument);
+		if (cleanedPathArgument.isEmpty()) {
+			return Optional.of(projectPrefix);
+		}
+		final IPath requestedPath = IPath.fromOSString(cleanedPathArgument).makeRelative();
 		if (projectPrefix.isPrefixOf(requestedPath)) {
 			return Optional.of(requestedPath);
 		}
@@ -37,6 +41,14 @@ public final class ToolUtils {
 			return Optional.of(projectPrefix.append(requestedPath));
 		}
 		return Optional.empty();
+	}
+
+	private static String cleanPathArgument(String pathArgument) {
+		String cleaned = pathArgument.trim().replace('\\', '/');
+		while (cleaned.startsWith("./")) {
+			cleaned = cleaned.substring(2);
+		}
+		return cleaned;
 	}
 
 }

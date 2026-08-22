@@ -29,7 +29,7 @@ public final class ListFilesTool extends Tool {
 						.set("properties", Json.object()
 								.set("path", Json.object()
 										.set("type", "string")
-										.set("description", "The path to list files from (relative to workspace root, as example " + ToolUtils.createPathPrefixExamples(projects) + "). If only one project is configured, the project prefix can be omitted."))
+										.set("description", "The path to list files from (relative to workspace root, as example " + ToolUtils.createPathPrefixExamples(projects) + ")."))
 								.set("file_pattern", Json.object()
 										.set("type", "string")
 										.set("description", "A regular-expression or filename glob pattern to search for in file names (for example, *.xml or .*\\\\.xml)."))

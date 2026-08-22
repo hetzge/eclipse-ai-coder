@@ -24,7 +24,7 @@ public final class ReadFileTool extends Tool {
 						.set("properties", Json.object()
 								.set("path", Json.object()
 										.set("type", "string")
-										.set("description", "Local file path (relative to workspace root, as example " + ToolUtils.createPathPrefixExamples(projects) + "). If only one project is configured, the project prefix can be omitted."))
+										.set("description", "Local file path (relative to workspace root, as example " + ToolUtils.createPathPrefixExamples(projects) + ")."))
 								.set("start_line", Json.object()
 										.set("type", "integer")
 										.set("description", "1-indexed line number to begin reading. Default: 1")

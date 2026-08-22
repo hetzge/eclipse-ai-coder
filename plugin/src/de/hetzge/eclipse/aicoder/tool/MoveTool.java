@@ -67,12 +67,14 @@ public final class MoveTool extends Tool {
 			return "Error: operation argument is required.";
 		}
 
-		final IProject project = this.projects.get(0); // Use the first project
+		final IProject project = resolveProject(sourceArg);
+		// Be tolerant: ignore redundant project prefixes in the paths
+		final IPath sourcePath = toResourcePath(sourceArg, project);
 
 		try {
 			switch (operation) {
 			case "delete": {
-				final IResource resource = project.findMember(IPath.fromOSString(sourceArg));
+				final IResource resource = project.findMember(sourcePath);
 				if (resource == null || !resource.exists()) {
 					return "Error: Source not found: " + sourceArg;
 				}
@@ -85,11 +87,11 @@ public final class MoveTool extends Tool {
 				if (destinationArg == null || destinationArg.isBlank()) {
 					return "Error: destination argument is required for operation: " + operation;
 				}
-				final IResource sourceResource = project.findMember(IPath.fromOSString(sourceArg));
+				final IResource sourceResource = project.findMember(sourcePath);
 				if (sourceResource == null || !sourceResource.exists()) {
 					return "Error: Source not found: " + sourceArg;
 				}
-				final IPath destinationPath = IPath.fromOSString(destinationArg);
+				final IPath destinationPath = toResourcePath(destinationArg, project);
 				final IResource destinationResource = project.findMember(destinationPath);
 				if (destinationResource != null && destinationResource.exists()) {
 					return "Error: Destination already exists: " + destinationArg;
@@ -117,5 +119,29 @@ public final class MoveTool extends Tool {
 		} catch (final CoreException exception) {
 			return "Error executing " + operation + " operation: " + exception.getMessage();
 		}
+	}
+
+	private IProject resolveProject(String pathArgument) {
+		if (pathArgument == null || pathArgument.isBlank()) {
+			return this.projects.get(0);
+		}
+		final IPath path = IPath.fromOSString(pathArgument.trim().replace('\\', '/')).makeRelative();
+		return this.projects.stream()
+				.filter(it -> IPath.fromOSString(it.getName()).isPrefixOf(path))
+				.findFirst()
+				.orElse(this.projects.get(0));
+	}
+
+	private IPath toResourcePath(String pathArgument, IProject project) {
+		if (pathArgument == null || pathArgument.isBlank()) {
+			return IPath.fromOSString("");
+		}
+		IPath path = IPath.fromOSString(pathArgument.trim().replace('\\', '/')).makeRelative();
+		final IPath projectPrefix = IPath.fromOSString(project.getName());
+		if (projectPrefix.isPrefixOf(path)) {
+			// Be tolerant: ignore the redundant project prefix because paths are project-relative
+			path = path.removeFirstSegments(projectPrefix.segmentCount());
+		}
+		return path;
 	}
 }

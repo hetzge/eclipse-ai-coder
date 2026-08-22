@@ -1,6 +1,7 @@
 package de.hetzge.eclipse.aicoder.tool;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IProject;
@@ -27,8 +28,14 @@ public final class ProblemsTool extends Tool {
 						.set("required", Json.array().add("path")));
 	}
 
+	private final List<IProject> projects;
+
 	public ProblemsTool(List<IProject> projects) {
 		super(prepareDefinition(projects));
+		this.projects = projects;
+		if (this.projects.isEmpty()) {
+			throw new IllegalArgumentException("At least one project must be provided.");
+		}
 	}
 
 	@Override
@@ -38,8 +45,14 @@ public final class ProblemsTool extends Tool {
 			return "Error: path argument is required.";
 		}
 
+		// Be tolerant: if only one project is configured, a missing project prefix in the path is ignored
+		final Optional<IPath> pathOptional = ToolUtils.resolvePath(path, this.projects.get(0), this.projects);
+		if (pathOptional.isEmpty()) {
+			return "Error: path ('" + path + "') must be relative to the workspace (as example " + ToolUtils.createPathPrefixExamples(this.projects) + ").";
+		}
+
 		try {
-			final List<IMarker> markers = EclipseUtils.getProblemMarkers(IPath.fromOSString(path));
+			final List<IMarker> markers = EclipseUtils.getProblemMarkers(pathOptional.get());
 			if (markers.isEmpty()) {
 				return "No problems found.";
 			}

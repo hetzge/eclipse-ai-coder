@@ -214,13 +214,21 @@ public final class FileSystem {
 	}
 
 	private IPath normalizePath(IPath path) {
-		if (path == null || path.isEmpty() || path.segmentCount() < 2) {
+		if (path == null || path.isEmpty()) {
 			throw new IllegalArgumentException("Path must include project and resource name: " + path);
 		}
-		if (isAvailableProjectPath(path)) {
-			return path.makeRelative();
+		IPath normalizedPath = path.makeRelative();
+		if (!isAvailableProjectPath(normalizedPath) && this.projects.size() == 1) {
+			// Be tolerant: ignore the missing project prefix because only one project is configured
+			normalizedPath = IPath.fromPortableString(this.projects.get(0).getName()).append(normalizedPath);
 		}
-		final IFile file = this.workspaceRoot.getFile(path);
+		if (normalizedPath.segmentCount() < 2) {
+			throw new IllegalArgumentException("Path must include project and resource name: " + path);
+		}
+		if (isAvailableProjectPath(normalizedPath)) {
+			return normalizedPath;
+		}
+		final IFile file = this.workspaceRoot.getFile(normalizedPath);
 		if (!file.exists()) {
 			throw new IllegalArgumentException("File does not exist: " + path);
 		}

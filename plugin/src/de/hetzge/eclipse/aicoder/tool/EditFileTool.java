@@ -1,6 +1,7 @@
 package de.hetzge.eclipse.aicoder.tool;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IPath;
@@ -54,11 +55,14 @@ public final class EditFileTool extends Tool {
 		if (oldText == null || oldText.isEmpty()) {
 			return "Error: old_text argument is required.";
 		}
-		if (this.projects.stream().noneMatch(it -> pathArg.startsWith(it.getName()))) {
+		// Be tolerant: if only one project is configured, a missing project prefix in the path is ignored
+		final Optional<IPath> pathOptional = ToolUtils.resolvePath(pathArg, this.projects.get(0), this.projects);
+		if (pathOptional.isEmpty()) {
 			return "Error: path ('" + pathArg + "') must be relative to the workspace (as example " + ToolUtils.createPathPrefixExamples(this.projects) + ").";
 		}
+		final IPath path = pathOptional.get();
 		try {
-			final String content = this.fileSystem.readFile(IPath.fromOSString(pathArg));
+			final String content = this.fileSystem.readFile(path);
 			final int index = content.indexOf(oldText);
 			if (index == -1) {
 				return "Error: old_text not found in file.";
@@ -68,7 +72,7 @@ public final class EditFileTool extends Tool {
 				return "Error: old_text appears multiple times in the file, must be unique.";
 			}
 			final String newContent = content.substring(0, index) + newText + content.substring(index + oldText.length());
-			this.fileSystem.putFile(IPath.fromOSString(pathArg), newContent);
+			this.fileSystem.putFile(path, newContent);
 			return "Successfully replaced text in " + pathArg;
 		} catch (final Exception exception) {
 			AiCoderActivator.log().error("Error editing file: " + pathArg, exception);
