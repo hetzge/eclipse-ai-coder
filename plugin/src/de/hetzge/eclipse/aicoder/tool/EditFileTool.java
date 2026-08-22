@@ -28,7 +28,7 @@ public final class EditFileTool extends Tool {
 								.set("new_text", Json.object()
 										.set("type", "string")
 										.set("description", "The new text to insert in place of old_text.")))
-						.set("required", Json.array().add("project").add("path").add("old_text").add("new_text")));
+						.set("required", Json.array().add("path").add("old_text").add("new_text")));
 	}
 
 	private final List<IProject> projects;
@@ -45,8 +45,8 @@ public final class EditFileTool extends Tool {
 
 	@Override
 	public String execute(IProgressMonitor monitor, Json arguments) {
-		final String pathArg = arguments.at("path").asString();
-		final String oldText = arguments.at("old_text").asString();
+		final String pathArg = arguments.at("path", "").asString();
+		final String oldText = arguments.at("old_text", "").asString();
 		final String newText = arguments.at("new_text", "").asString();
 		if (pathArg == null || pathArg.isBlank()) {
 			return "Error: path argument is required.";

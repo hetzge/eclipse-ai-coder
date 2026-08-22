@@ -56,8 +56,8 @@ public final class MoveTool extends Tool {
 
 	@Override
 	public String execute(IProgressMonitor monitor, Json arguments) {
-		final String sourceArg = arguments.at("source").asString();
-		final String operation = arguments.at("operation").asString();
+		final String sourceArg = arguments.at("source", "").asString();
+		final String operation = arguments.at("operation", "").asString();
 		final String destinationArg = arguments.has("destination") ? arguments.at("destination").asString() : null;
 
 		if (sourceArg == null || sourceArg.isBlank()) {
