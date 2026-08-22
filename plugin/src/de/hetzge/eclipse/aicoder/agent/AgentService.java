@@ -20,7 +20,7 @@ import com.github.f4b6a3.uuid.UuidCreator;
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.llm.LlmMessage;
 import de.hetzge.eclipse.aicoder.llm.LlmRole;
-import de.hetzge.eclipse.aicoder.tool.CreateFileTool;
+import de.hetzge.eclipse.aicoder.tool.CreateOrDeleteFileTool;
 import de.hetzge.eclipse.aicoder.tool.EditFileTool;
 import de.hetzge.eclipse.aicoder.tool.FileSystem;
 import de.hetzge.eclipse.aicoder.tool.ListFilesTool;
@@ -156,7 +156,7 @@ public final class AgentService {
 								new SearchTool(projects, fileSystem));
 					} else {
 						tools = List.of(
-								new CreateFileTool(projects, fileSystem),
+								new CreateOrDeleteFileTool(projects, fileSystem),
 								new EditFileTool(projects, fileSystem),
 								new ListFilesTool(projects, fileSystem),
 								new ReadFileTool(projects, fileSystem),
