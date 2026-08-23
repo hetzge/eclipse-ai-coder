@@ -342,8 +342,8 @@ public final class LlmUtils {
 						} else {
 							reasoning = "";
 						}
-						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
-						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
+						final int inputTokens = responseJson.at("usage").at("prompt_tokens", 0).asInteger();
+						final int outputTokens = responseJson.at("usage").at("completion_tokens", 0).asInteger();
 						final List<LlmToolCallRequest> toolCallRequests;
 						if (messageJson != null && messageJson.isObject()) {
 							final Json toolCallsJson = messageJson.at("tool_calls");
