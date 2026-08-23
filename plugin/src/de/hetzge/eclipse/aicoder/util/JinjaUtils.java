@@ -8,6 +8,8 @@ import com.hubspot.jinjava.JinjavaConfig;
 public final class JinjaUtils {
 	private static final Jinjava JINJAVA = new Jinjava(JinjavaConfig.newBuilder()
 			.withTrimBlocks(true)
+			.withEnableRecursiveMacroCalls(false)
+			.withNestedInterpretationEnabled(false)
 			.build());
 
 	private JinjaUtils() {
