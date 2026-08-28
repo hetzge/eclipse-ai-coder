@@ -12,7 +12,9 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.eclipse.core.commands.ExecutionEvent;
+import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
@@ -444,10 +446,16 @@ public final class AgentTaskTreeView extends ViewPart {
 			if (file.exists()) {
 				file.delete(true, false, null);
 			}
-		} else if (!file.exists()) {
-			file.create(new ByteArrayInputStream(content.getBytes(getCharset(path))), true, null);
 		} else {
-			file.setContents(new ByteArrayInputStream(content.getBytes(getCharset(path))), true, true, null);
+			final IContainer parent = file.getParent();
+			if (parent instanceof IFolder && !parent.exists()) {
+				((IFolder) parent).create(true, true, null);
+			}
+			if (!file.exists()) {
+				file.create(new ByteArrayInputStream(content.getBytes(getCharset(path))), true, null);
+			} else {
+				file.setContents(new ByteArrayInputStream(content.getBytes(getCharset(path))), true, true, null);
+			}
 		}
 	}
 
