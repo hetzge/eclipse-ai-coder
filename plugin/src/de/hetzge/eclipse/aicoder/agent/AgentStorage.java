@@ -20,6 +20,7 @@ import com.github.f4b6a3.uuid.util.UuidComparator;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.llm.LlmRole;
+import de.hetzge.eclipse.aicoder.trajectory.ErrorTrajectoryEntry;
 import de.hetzge.eclipse.aicoder.trajectory.MessageTrajectoryEntry;
 import de.hetzge.eclipse.aicoder.trajectory.TrajectoryEntry;
 import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
@@ -94,8 +95,7 @@ public final class AgentStorage {
 	}
 
 	/**
-	 * Efficiently loads only the content of the last assistant message from the trajectory file.
-	 * This avoids parsing the entire trajectory just to find the result message.
+	 * Efficiently loads only the content of the last assistant message from the trajectory file. This avoids parsing the entire trajectory just to find the result message.
 	 */
 	public static Optional<String> loadLastAssistantMessageContent(UUID id) throws IOException {
 		final IPath trajectoryFilePath = getTrajectoryFilePath(id);
@@ -112,6 +112,10 @@ public final class AgentStorage {
 			final Optional<MessageTrajectoryEntry> entry = MessageTrajectoryEntry.fromJson(json);
 			if (entry.isPresent() && entry.get().message().role() == LlmRole.ASSISTANT) {
 				return Optional.of(entry.get().message().content());
+			}
+			final Optional<ErrorTrajectoryEntry> errorEntry = ErrorTrajectoryEntry.fromJson(json);
+			if (errorEntry.isPresent()) {
+				return Optional.of(errorEntry.get().message());
 			}
 		}
 		return Optional.empty();
