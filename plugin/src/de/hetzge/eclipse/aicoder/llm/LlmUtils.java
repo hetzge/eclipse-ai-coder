@@ -188,6 +188,8 @@ public final class LlmUtils {
 								: "";
 						final int inputTokens = responseJson.at("prompt_eval_count", 0).asInteger();
 						final int outputTokens = responseJson.at("eval_count", 0).asInteger();
+						final int reasoningTokens = 0; // not supported by ollama api?!
+						final int cachedTokens = responseJson.at("prompt_eval_cached_count", 0).asInteger();
 						final List<LlmToolCallRequest> toolCallRequests = responseJson.has("tool_calls") && responseJson.at("tool_calls").isArray()
 								? responseJson.at("tool_calls").asJsonList().stream().map(toolCallJson -> new LlmToolCallRequest(
 										toolCallJson.at("id").asString(),
@@ -196,7 +198,7 @@ public final class LlmUtils {
 										Json.read(toolCallJson.at("function").at("arguments").asString()))).toList()
 								: List.of();
 						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
-						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, duration, false);
+						return new LlmResponse(llmModelOption, responseJson, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, reasoningTokens, cachedTokens, duration, false);
 					} else {
 						throw new RuntimeException(String.format("Error: %s (%s)", response.body(), response.statusCode()));
 					}
@@ -256,6 +258,8 @@ public final class LlmUtils {
 										: "";
 						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
+						final int reasoningTokens = 0; // not supported?
+						final int cachedTokens = 0; // not supported?
 						final Json toolCallsJson = responseJson.at("choices").at(0).at("message").at("tool_calls");
 						final List<LlmToolCallRequest> toolCallRequests = toolCallsJson != null && toolCallsJson.isArray()
 								? responseJson.at("choices").at(0).at("message").at("tool_calls").asJsonList().stream().map(toolCallJson -> new LlmToolCallRequest(
@@ -265,7 +269,7 @@ public final class LlmUtils {
 										Json.read(toolCallJson.at("function").at("arguments").asString()))).toList()
 								: List.of();
 						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
-						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, duration, false);
+						return new LlmResponse(llmModelOption, responseJson, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, reasoningTokens, cachedTokens, duration, false);
 					} else {
 						throw new RuntimeException(String.format("Error: %s (%s)", response.body(), response.statusCode()));
 					}
@@ -344,6 +348,8 @@ public final class LlmUtils {
 						}
 						final int inputTokens = responseJson.at("usage").at("prompt_tokens", 0).asInteger();
 						final int outputTokens = responseJson.at("usage").at("completion_tokens", 0).asInteger();
+						final int reasoningTokens = responseJson.at("usage").at("reasoning_tokens", 0).asInteger();
+						final int cachedTokens = responseJson.at("usage").at("cached_tokens", 0).asInteger();
 						final List<LlmToolCallRequest> toolCallRequests;
 						if (messageJson != null && messageJson.isObject()) {
 							final Json toolCallsJson = messageJson.at("tool_calls");
@@ -358,7 +364,7 @@ public final class LlmUtils {
 							toolCallRequests = List.of();
 						}
 						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
-						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, duration, false);
+						return new LlmResponse(llmModelOption, responseJson, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, reasoningTokens, cachedTokens, duration, false);
 					} else {
 						throw new RuntimeException(String.format("Error: %s (%s)", response.body(), response.statusCode()));
 					}
@@ -481,8 +487,10 @@ public final class LlmUtils {
 								.orElse("");
 						final int inputTokens = responseJson.at("usage").at("input_tokens", 0).asInteger();
 						final int outputTokens = responseJson.at("usage").at("output_tokens", 0).asInteger();
+						final int reasoningTokens = responseJson.at("usage").at("reasoning_tokens", 0).asInteger();
+						final int cachedTokens = responseJson.at("usage").at("cached_tokens", 0).asInteger();
 						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
-						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, duration, false);
+						return new LlmResponse(llmModelOption, responseJson, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, reasoningTokens, cachedTokens, duration, false);
 					} else {
 						throw new RuntimeException(String.format("Error: %s (%s)", response.body(), response.statusCode()));
 					}
@@ -551,6 +559,8 @@ public final class LlmUtils {
 						}
 						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
+						final int reasoningTokens = 0; // not supported?
+						final int cachedTokens = 0; // not supported?
 						final List<LlmToolCallRequest> toolCallRequests;
 						if (messageJson != null && messageJson.isObject()) {
 							toolCallRequests = messageJson.has("tool_calls")
@@ -564,7 +574,7 @@ public final class LlmUtils {
 							toolCallRequests = List.of();
 						}
 						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
-						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, duration, false);
+						return new LlmResponse(llmModelOption, responseJson, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, reasoningTokens, cachedTokens, duration, false);
 					} else {
 						throw new RuntimeException(String.format("Error: %s (%s)", response.body(), response.statusCode()));
 					}
@@ -611,8 +621,10 @@ public final class LlmUtils {
 														: "";
 						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
 						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
+						final int reasoningTokens = 0; // not supported?
+						final int cachedTokens = 0; // not supported?
 						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
-						return new LlmResponse(llmModelOption, reasoning, content, plainResponse, List.of(), inputTokens, outputTokens, duration, false);
+						return new LlmResponse(llmModelOption, responseJson, reasoning, content, plainResponse, List.of(), inputTokens, outputTokens, reasoningTokens, cachedTokens, duration, false);
 					} else {
 						throw new RuntimeException(String.format("Error: %s (%s)", response.body(), response.statusCode()));
 					}
