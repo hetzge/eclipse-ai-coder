@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,8 +23,6 @@ import org.eclipse.core.runtime.IPath;
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.agent.AgentChange;
 import de.hetzge.eclipse.aicoder.agent.AgentChangeType;
-import de.hetzge.eclipse.aicoder.history.AiCoderHistoryEntry;
-import de.hetzge.eclipse.aicoder.history.HistoryType;
 import de.hetzge.eclipse.aicoder.inline.Suggestion;
 import de.hetzge.eclipse.aicoder.quicksearch.FilePatternUtils;
 import de.hetzge.eclipse.aicoder.quicksearch.SearchResult;
@@ -44,7 +43,7 @@ public final class FileSystem {
 		this.contentByPath = new HashMap<>();
 	}
 
-	public List<Suggestion> toSuggestions(IPath path, HistoryType historyType) throws IOException {
+	public List<Suggestion> toSuggestions(IPath path) throws IOException {
 		final IPath normalizedPath = normalizePath(path);
 		final String oldContent = EclipseUtils.readContentFromBufferOrFile(this.workspaceRoot, normalizedPath);
 		final String newContent = this.contentByPath.getOrDefault(normalizedPath, oldContent);
@@ -61,7 +60,7 @@ public final class FileSystem {
 			final int oldLineCount = (int) oldChangeContent.lines().count();
 			final int newLineCount = (int) newChangeContent.lines().count();
 			suggestions.add(new Suggestion(
-					new AiCoderHistoryEntry(historyType, normalizedPath.toString(), oldContent),
+					Optional.empty(),
 					newChangeContent,
 					modelOffset,
 					originalLength,

@@ -61,7 +61,6 @@ import de.hetzge.eclipse.aicoder.AiCoderResultView;
 import de.hetzge.eclipse.aicoder.handler.AbortAgentTaskHandler;
 import de.hetzge.eclipse.aicoder.handler.AbortAllAgentTasksHandler;
 import de.hetzge.eclipse.aicoder.handler.RerunAgentTaskHandler;
-import de.hetzge.eclipse.aicoder.history.HistoryType;
 import de.hetzge.eclipse.aicoder.inline.InlineCompletionController;
 import de.hetzge.eclipse.aicoder.inline.Suggestion;
 import de.hetzge.eclipse.aicoder.tool.FileSystem;
@@ -473,7 +472,7 @@ public final class AgentTaskTreeView extends ViewPart {
 			final List<IProject> projects = task.getRequest().projects();
 			final FileSystem fileSystem = new FileSystem(projects, projects.get(0).getWorkspace().getRoot());
 			fileSystem.load(AgentStorage.getFileSystemPath(task.getId()).toPath());
-			final List<Suggestion> suggestions = fileSystem.toSuggestions(agentChange.path(), HistoryType.AGENT);
+			final List<Suggestion> suggestions = fileSystem.toSuggestions(agentChange.path());
 			final IFile file = ResourcesPlugin.getWorkspace().getRoot().getFile(agentChange.path());
 			IDE.openEditor(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage(), file);
 			final InlineCompletionController controller = InlineCompletionController.setup(EclipseUtils.getActiveTextEditor().orElseThrow());

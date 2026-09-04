@@ -311,6 +311,37 @@ public final class EclipseUtils {
 		return Optional.ofNullable(file).map(IFile::getFullPath);
 	}
 
+	/**
+	 * Converts the given path into a path that is relative to the workspace root.
+	 * <p>
+	 * Handles absolute file system paths that live inside the workspace
+	 * (e.g. {@code /home/user/workspace/Project/src/Foo.java}), Eclipse workspace
+	 * paths (e.g. {@code /Project/src/Foo.java} as returned by
+	 * {@link IFile#getFullPath()}) and already relative paths (which are returned
+	 * unchanged).
+	 */
+	public static Path toWorkspaceRootRelativePath(Path path) {
+		if (path == null) {
+			return null;
+		}
+		final Path normalized = path.normalize();
+		if (!normalized.isAbsolute()) {
+			return normalized;
+		}
+		final IWorkspaceRoot workspaceRoot = ResourcesPlugin.getWorkspace().getRoot();
+		// Absolute file system path that lives inside the workspace.
+		final Path workspaceRootPath = Optional.ofNullable(workspaceRoot.getLocation()).map(IPath::toFile).map(File::toPath).orElse(null);
+		if (workspaceRootPath != null && normalized.startsWith(workspaceRootPath)) {
+			return workspaceRootPath.relativize(normalized);
+		}
+		// Eclipse workspace path (e.g. /Project/src/Foo.java) that starts with a project name.
+		if (workspaceRoot.getProject(normalized.getName(0).toString()).exists()) {
+			return normalized.subpath(0, normalized.getNameCount());
+		}
+		// Cannot be expressed relative to the workspace; keep it unchanged.
+		return normalized;
+	}
+
 	public static void executeCommand(String commandId) {
 		try {
 			PlatformUI.getWorkbench().getActiveWorkbenchWindow().getService(IHandlerService.class).executeCommand(commandId, null);

@@ -14,7 +14,6 @@ import java.util.stream.Stream;
 import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.IPath;
-import org.eclipse.core.runtime.Platform;
 
 import com.github.f4b6a3.uuid.util.UuidComparator;
 
@@ -126,7 +125,7 @@ public final class AgentStorage {
 	}
 
 	private static IPath getTrajectoriesPath() {
-		return getStateLocationPath().append("trajectories");
+		return AiCoderActivator.getStateLocationPath().append("trajectories");
 	}
 
 	private static IPath getTaskPath(UUID id) {
@@ -134,14 +133,10 @@ public final class AgentStorage {
 	}
 
 	private static IPath getTasksPath() {
-		return getStateLocationPath().append("tasks");
-	}
-
-	private static IPath getStateLocationPath() {
-		return Platform.getStateLocation(AiCoderActivator.getDefault().getBundle());
+		return AiCoderActivator.getStateLocationPath().append("tasks");
 	}
 
 	public static IPath getFileSystemPath(UUID id) {
-		return getStateLocationPath().append("filesystem").append(id.toString());
+		return AiCoderActivator.getStateLocationPath().append("filesystem").append(id.toString());
 	}
 }

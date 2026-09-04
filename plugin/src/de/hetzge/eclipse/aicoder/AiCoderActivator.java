@@ -1,10 +1,10 @@
 package de.hetzge.eclipse.aicoder;
 
 import org.eclipse.core.runtime.ILog;
-import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
-import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.ImageRegistry;
@@ -20,6 +20,7 @@ import de.hetzge.eclipse.aicoder.agent.AgentService;
 import de.hetzge.eclipse.aicoder.agent.AgentTasksState;
 import de.hetzge.eclipse.aicoder.config.ConfigManager;
 import de.hetzge.eclipse.aicoder.content.InstructionStorage;
+import de.hetzge.eclipse.aicoder.history.HistoryDatabase;
 import de.hetzge.eclipse.aicoder.mcp.McpClients;
 
 // TODO
@@ -27,10 +28,6 @@ import de.hetzge.eclipse.aicoder.mcp.McpClients;
 // - on close eclipse window abort suggestions (?!)
 // - fix added lines in suggestions (popup offsets)
 // - use AGENT context for agents
-// - abort agent action
-// - agent task file open diff action (original change)
-// - agent task file open compare action (compare with working tree)
-// - agent task apply all
 // - agent task revert to reference state
 // - if suggestion apply makes the editor blank then ask if file should be deleted
 // - tools selection in dialog
@@ -48,6 +45,7 @@ public class AiCoderActivator extends AbstractUIPlugin {
 	private ConfigManager configManager;
 	private AgentTasksState agentTasksState;
 	private AgentService agentService;
+	private HistoryDatabase historyDatabase;
 
 	public AiCoderActivator() {
 	}
@@ -59,9 +57,10 @@ public class AiCoderActivator extends AbstractUIPlugin {
 		this.instructionStorage = InstructionStorage.load(getStateLocation());
 		this.editorViewMemory = new EditorViewMemory(1000);
 		this.configManager = new ConfigManager();
-		this.agentTasksState = new AgentTasksState();
-		AiCoderActivator.getDefault().getAgentTasksState().load();
+		this.historyDatabase = new HistoryDatabase(getStateLocationPath().append("history.db").toPath());
 		this.agentService = new AgentService();
+		this.agentTasksState = new AgentTasksState();
+		this.agentTasksState.load();
 		McpClients.INSTANCE.reload(() -> {
 			log().info("MCP clients loaded: " + McpClients.INSTANCE.getMcpStatusCountsString());
 		});
@@ -105,6 +104,10 @@ public class AiCoderActivator extends AbstractUIPlugin {
 		return this.agentService;
 	}
 
+	public HistoryDatabase getHistoryDatabase() {
+		return this.historyDatabase;
+	}
+
 	public static AiCoderActivator getDefault() {
 		return plugin;
 	}
@@ -129,6 +132,10 @@ public class AiCoderActivator extends AbstractUIPlugin {
 
 	public static void openErrorDialog(String title, String message, Throwable throwable) {
 		ErrorDialog.openError(null, title, null, new Status(IStatus.ERROR, AiCoderActivator.PLUGIN_ID, message, throwable));
+	}
+
+	public static IPath getStateLocationPath() {
+		return Platform.getStateLocation(AiCoderActivator.getDefault().getBundle());
 	}
 
 }

@@ -177,32 +177,7 @@ public final class LlmUtils {
 				.POST(HttpRequest.BodyPublishers.ofString(json.toString()))
 				.build();
 		return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-				.thenApply(response -> {
-					final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
-					if (response.statusCode() == 200) {
-						final String responseBody = response.body();
-						final Json responseJson = Json.read(responseBody);
-						final String content = responseJson.at("response").asString();
-						final String reasoning = responseJson.has("thinking") && responseJson.at("thinking").isString()
-								? responseJson.at("thinking").asString()
-								: "";
-						final int inputTokens = responseJson.at("prompt_eval_count", 0).asInteger();
-						final int outputTokens = responseJson.at("eval_count", 0).asInteger();
-						final int reasoningTokens = 0; // not supported by ollama api?!
-						final int cachedTokens = responseJson.at("prompt_eval_cached_count", 0).asInteger();
-						final List<LlmToolCallRequest> toolCallRequests = responseJson.has("tool_calls") && responseJson.at("tool_calls").isArray()
-								? responseJson.at("tool_calls").asJsonList().stream().map(toolCallJson -> new LlmToolCallRequest(
-										toolCallJson.at("id").asString(),
-										toolCallJson.at("type").asString(),
-										toolCallJson.at("function").at("name").asString(),
-										Json.read(toolCallJson.at("function").at("arguments").asString()))).toList()
-								: List.of();
-						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
-						return new LlmResponse(llmModelOption, responseJson, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, reasoningTokens, cachedTokens, duration, false);
-					} else {
-						throw new RuntimeException(String.format("Error: %s (%s)", response.body(), response.statusCode()));
-					}
-				});
+				.thenApply(response -> handleLlmResponse(response, llmModelOption, beforeTimestamp));
 	}
 
 	private static CompletableFuture<LlmResponse> executeMistral(LlmOption llmModelOption, LlmRequest llmRequest) {
@@ -244,36 +219,7 @@ public final class LlmUtils {
 				.POST(HttpRequest.BodyPublishers.ofString(json.toString()))
 				.build();
 		return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-				.thenApply(response -> {
-					final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
-					if (response.statusCode() == 200) {
-						final String responseBody = response.body();
-						final Json responseJson = Json.read(responseBody);
-						final String content = responseJson.at("choices").at(0).at("message").at("content").isString()
-								? responseJson.at("choices").at(0).at("message").at("content").asString()
-								: "";
-						final String reasoning = responseJson.at("choices").at(0).at("message").has("reasoning")
-								&& responseJson.at("choices").at(0).at("message").at("reasoning").isString()
-										? responseJson.at("choices").at(0).at("message").at("reasoning").asString()
-										: "";
-						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
-						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
-						final int reasoningTokens = 0; // not supported?
-						final int cachedTokens = 0; // not supported?
-						final Json toolCallsJson = responseJson.at("choices").at(0).at("message").at("tool_calls");
-						final List<LlmToolCallRequest> toolCallRequests = toolCallsJson != null && toolCallsJson.isArray()
-								? responseJson.at("choices").at(0).at("message").at("tool_calls").asJsonList().stream().map(toolCallJson -> new LlmToolCallRequest(
-										toolCallJson.at("id").asString(),
-										toolCallJson.at("type").asString(),
-										toolCallJson.at("function").at("name").asString(),
-										Json.read(toolCallJson.at("function").at("arguments").asString()))).toList()
-								: List.of();
-						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
-						return new LlmResponse(llmModelOption, responseJson, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, reasoningTokens, cachedTokens, duration, false);
-					} else {
-						throw new RuntimeException(String.format("Error: %s (%s)", response.body(), response.statusCode()));
-					}
-				});
+				.thenApply(response -> handleLlmResponse(response, llmModelOption, beforeTimestamp));
 	}
 
 	private static CompletableFuture<LlmResponse> executeOpenAi(String urlString, String openAiApiKey, LlmOption llmModelOption, LlmRequest llmRequest) {
@@ -324,51 +270,7 @@ public final class LlmUtils {
 				.POST(HttpRequest.BodyPublishers.ofString(json.toString()))
 				.build();
 		return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-				.thenApply(response -> {
-					final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
-					if (response.statusCode() == 200) {
-						final String responseBody = response.body();
-						final Json responseJson = Json.read(responseBody);
-						final Json messageJson = responseJson.at("choices").at(0).at("message");
-						final String content = isFillInTheMiddle && !isPseudoFim
-								? responseJson.at("choices").at(0).at("text").asString()
-								: messageJson.at("content").isString()
-										? messageJson.at("content").asString()
-										: "";
-						final String reasoning;
-						if (messageJson != null && messageJson.isObject()) {
-							reasoning = messageJson != null && messageJson.has("reasoning") && messageJson.at("reasoning").isString()
-									? messageJson.at("reasoning").asString()
-									: messageJson.has("reasoning_content")
-											&& messageJson.at("reasoning_content").isString()
-													? messageJson.at("reasoning_content").asString()
-													: "";
-						} else {
-							reasoning = "";
-						}
-						final int inputTokens = responseJson.at("usage").at("prompt_tokens", 0).asInteger();
-						final int outputTokens = responseJson.at("usage").at("completion_tokens", 0).asInteger();
-						final int reasoningTokens = responseJson.at("usage").at("reasoning_tokens", 0).asInteger();
-						final int cachedTokens = responseJson.at("usage").at("cached_tokens", 0).asInteger();
-						final List<LlmToolCallRequest> toolCallRequests;
-						if (messageJson != null && messageJson.isObject()) {
-							final Json toolCallsJson = messageJson.at("tool_calls");
-							toolCallRequests = toolCallsJson != null && toolCallsJson.isArray()
-									? messageJson.at("tool_calls").asJsonList().stream().map(toolCallJson -> new LlmToolCallRequest(
-											toolCallJson.at("id").asString(),
-											toolCallJson.at("type").asString(),
-											toolCallJson.at("function").at("name").asString(),
-											Json.read(toolCallJson.at("function").at("arguments").asString()))).toList()
-									: List.of();
-						} else {
-							toolCallRequests = List.of();
-						}
-						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
-						return new LlmResponse(llmModelOption, responseJson, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, reasoningTokens, cachedTokens, duration, false);
-					} else {
-						throw new RuntimeException(String.format("Error: %s (%s)", response.body(), response.statusCode()));
-					}
-				});
+				.thenApply(response -> handleLlmResponse(response, llmModelOption, beforeTimestamp));
 	}
 
 	private static CompletableFuture<LlmResponse> executeOpenAiResponseApi(String urlString, String openAiApiKey, LlmOption llmModelOption, LlmRequest llmRequest) {
@@ -429,72 +331,7 @@ public final class LlmUtils {
 				.POST(HttpRequest.BodyPublishers.ofString(body.toString()))
 				.build();
 		return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-				.thenApply(response -> {
-					final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
-					if (response.statusCode() == 200) {
-						final String responseBody = response.body();
-						final Json responseJson = Json.read(responseBody);
-						final List<Json> outputs = responseJson.at("output").isArray()
-								? responseJson.at("output").asJsonList()
-								: List.of();
-						final String content = outputs.stream()
-								.filter(item -> item != null && item.has("type") && "message".equals(item.at("type").asString()))
-								.findFirst()
-								.map(item -> item.has("content") ? item.at("content") : null)
-								.filter(itemContent -> itemContent != null)
-								.map(itemContent -> itemContent.asJsonList().stream()
-										.filter(contentItem -> contentItem != null && contentItem.has("type") && "output_text".equals(contentItem.at("type").asString()))
-										.findFirst()
-										.map(contentItem -> contentItem.has("text") ? contentItem.at("text").asString() : null)
-										.orElse(null))
-								.orElseGet(() -> outputs.stream()
-										.filter(item -> item != null && item.has("content"))
-										.findFirst()
-										.map(item -> item.at("content").asJsonList().stream()
-												.filter(contentItem -> contentItem != null && contentItem.has("text"))
-												.findFirst()
-												.map(contentItem -> contentItem.at("text").asString())
-												.orElse(null))
-										.orElse(""));
-						final List<LlmToolCallRequest> toolCallRequests = outputs.stream()
-								.filter(item -> item != null && item.has("type") && "function_call".equals(item.at("type").asString()))
-								.map(toolCallJson -> new LlmToolCallRequest(
-										toolCallJson.at("call_id").asString(),
-										"function",
-										toolCallJson.at("name").asString(),
-										toolCallJson.at("arguments").isString()
-												? Json.read(toolCallJson.at("arguments").asString())
-												: toolCallJson.at("arguments")))
-								.toList();
-						final String reasoning = outputs.stream()
-								.filter(item -> item != null
-										&& item.has("type")
-										&& "reasoning".equals(item.at("type").asString()))
-								.findFirst()
-								.map(item -> {
-									if (item.has("summary")) {
-										final List<String> summaryTexts = item.at("summary").asJsonList().stream()
-												.filter(s -> s != null
-														&& s.has("type")
-														&& "summary_text".equals(s.at("type").asString())
-														&& s.has("text"))
-												.map(s -> s.at("text").asString())
-												.toList();
-										return String.join("\n", summaryTexts);
-									}
-									return "";
-								})
-								.orElse("");
-						final int inputTokens = responseJson.at("usage").at("input_tokens", 0).asInteger();
-						final int outputTokens = responseJson.at("usage").at("output_tokens", 0).asInteger();
-						final int reasoningTokens = responseJson.at("usage").at("reasoning_tokens", 0).asInteger();
-						final int cachedTokens = responseJson.at("usage").at("cached_tokens", 0).asInteger();
-						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
-						return new LlmResponse(llmModelOption, responseJson, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, reasoningTokens, cachedTokens, duration, false);
-					} else {
-						throw new RuntimeException(String.format("Error: %s (%s)", response.body(), response.statusCode()));
-					}
-				});
+				.thenApply(response -> handleLlmResponse(response, llmModelOption, beforeTimestamp));
 	}
 
 	private static CompletableFuture<LlmResponse> executeInceptionLabs(LlmOption llmModelOption, LlmRequest llmRequest) {
@@ -534,51 +371,7 @@ public final class LlmUtils {
 				.POST(HttpRequest.BodyPublishers.ofString(json.toString()))
 				.build();
 		return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-				.thenApply(response -> {
-					final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
-					if (response.statusCode() == 200) {
-						final String responseBody = response.body();
-						final Json responseJson = Json.read(responseBody);
-						final Json messageJson = responseJson.at("choices").at(0).at("message");
-						final String content = isFillInTheMiddle && !isPseudoFim
-								? responseJson.at("choices").at(0).at("text").asString()
-								: messageJson.at("content").isString()
-										? messageJson.at("content").asString()
-										: "";
-						final String reasoning;
-						if (messageJson != null && messageJson.isObject()) {
-							reasoning = messageJson.has("reasoning")
-									&& messageJson.at("reasoning").isString()
-											? messageJson.at("reasoning").asString()
-											: messageJson.has("reasoning_content")
-													&& messageJson.at("reasoning_content").isString()
-															? messageJson.at("reasoning_content").asString()
-															: "";
-						} else {
-							reasoning = "";
-						}
-						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
-						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
-						final int reasoningTokens = 0; // not supported?
-						final int cachedTokens = 0; // not supported?
-						final List<LlmToolCallRequest> toolCallRequests;
-						if (messageJson != null && messageJson.isObject()) {
-							toolCallRequests = messageJson.has("tool_calls")
-									? messageJson.at("tool_calls").asJsonList().stream().map(toolCallJson -> new LlmToolCallRequest(
-											toolCallJson.at("id").asString(),
-											toolCallJson.at("type").asString(),
-											toolCallJson.at("function").at("name").asString(),
-											Json.read(toolCallJson.at("function").at("arguments").asString()))).toList()
-									: List.of();
-						} else {
-							toolCallRequests = List.of();
-						}
-						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
-						return new LlmResponse(llmModelOption, responseJson, reasoning, content, plainResponse, toolCallRequests, inputTokens, outputTokens, reasoningTokens, cachedTokens, duration, false);
-					} else {
-						throw new RuntimeException(String.format("Error: %s (%s)", response.body(), response.statusCode()));
-					}
-				});
+				.thenApply(response -> handleLlmResponse(response, llmModelOption, beforeTimestamp));
 	}
 
 	public static CompletableFuture<LlmResponse> executeNextEdit(NextEditRequest request) {
@@ -606,29 +399,7 @@ public final class LlmUtils {
 				.POST(HttpRequest.BodyPublishers.ofString(json.toString()))
 				.build();
 		return HTTP_CLIENT.sendAsync(httpRequest, HttpResponse.BodyHandlers.ofString())
-				.thenApply(response -> {
-					final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
-					if (response.statusCode() == 200) {
-						final String responseBody = response.body();
-						final Json responseJson = Json.read(responseBody);
-						final String content = responseJson.at("choices").at(0).at("message").at("content").asString();
-						final String reasoning = responseJson.at("choices").at(0).at("message").has("reasoning")
-								&& responseJson.at("choices").at(0).at("message").at("reasoning").isString()
-										? responseJson.at("choices").at(0).at("message").at("reasoning").asString()
-										: responseJson.at("choices").at(0).at("message").has("reasoning_content")
-												&& responseJson.at("choices").at(0).at("message").at("reasoning_content").isString()
-														? responseJson.at("choices").at(0).at("message").at("reasoning_content").asString()
-														: "";
-						final int inputTokens = responseJson.at("usage").at("prompt_tokens").asInteger();
-						final int outputTokens = responseJson.at("usage").at("completion_tokens").asInteger();
-						final int reasoningTokens = 0; // not supported?
-						final int cachedTokens = 0; // not supported?
-						final String plainResponse = reasoning.isEmpty() ? responseBody : responseBody + "\n\n" + reasoning;
-						return new LlmResponse(llmModelOption, responseJson, reasoning, content, plainResponse, List.of(), inputTokens, outputTokens, reasoningTokens, cachedTokens, duration, false);
-					} else {
-						throw new RuntimeException(String.format("Error: %s (%s)", response.body(), response.statusCode()));
-					}
-				});
+				.thenApply(response -> handleLlmResponse(response, llmModelOption, beforeTimestamp));
 	}
 
 	private static String getPseduoFIMSystemPrompt() {
@@ -678,6 +449,21 @@ public final class LlmUtils {
 			array.add(messageJson);
 		}
 		return array;
+	}
+
+	private static LlmResponse handleLlmResponse(HttpResponse<String> response, LlmOption llmModelOption, long beforeTimestamp) {
+		final Duration duration = Duration.ofMillis(System.currentTimeMillis() - beforeTimestamp);
+		final Json responseJson = safeReadJson(response.body());
+		return new LlmResponse(response.statusCode(), llmModelOption, responseJson, duration);
+	}
+
+	private static Json safeReadJson(String value) {
+		try {
+			return Json.read(value);
+		} catch (final Exception exception) {
+			AiCoderActivator.log().warn("Failed to parse JSON ... fallback");
+			return Json.object().set("content", value);
+		}
 	}
 
 }

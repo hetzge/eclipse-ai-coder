@@ -11,11 +11,11 @@ import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.Region;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
-import de.hetzge.eclipse.aicoder.history.AiCoderHistoryEntry;
+import de.hetzge.eclipse.aicoder.history.HistoryEntry;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 
 public record InlineCompletion(
-		AiCoderHistoryEntry historyEntry,
+		HistoryEntry historyEntry,
 		IRegion modelRegion,
 		String content, // the whole completion content
 		List<String> lines, // the completion content line by line
@@ -52,7 +52,7 @@ public record InlineCompletion(
 		return replaceOffset + this.content().length();
 	}
 
-	public static InlineCompletion create(AiCoderHistoryEntry historyEntry, IDocument document, int modelOffset, String content, int lineHeight, int defaultLineSpacing) throws BadLocationException {
+	public static InlineCompletion create(HistoryEntry historyEntry, IDocument document, int modelOffset, String content, int lineHeight, int defaultLineSpacing) throws BadLocationException {
 		final boolean isMultiline = content.lines().count() > 1;
 		// TODO validate if this is working
 		if (isMultiline) {

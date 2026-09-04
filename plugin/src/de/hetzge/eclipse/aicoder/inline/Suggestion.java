@@ -1,14 +1,16 @@
 package de.hetzge.eclipse.aicoder.inline;
 
+import java.util.Optional;
+
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextViewer;
 
-import de.hetzge.eclipse.aicoder.history.AiCoderHistoryEntry;
+import de.hetzge.eclipse.aicoder.history.HistoryEntry;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 
 public record Suggestion(
-		AiCoderHistoryEntry historyEntry,
+		Optional<HistoryEntry> historyEntryOptional,
 		String content,
 		int modelOffset,
 		int originalLength,
@@ -21,7 +23,7 @@ public record Suggestion(
 
 	public Suggestion withOffset(int additionalCharCount) {
 		return new Suggestion(
-				this.historyEntry,
+				this.historyEntryOptional,
 				this.content,
 				this.modelOffset + additionalCharCount,
 				this.originalLength,

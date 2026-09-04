@@ -4,6 +4,8 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -23,15 +25,16 @@ import org.eclipse.ui.IFileEditorInput;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.AiCoderImageKey;
+import de.hetzge.eclipse.aicoder.CompletionMode;
 import de.hetzge.eclipse.aicoder.config.ContextConfig.AiRerankConfig;
 import de.hetzge.eclipse.aicoder.config.TaskConfig;
-import de.hetzge.eclipse.aicoder.history.AiCoderHistoryEntry;
-import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.history.AiCoderHistoryView;
-import de.hetzge.eclipse.aicoder.history.HistoryType;
+import de.hetzge.eclipse.aicoder.history.HistoryEntry;
+import de.hetzge.eclipse.aicoder.history.HistoryStatus;
 import de.hetzge.eclipse.aicoder.llm.LlmPromptTemplates;
 import de.hetzge.eclipse.aicoder.llm.LlmResponse;
 import de.hetzge.eclipse.aicoder.llm.LlmUtils;
+import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.util.ContextUtils;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 import de.hetzge.eclipse.aicoder.util.FileTreeUtils;
@@ -87,13 +90,11 @@ public class AiRerankContextEntry extends ContextEntry {
 				final LlmResponse llmResponse = LlmUtils.executeRerank(systemPrompt, instructions).get(1, TimeUnit.MINUTES);
 				AiCoderHistoryView.get().ifPresent(view -> {
 					Display.getDefault().asyncExec(() -> {
-						final AiCoderHistoryEntry historyEntry = new AiCoderHistoryEntry(HistoryType.RERANK, file.getName(), null);
-						historyEntry.setInput(instructions);
-						historyEntry.setupLlmResponse(llmResponse);
+						final HistoryEntry historyEntry = new HistoryEntry(UUID.randomUUID(), CompletionMode.DUMMY, file.getFullPath().makeRelative().toPath(), instructions, "", Optional.of(llmResponse), Duration.ofMillis(System.currentTimeMillis() - before), HistoryStatus.ACCEPTED);
 						view.addHistoryEntry(historyEntry);
 					});
 				});
-				if (llmResponse.isError()) {
+				if (!llmResponse.isSuccess()) {
 					final Duration creationDuration = Duration.ofMillis(System.currentTimeMillis() - before);
 					return new AiRerankContextEntry(List.of(), creationDuration);
 				}
