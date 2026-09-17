@@ -132,4 +132,12 @@ public final class Utils {
 			return days + " day" + (days != 1 ? "s" : "") + " ago";
 		}
 	}
+
+	public static String stacktraceToString(final Exception exception) {
+		final StringWriter stringWriter = new StringWriter();
+		final PrintWriter printWriter = new PrintWriter(stringWriter);
+		exception.printStackTrace(printWriter);
+		final String stacktrace = stringWriter.getBuffer().toString();
+		return stacktrace;
+	}
 }

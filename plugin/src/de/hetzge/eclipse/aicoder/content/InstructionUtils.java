@@ -16,7 +16,6 @@ import org.tomlj.Toml;
 import org.tomlj.TomlParseResult;
 
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
-import de.hetzge.eclipse.aicoder.mcp.McpClients;
 
 public final class InstructionUtils {
 
@@ -52,7 +51,7 @@ public final class InstructionUtils {
 						.filter(Files::exists)
 						.flatMap(folder -> loadFromFolder(folder).stream()),
 				// MCP server
-				McpClients.INSTANCE.getEditInstructions().stream(),
+				AiCoderActivator.getDefault().getMcpManager().getEditInstructions().stream(),
 				// Defaults
 				getDefaultEditInstructions().stream(),
 				// History

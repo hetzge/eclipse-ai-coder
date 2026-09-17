@@ -20,14 +20,12 @@ import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
+import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.ContentPreviewDialog;
-import de.hetzge.eclipse.aicoder.mcp.AiCoderMcpContent;
-import de.hetzge.eclipse.aicoder.mcp.McpClients;
+import de.hetzge.eclipse.aicoder.mcp.McpInstance;
 import mjson.Json;
 import mjson.Json.MalformedJsonException;
+import tools.jackson.databind.ObjectMapper;
 
 public class McpPreferencePage extends PreferencePage implements IWorkbenchPreferencePage {
 
@@ -64,7 +62,7 @@ public class McpPreferencePage extends PreferencePage implements IWorkbenchPrefe
 		final TableViewer tableViewer = new TableViewer(control, SWT.BORDER | SWT.FULL_SELECTION);
 		tableViewer.addDoubleClickListener(event -> {
 			final Shell shell = tableViewer.getControl().getShell();
-			final ContentPreviewDialog dialog = new ContentPreviewDialog(shell, "Output", ((AiCoderMcpContent) tableViewer.getStructuredSelection().getFirstElement()).output());
+			final ContentPreviewDialog dialog = new ContentPreviewDialog(shell, "Output", ((McpInstance) tableViewer.getStructuredSelection().getFirstElement()).getLogs());
 			dialog.open();
 		});
 		this.table = tableViewer.getTable();
@@ -77,26 +75,26 @@ public class McpPreferencePage extends PreferencePage implements IWorkbenchPrefe
 		final TableColumn statusColumn = new TableColumn(this.table, SWT.NONE);
 		statusColumn.setText("Status");
 		statusColumn.setWidth(100);
-		final TableColumn titleColumn = new TableColumn(this.table, SWT.NONE);
-		titleColumn.setText("Title");
-		titleColumn.setWidth(100);
 		final TableColumn promptsColumn = new TableColumn(this.table, SWT.NONE);
 		promptsColumn.setText("Prompts");
 		promptsColumn.setWidth(100);
+		final TableColumn toolsColumn = new TableColumn(this.table, SWT.NONE);
+		toolsColumn.setText("Tools");
+		toolsColumn.setWidth(100);
 		initTable();
 		return control;
 	}
 
 	private void initTable() {
-		final List<AiCoderMcpContent> contents = McpClients.INSTANCE.getContents();
+		final List<McpInstance> instances = AiCoderActivator.getDefault().getMcpManager().getMcpServers();
 		this.table.removeAll();
-		for (final AiCoderMcpContent content : contents) {
+		for (final McpInstance instance : instances) {
 			final TableItem item = new TableItem(this.table, SWT.NONE);
-			item.setData(content);
-			item.setText(0, content.key());
-			item.setText(1, content.success() ? "OK" : "Error");
-			item.setText(2, content.title() != null ? content.title() : "");
-			item.setText(3, String.valueOf(content.editInstructions().size()));
+			item.setData(instance);
+			item.setText(0, instance.name());
+			item.setText(1, instance.isInitialized() ? "OK" : "Error");
+			item.setText(2, String.valueOf(instance.editInstructions().size()));
+			item.setText(3, String.valueOf(instance.getToolCount()));
 		}
 	}
 
@@ -114,12 +112,17 @@ public class McpPreferencePage extends PreferencePage implements IWorkbenchPrefe
 
 	@Override
 	protected void performApply() {
+		this.text.setText(formatJson(Json.read(this.text.getText())));
 		AiCoderPreferences.setMcpServerConfigurations(Json.read(this.text.getText()));
 		this.table.setEnabled(false);
 		this.progressBar.setVisible(true);
-		McpClients.INSTANCE.reload(() -> Display.getDefault().syncExec(() -> {
+		AiCoderActivator.getDefault().getMcpManager().startAllMcpServers(() -> Display.getDefault().syncExec(() -> {
 			try {
-				initTable();
+				if (this.table != null && !this.table.isDisposed()) {
+					initTable();
+				} else {
+					AiCoderActivator.log().warn("Table is disposed");
+				}
 			} finally {
 				this.table.setEnabled(true);
 				this.progressBar.setVisible(false);
@@ -135,11 +138,7 @@ public class McpPreferencePage extends PreferencePage implements IWorkbenchPrefe
 	}
 
 	private String formatJson(Json json) {
-		try {
-			final ObjectMapper objectMapper = new ObjectMapper();
-			return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(objectMapper.readTree(json.toString()));
-		} catch (final JsonProcessingException exception) {
-			throw new RuntimeException("Failed to format JSON", exception);
-		}
+		final ObjectMapper objectMapper = new ObjectMapper();
+		return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(objectMapper.readTree(json.toString()));
 	}
 }

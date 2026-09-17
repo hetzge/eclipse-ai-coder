@@ -21,7 +21,7 @@ import de.hetzge.eclipse.aicoder.agent.AgentTasksState;
 import de.hetzge.eclipse.aicoder.config.ConfigManager;
 import de.hetzge.eclipse.aicoder.content.InstructionStorage;
 import de.hetzge.eclipse.aicoder.history.HistoryDatabase;
-import de.hetzge.eclipse.aicoder.mcp.McpClients;
+import de.hetzge.eclipse.aicoder.mcp.McpManager;
 
 // TODO
 // - on switch editor abort inline completions/suggestions
@@ -46,6 +46,7 @@ public class AiCoderActivator extends AbstractUIPlugin {
 	private AgentTasksState agentTasksState;
 	private AgentService agentService;
 	private HistoryDatabase historyDatabase;
+	private McpManager mcpManager;
 
 	public AiCoderActivator() {
 	}
@@ -61,8 +62,9 @@ public class AiCoderActivator extends AbstractUIPlugin {
 		this.agentService = new AgentService();
 		this.agentTasksState = new AgentTasksState();
 		this.agentTasksState.load();
-		McpClients.INSTANCE.reload(() -> {
-			log().info("MCP clients loaded: " + McpClients.INSTANCE.getMcpStatusCountsString());
+		this.mcpManager = new McpManager();
+		this.mcpManager.startAllMcpServers(() -> {
+			// ignore
 		});
 		final IWorkbench workbench = PlatformUI.getWorkbench();
 		final IWorkbenchWindow[] windows = workbench.getWorkbenchWindows();
@@ -80,8 +82,19 @@ public class AiCoderActivator extends AbstractUIPlugin {
 		if (this.configManager != null) {
 			this.configManager.dispose();
 		}
+		if (this.historyDatabase != null) {
+			this.historyDatabase.close();
+		}
+		if (this.mcpManager != null) {
+			this.mcpManager.close();
+		}
+		this.agentService.abortAll();
 		plugin = null;
 		super.stop(context);
+	}
+
+	public McpManager getMcpManager() {
+		return this.mcpManager;
 	}
 
 	public InstructionStorage getInstructionStorage() {
