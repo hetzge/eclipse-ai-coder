@@ -20,6 +20,7 @@ import de.hetzge.eclipse.aicoder.agent.AgentService;
 import de.hetzge.eclipse.aicoder.agent.AgentTasksState;
 import de.hetzge.eclipse.aicoder.config.ConfigManager;
 import de.hetzge.eclipse.aicoder.content.InstructionStorage;
+import de.hetzge.eclipse.aicoder.history.AiCoderHistory;
 import de.hetzge.eclipse.aicoder.history.HistoryDatabase;
 import de.hetzge.eclipse.aicoder.mcp.McpManager;
 
@@ -46,6 +47,7 @@ public class AiCoderActivator extends AbstractUIPlugin {
 	private AgentTasksState agentTasksState;
 	private AgentService agentService;
 	private HistoryDatabase historyDatabase;
+	private AiCoderHistory history;
 	private McpManager mcpManager;
 
 	public AiCoderActivator() {
@@ -59,6 +61,8 @@ public class AiCoderActivator extends AbstractUIPlugin {
 		this.editorViewMemory = new EditorViewMemory(1000);
 		this.configManager = new ConfigManager();
 		this.historyDatabase = new HistoryDatabase(getStateLocationPath().append("history.db").toPath());
+		this.history = new AiCoderHistory(this.historyDatabase);
+		this.history.loadHistoryEntries();
 		this.agentService = new AgentService();
 		this.agentTasksState = new AgentTasksState();
 		this.agentTasksState.load();
@@ -119,6 +123,10 @@ public class AiCoderActivator extends AbstractUIPlugin {
 
 	public HistoryDatabase getHistoryDatabase() {
 		return this.historyDatabase;
+	}
+
+	public AiCoderHistory getHistory() {
+		return this.history;
 	}
 
 	public static AiCoderActivator getDefault() {

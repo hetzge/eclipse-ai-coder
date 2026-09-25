@@ -18,7 +18,6 @@ import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IFileEditorInput;
 
@@ -27,7 +26,6 @@ import de.hetzge.eclipse.aicoder.AiCoderImageKey;
 import de.hetzge.eclipse.aicoder.CompletionMode;
 import de.hetzge.eclipse.aicoder.config.ContextConfig.AiRerankConfig;
 import de.hetzge.eclipse.aicoder.config.TaskConfig;
-import de.hetzge.eclipse.aicoder.history.AiCoderHistoryView;
 import de.hetzge.eclipse.aicoder.history.HistoryEntry;
 import de.hetzge.eclipse.aicoder.history.HistoryStatus;
 import de.hetzge.eclipse.aicoder.llm.LlmPromptTemplates;
@@ -87,12 +85,8 @@ public class AiRerankContextEntry extends ContextEntry {
 			final String instructions = LlmPromptTemplates.rerankPrompt(FileTreeUtils.createResourceTreeString(project, whitelist, blacklist), originalInstructions, prefix, suffix, currentFileName);
 			try {
 				final LlmResponse llmResponse = LlmUtils.executeRerank(systemPrompt, instructions).get(1, TimeUnit.MINUTES);
-				AiCoderHistoryView.get().ifPresent(view -> {
-					Display.getDefault().asyncExec(() -> {
-						final HistoryEntry historyEntry = new HistoryEntry(UUID.randomUUID(), CompletionMode.DUMMY, file.getFullPath().makeRelative().toPath(), instructions, "", List.of(llmResponse), Duration.ofMillis(System.currentTimeMillis() - before), HistoryStatus.ACCEPTED);
-						view.addHistoryEntry(historyEntry);
-					});
-				});
+				final HistoryEntry historyEntry = new HistoryEntry(UUID.randomUUID(), CompletionMode.DUMMY, file.getFullPath().makeRelative().toPath(), instructions, "", List.of(llmResponse), Duration.ofMillis(System.currentTimeMillis() - before), HistoryStatus.ACCEPTED);
+				AiCoderActivator.getDefault().getHistory().saveHistoryEntry(historyEntry);
 				if (!llmResponse.isSuccess()) {
 					final Duration creationDuration = Duration.ofMillis(System.currentTimeMillis() - before);
 					return new AiRerankContextEntry(List.of(), creationDuration);

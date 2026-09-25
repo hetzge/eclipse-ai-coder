@@ -4,8 +4,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
@@ -40,15 +38,9 @@ public class AiCoderHistoryView extends ViewPart {
 
 	public static final String ID = "de.hetzge.eclipse.aicoder.AiCoderHistoryView";
 
-	private static final int HISTORY_LIMIT = 100;
 	private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
 
 	private TableViewer viewer;
-	private final List<HistoryEntry> historyEntries;
-
-	public AiCoderHistoryView() {
-		this.historyEntries = new ArrayList<>();
-	}
 
 	@Override
 	public void createPartControl(Composite parent) {
@@ -67,9 +59,7 @@ public class AiCoderHistoryView extends ViewPart {
 		gridData.grabExcessVerticalSpace = true;
 		this.viewer.getControl().setLayoutData(gridData);
 
-		// Load persisted history entries from the database
-		loadHistoryEntries();
-		this.viewer.setInput(this.historyEntries);
+		refreshHistory();
 	}
 
 	private void createViewer(Composite parent) {
@@ -86,19 +76,6 @@ public class AiCoderHistoryView extends ViewPart {
 
 		hookContextMenu();
 		hookDoubleClickAction();
-	}
-
-	private void loadHistoryEntries() {
-		try {
-			final List<HistoryEntry> persistedEntries = getHistoryDatabase().loadHistoryEntries(HISTORY_LIMIT);
-			this.historyEntries.addAll(persistedEntries);
-		} catch (final RuntimeException exception) {
-			AiCoderActivator.log().error("Failed to load history entries", exception);
-		}
-	}
-
-	private HistoryDatabase getHistoryDatabase() {
-		return AiCoderActivator.getDefault().getHistoryDatabase();
 	}
 
 	private void hookContextMenu() {
@@ -136,7 +113,7 @@ public class AiCoderHistoryView extends ViewPart {
 			manager.add(new Action("Delete") {
 				@Override
 				public void run() {
-					deleteEntry(entry);
+					AiCoderActivator.getDefault().getHistory().deleteHistoryEntry(entry);
 				}
 			});
 		});
@@ -162,30 +139,12 @@ public class AiCoderHistoryView extends ViewPart {
 		return this.viewer.getControl().getShell();
 	}
 
-	private void deleteEntry(HistoryEntry entry) {
-		getHistoryDatabase().delete(entry.getId());
-		this.historyEntries.remove(entry);
-		this.viewer.refresh();
+	public void refreshHistory() {
+		this.viewer.setInput(AiCoderActivator.getDefault().getHistory().getCurrentHistoryEntries());
 	}
 
-	public void addHistoryEntry(HistoryEntry entry) {
-		getHistoryDatabase().save(entry);
-		if (this.viewer == null) {
-			return;
-		}
-		if (!this.historyEntries.contains(entry)) {
-			this.historyEntries.add(0, entry); // Add to the beginning of the list
-			if (this.historyEntries.size() > HISTORY_LIMIT) { // TODO max preference
-				this.historyEntries.removeLast();
-			}
-			this.viewer.refresh();
-		} else {
-			this.viewer.update(entry, null);
-		}
-	}
-
-	public void refresh() {
-		this.viewer.refresh();
+	public void refreshHistory(HistoryEntry entry) {
+		this.viewer.update(entry, null);
 	}
 
 	private void createColumns() {

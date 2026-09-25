@@ -9,8 +9,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-import org.eclipse.swt.widgets.Display;
-
+import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.CompletionMode;
 import de.hetzge.eclipse.aicoder.llm.LlmResponse;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
@@ -99,11 +98,7 @@ public final class HistoryEntry {
 
 	public void update(Consumer<Setter> callback) {
 		callback.accept(new Setter());
-		AiCoderHistoryView.get().ifPresent(view -> {
-			Display.getDefault().asyncExec(() -> {
-				view.addHistoryEntry(this);
-			});
-		});
+		AiCoderActivator.getDefault().getHistory().saveHistoryEntry(this);
 	}
 
 	public static HistoryEntry fromJson(Json json) {
