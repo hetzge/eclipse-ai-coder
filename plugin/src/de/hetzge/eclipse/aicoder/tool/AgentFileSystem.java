@@ -28,6 +28,7 @@ import de.hetzge.eclipse.aicoder.quicksearch.FilePatternUtils;
 import de.hetzge.eclipse.aicoder.quicksearch.SearchResult;
 import de.hetzge.eclipse.aicoder.util.DiffUtils;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
+import de.hetzge.eclipse.aicoder.util.PatchUtils;
 
 public final class AgentFileSystem {
 
@@ -46,12 +47,14 @@ public final class AgentFileSystem {
 	public List<Suggestion> toSuggestions(IPath path) throws IOException {
 		final IPath normalizedPath = normalizePath(path);
 		final String oldContent = EclipseUtils.readContentFromBufferOrFile(this.workspaceRoot, normalizedPath);
+		final String referenceContent = getReferenceContent(normalizedPath);
 		final String newContent = this.contentByPath.getOrDefault(normalizedPath, oldContent);
+		final String targetContent = PatchUtils.applyPatch(oldContent, PatchUtils.createPatch(referenceContent, newContent));
 		if (oldContent.equals(newContent)) {
 			return List.of();
 		}
 		final List<Suggestion> suggestions = new ArrayList<>();
-		final DiffUtils.Diff diff = DiffUtils.diff(oldContent, newContent);
+		final DiffUtils.Diff diff = DiffUtils.diff(oldContent, targetContent);
 		for (final DiffUtils.Change change : diff.changes()) {
 			final String oldChangeContent = change.oldContent();
 			final String newChangeContent = change.newContent();
@@ -197,7 +200,7 @@ public final class AgentFileSystem {
 		this.referenceContentByPath.clear();
 		for (final Path path : Files.walk(folder).filter(Files::isRegularFile).toList()) {
 			if (path.getFileName().toString().endsWith(".original")) {
-				final IPath relativePath = IPath.fromPath(path.getParent().relativize(path)).removeFileExtension();
+				final IPath relativePath = IPath.fromPath(folder.relativize(path)).removeFileExtension();
 				// Normalize the path to ensure consistent key representation across persist/load cycles
 				final String normalizedSegmentString = relativePath.toPortableString();
 				final IPath normalizedPath = IPath.fromPortableString(normalizedSegmentString);
