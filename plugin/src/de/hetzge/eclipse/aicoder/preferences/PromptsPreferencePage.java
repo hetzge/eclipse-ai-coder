@@ -26,5 +26,6 @@ public class PromptsPreferencePage extends FieldEditorPreferencePage implements 
 		addField(new StringFieldEditor(AiCoderPreferences.GENERATE_CODE_SYSTEM_PROMPT_KEY, "Generate code system prompt", 70, 7, StringFieldEditor.VALIDATE_ON_KEY_STROKE, getFieldEditorParent()));
 		addField(new StringFieldEditor(AiCoderPreferences.PSEUDO_FIM_SYSTEM_PROMPT_KEY, "Pseduo FIM system prompt", 70, 7, StringFieldEditor.VALIDATE_ON_KEY_STROKE, getFieldEditorParent()));
 		addField(new StringFieldEditor(AiCoderPreferences.QUERY_SYSTEM_PROMPT_KEY, "Query system prompt", 70, 7, StringFieldEditor.VALIDATE_ON_KEY_STROKE, getFieldEditorParent()));
+		addField(new StringFieldEditor(AiCoderPreferences.AGENT_SYSTEM_PROMPT_KEY, "Agent system prompt ({{ projects }} is replaced with the project names)", 70, 7, StringFieldEditor.VALIDATE_ON_KEY_STROKE, getFieldEditorParent()));
 	}
 }

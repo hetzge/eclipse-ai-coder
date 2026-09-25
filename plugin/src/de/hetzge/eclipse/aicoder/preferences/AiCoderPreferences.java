@@ -55,6 +55,7 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 	public static final String CHANGE_CODE_SYSTEM_PROMPT_KEY = "de.hetzge.eclipse.aicoder.change_code_system_prompt";
 	public static final String GENERATE_CODE_SYSTEM_PROMPT_KEY = "de.hetzge.eclipse.aicoder.generate_code_system_prompt";
 	public static final String QUERY_SYSTEM_PROMPT_KEY = "de.hetzge.eclipse.aicoder.query_system_prompt";
+	public static final String AGENT_SYSTEM_PROMPT_KEY = "de.hetzge.eclipse.aicoder.agent_system_prompt";
 	public static final String FIM_TEMPLATE_KEY = "de.hetzge.eclipse.aicoder.fim_template";
 	public static final String ENABLE_PSEUDO_FIM_KEY = "de.hetzge.eclipse.aicoder.enable_pseduo_fim";
 	public static final String PSEUDO_FIM_SYSTEM_PROMPT_KEY = "de.hetzge.eclipse.aicoder.pseudo_fim_system_prompt";
@@ -119,6 +120,7 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 		store.setDefault(ENABLE_PSEUDO_FIM_KEY, false);
 		store.setDefault(PSEUDO_FIM_SYSTEM_PROMPT_KEY, LlmPromptTemplates.pseudoFimCodeSystemPrompt());
 		store.setDefault(QUERY_SYSTEM_PROMPT_KEY, LlmPromptTemplates.querySystemPrompt());
+		store.setDefault(AGENT_SYSTEM_PROMPT_KEY, LlmPromptTemplates.agentSystemPrompt());
 		store.setDefault(TIMEOUT_KEY, Duration.ofMinutes(5).toMillis());
 		store.setDefault(INCEPTIONLABS_API_KEY_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
 		store.setDefault(OPENROUTER_API_KEY_KEY, IPreferenceStore.STRING_DEFAULT_DEFAULT);
@@ -392,6 +394,10 @@ public final class AiCoderPreferences extends AbstractPreferenceInitializer {
 
 	public static String getQuerySystemPrompt() {
 		return getStore().getString(QUERY_SYSTEM_PROMPT_KEY);
+	}
+
+	public static String getAgentSystemPrompt() {
+		return getStore().getString(AGENT_SYSTEM_PROMPT_KEY);
 	}
 
 	public static Duration getTimeout() {

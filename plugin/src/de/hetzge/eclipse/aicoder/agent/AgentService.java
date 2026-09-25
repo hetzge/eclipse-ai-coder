@@ -20,6 +20,7 @@ import com.github.f4b6a3.uuid.UuidCreator;
 import de.hetzge.eclipse.aicoder.AiCoderActivator;
 import de.hetzge.eclipse.aicoder.llm.LlmMessage;
 import de.hetzge.eclipse.aicoder.llm.LlmRole;
+import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.tool.CreateOrDeleteFileTool;
 import de.hetzge.eclipse.aicoder.tool.EditFileTool;
 import de.hetzge.eclipse.aicoder.tool.FileSystem;
@@ -118,12 +119,8 @@ public final class AgentService {
 					AiCoderActivator.getDefault().getAgentTasksState().saveAgentTask(task);
 					final String fileExtension = this.request.selection().path().getFileExtension();
 					final List<LlmMessage> initialMessages = List.of(
-							// TODO prompt preferences
-							new LlmMessage(LlmRole.SYSTEM, """
-									You are an AI coding assistant.
-									You operate in an Eclipse IDE workspace. You have access to the following projects: ${PROJECTS}
-									Use the available tools to implement the request.
-									""".replace("${PROJECTS}", this.request.projects().stream().map(it -> it.getName()).collect(Collectors.joining(", ")))),
+							new LlmMessage(LlmRole.SYSTEM, JinjaUtils.applyTemplate(AiCoderPreferences.getAgentSystemPrompt(), Map.ofEntries(
+									Map.entry("projects", this.request.projects().stream().map(it -> it.getName()).collect(Collectors.joining(", ")))))),
 							new LlmMessage(LlmRole.USER, JinjaUtils.applyTemplate("""
 									User request:
 									{{ task }}

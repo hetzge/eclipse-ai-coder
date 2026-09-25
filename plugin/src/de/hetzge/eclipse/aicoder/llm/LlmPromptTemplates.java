@@ -229,6 +229,14 @@ public final class LlmPromptTemplates {
 				""".trim().formatted(locations, instructions, prefix, suffix, currentFileName);
 	}
 
+	public static String agentSystemPrompt() {
+		return """
+				You are an AI coding assistant.
+				You operate in an Eclipse IDE workspace. You have access to the following projects: {{ projects }}
+				Use the available tools to implement the request.
+				""".trim();
+	}
+
 	public static String querySystemPrompt() {
 		return """
 				You are a software developer assistant.

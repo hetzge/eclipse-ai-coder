@@ -82,7 +82,9 @@ public final class HistoryEntry {
 
 	public Json toJson() {
 		final Json responsesJson = Json.array();
-		getResponses().forEach(response -> responsesJson.add(response.toJson()));
+		for (final LlmResponse response : getResponses()) {
+			responsesJson.add(response.toJson());
+		}
 		return Json.object()
 				.set("id", getId().toString())
 				.set("timestamp", getTimestamp().toString())
@@ -113,7 +115,9 @@ public final class HistoryEntry {
 		final String content = json.at("content").asString();
 		final List<LlmResponse> responses = new ArrayList<>();
 		if (json.has("responses") && json.at("responses").isArray()) {
-			json.at("responses").asJsonList().forEach(responseJson -> responses.add(new LlmResponse(responseJson)));
+			for (final Json responseJson : json.at("responses").asJsonList()) {
+				responses.add(new LlmResponse(responseJson));
+			}
 		} else if (json.has("response") && !json.at("response").isNull()) {
 			// backward compatibility with the legacy single "response" field
 			responses.add(new LlmResponse(json.at("response")));
