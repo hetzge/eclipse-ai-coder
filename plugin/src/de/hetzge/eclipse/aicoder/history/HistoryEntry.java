@@ -4,7 +4,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Optional;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -23,22 +24,22 @@ public final class HistoryEntry {
 	private final Path filePath;
 	private String context;
 	private String content;
-	private Optional<LlmResponse> responseOptional;
+	private List<LlmResponse> responses;
 	private Duration duration;
 	private HistoryStatus status;
 
-	public HistoryEntry(UUID id, CompletionMode mode, Path filePath, String context, String content, Optional<LlmResponse> responseOptional, Duration duration, HistoryStatus status) {
-		this(id, mode, filePath, context, content, responseOptional, duration, status, Instant.now());
+	public HistoryEntry(UUID id, CompletionMode mode, Path filePath, String context, String content, List<LlmResponse> responses, Duration duration, HistoryStatus status) {
+		this(id, mode, filePath, context, content, responses, duration, status, Instant.now());
 	}
 
-	private HistoryEntry(UUID id, CompletionMode mode, Path filePath, String context, String content, Optional<LlmResponse> responseOptional, Duration duration, HistoryStatus status, Instant timestamp) {
+	private HistoryEntry(UUID id, CompletionMode mode, Path filePath, String context, String content, List<LlmResponse> responses, Duration duration, HistoryStatus status, Instant timestamp) {
 		this.id = id;
 		this.timestamp = timestamp;
 		this.mode = mode;
 		this.filePath = EclipseUtils.toWorkspaceRootRelativePath(filePath);
 		this.context = context;
 		this.content = content;
-		this.responseOptional = responseOptional;
+		this.responses = new ArrayList<>(responses);
 		this.duration = duration;
 		this.status = status;
 	}
@@ -67,8 +68,8 @@ public final class HistoryEntry {
 		return this.content;
 	}
 
-	public Optional<LlmResponse> getResponseOptional() {
-		return this.responseOptional;
+	public List<LlmResponse> getResponses() {
+		return this.responses;
 	}
 
 	public Duration getDuration() {
@@ -80,6 +81,8 @@ public final class HistoryEntry {
 	}
 
 	public Json toJson() {
+		final Json responsesJson = Json.array();
+		getResponses().forEach(response -> responsesJson.add(response.toJson()));
 		return Json.object()
 				.set("id", getId().toString())
 				.set("timestamp", getTimestamp().toString())
@@ -87,7 +90,7 @@ public final class HistoryEntry {
 				.set("filePath", getFilePath().toString())
 				.set("context", getContext())
 				.set("content", getContent())
-				.set("response", getResponseOptional().map(LlmResponse::toJson).orElse(Json.nil()))
+				.set("responses", responsesJson)
 				.set("status", getStatus().name())
 				.set("duration", getDuration().toMillis());
 	}
@@ -108,12 +111,16 @@ public final class HistoryEntry {
 		final Path filePath = EclipseUtils.toWorkspaceRootRelativePath(Paths.get(json.at("filePath").asString()));
 		final String context = json.at("content").asString();
 		final String content = json.at("content").asString();
-		final Optional<LlmResponse> responseOptional = json.has("response") && !json.at("response").isNull()
-				? Optional.of(new LlmResponse(json.at("response")))
-				: Optional.empty();
+		final List<LlmResponse> responses = new ArrayList<>();
+		if (json.has("responses") && json.at("responses").isArray()) {
+			json.at("responses").asJsonList().forEach(responseJson -> responses.add(new LlmResponse(responseJson)));
+		} else if (json.has("response") && !json.at("response").isNull()) {
+			// backward compatibility with the legacy single "response" field
+			responses.add(new LlmResponse(json.at("response")));
+		}
 		final HistoryStatus status = HistoryStatus.valueOf(json.at("status").asString());
 		final Duration duration = Duration.ofMillis(json.at("duration").asLong());
-		return new HistoryEntry(id, mode, filePath, context, content, responseOptional, duration, status, timestamp);
+		return new HistoryEntry(id, mode, filePath, context, content, responses, duration, status, timestamp);
 	}
 
 	public class Setter {
@@ -126,8 +133,14 @@ public final class HistoryEntry {
 			HistoryEntry.this.content = content;
 		}
 
-		public void setResponseOptional(Optional<LlmResponse> responseOptional) {
-			HistoryEntry.this.responseOptional = responseOptional;
+		public void setResponses(List<LlmResponse> responses) {
+			HistoryEntry.this.responses = new ArrayList<>(responses);
+		}
+
+		public void addResponse(LlmResponse response) {
+			if (response != null) {
+				HistoryEntry.this.responses.add(response);
+			}
 		}
 
 		public void setDuration(Duration duration) {

@@ -4,7 +4,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -90,7 +89,7 @@ public class AiRerankContextEntry extends ContextEntry {
 				final LlmResponse llmResponse = LlmUtils.executeRerank(systemPrompt, instructions).get(1, TimeUnit.MINUTES);
 				AiCoderHistoryView.get().ifPresent(view -> {
 					Display.getDefault().asyncExec(() -> {
-						final HistoryEntry historyEntry = new HistoryEntry(UUID.randomUUID(), CompletionMode.DUMMY, file.getFullPath().makeRelative().toPath(), instructions, "", Optional.of(llmResponse), Duration.ofMillis(System.currentTimeMillis() - before), HistoryStatus.ACCEPTED);
+						final HistoryEntry historyEntry = new HistoryEntry(UUID.randomUUID(), CompletionMode.DUMMY, file.getFullPath().makeRelative().toPath(), instructions, "", List.of(llmResponse), Duration.ofMillis(System.currentTimeMillis() - before), HistoryStatus.ACCEPTED);
 						view.addHistoryEntry(historyEntry);
 					});
 				});

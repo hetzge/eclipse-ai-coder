@@ -203,7 +203,7 @@ public final class InlineCompletionController {
 		final IEditorInput editorInput = this.textEditor.getEditorInput();
 		final String filePath = EclipseUtils.getFilename(editorInput).orElseGet(() -> editorInput.getName());
 		final CompletionMode mode = CompletionMode.getMode(this.textViewer, instruction, false, readOnly);
-		final HistoryEntry historyEntry = new HistoryEntry(UUID.randomUUID(), mode, EclipseUtils.toWorkspaceRootRelativePath(Path.of(filePath)), "", "", Optional.empty(), Duration.ZERO, HistoryStatus.STARTED);
+		final HistoryEntry historyEntry = new HistoryEntry(UUID.randomUUID(), mode, EclipseUtils.toWorkspaceRootRelativePath(Path.of(filePath)), "", "", List.of(), Duration.ZERO, HistoryStatus.STARTED);
 		this.job = new Job("AI") {
 
 			ITextViewer textViewer = InlineCompletionController.this.textViewer;
@@ -302,7 +302,7 @@ public final class InlineCompletionController {
 						final LlmResponse finalLlmResponse = llmResponse;
 						historyEntry.update(sink -> {
 							sink.setStatus(HistoryStatus.ERROR);
-							sink.setResponseOptional(Optional.of(finalLlmResponse));
+							sink.addResponse(finalLlmResponse);
 						});
 						return Status.OK_STATUS;
 					}
@@ -347,7 +347,9 @@ public final class InlineCompletionController {
 					}
 					final LlmResponse llmResponseFinal = llmResponse;
 					historyEntry.update(sink -> {
-						sink.setResponseOptional(Optional.ofNullable(llmResponseFinal));
+						if (llmResponseFinal != null) {
+							sink.addResponse(llmResponseFinal);
+						}
 						sink.setStatus(calculateStatus(isBlank, isMoved, isSame));
 						sink.setDuration(Duration.ofMillis(System.currentTimeMillis() - startTime));
 					});
@@ -430,7 +432,7 @@ public final class InlineCompletionController {
 		System.out.println("newEditable:\n " + newEditable);
 		System.out.println("newContent:\n " + newContent);
 		setup(new Suggestion(
-				Optional.of(new HistoryEntry(UUID.randomUUID(), CompletionMode.NEXT_EDIT, currentPath.makeRelative().toPath(), document.get(), "", Optional.empty(), Duration.ZERO, HistoryStatus.STARTED)),
+				Optional.of(new HistoryEntry(UUID.randomUUID(), CompletionMode.NEXT_EDIT, currentPath.makeRelative().toPath(), document.get(), "", List.of(), Duration.ZERO, HistoryStatus.STARTED)),
 				newContent,
 				document.getLineOffset(firstLine + prefixLineOffset),
 				newEditable.length(),

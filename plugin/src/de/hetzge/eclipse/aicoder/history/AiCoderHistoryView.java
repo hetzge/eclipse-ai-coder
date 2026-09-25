@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
+import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Status;
@@ -123,10 +124,13 @@ public class AiCoderHistoryView extends ViewPart {
 			final Action responseAction = new Action("LLM Response") {
 				@Override
 				public void run() {
-					entry.getResponseOptional().ifPresent(response -> new ContentPreviewDialog(getShell(), "LLM Response", response.getPlainResponse()).open());
+					final String plainResponses = entry.getResponses().stream()
+							.map(LlmResponse::getPlainResponse)
+							.collect(Collectors.joining("\n\n----------------------------------------\n\n"));
+					new ContentPreviewDialog(getShell(), "LLM Response", plainResponses).open();
 				}
 			};
-			responseAction.setEnabled(entry.getResponseOptional().isPresent());
+			responseAction.setEnabled(!entry.getResponses().isEmpty());
 			manager.add(responseAction);
 			manager.add(new Separator());
 			manager.add(new Action("Delete") {
@@ -209,7 +213,7 @@ public class AiCoderHistoryView extends ViewPart {
 
 		// Timing
 		createColumn("Duration", 70, entry -> formatDuration(entry.getDuration()));
-		createColumn("LLM duration", 90, entry -> entry.getResponseOptional().map(LlmResponse::getDuration).map(AiCoderHistoryView::formatDuration).orElse(""));
+		createColumn("LLM duration", 90, entry -> entry.getResponses().isEmpty() ? "" : formatDuration(getTotalResponseDuration(entry)));
 		createColumn("Tokens/s", 70, AiCoderHistoryView::getTokensPerSecond);
 	}
 
@@ -232,27 +236,35 @@ public class AiCoderHistoryView extends ViewPart {
 	}
 
 	private static String getModelLabel(HistoryEntry entry) {
-		return entry.getResponseOptional()
+		return entry.getResponses().stream()
 				.map(response -> response.getLlmModelOption().getLabel())
-				.orElse("");
+				.distinct()
+				.collect(Collectors.joining(", "));
 	}
 
 	private static String getTokenCount(HistoryEntry entry, ToIntFunction<LlmResponse> tokenExtractor) {
-		return entry.getResponseOptional()
-				.map(response -> String.valueOf(tokenExtractor.applyAsInt(response)))
-				.orElse("-");
+		if (entry.getResponses().isEmpty()) {
+			return "-";
+		}
+		return String.valueOf(entry.getResponses().stream().mapToInt(tokenExtractor).sum());
 	}
 
 	private static String getTokensPerSecond(HistoryEntry entry) {
-		return entry.getResponseOptional()
-				.map(response -> {
-					final double seconds = response.getDuration().toMillis() / 1000.0;
-					if (seconds <= 0.0) {
-						return "-";
-					}
-					return String.format("%.1f", response.getOutputTokens() / seconds);
-				})
-				.orElse("-");
+		if (entry.getResponses().isEmpty()) {
+			return "-";
+		}
+		final double seconds = getTotalResponseDuration(entry).toMillis() / 1000.0;
+		if (seconds <= 0.0) {
+			return "-";
+		}
+		final int outputTokens = entry.getResponses().stream().mapToInt(LlmResponse::getOutputTokens).sum();
+		return String.format("%.1f", outputTokens / seconds);
+	}
+
+	private static Duration getTotalResponseDuration(HistoryEntry entry) {
+		return entry.getResponses().stream()
+				.map(LlmResponse::getDuration)
+				.reduce(Duration.ZERO, Duration::plus);
 	}
 
 	private static int getCharCount(String text) {
