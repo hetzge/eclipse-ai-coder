@@ -96,6 +96,10 @@ public final class HistoryEntry {
 				.set("duration", getDuration().toMillis());
 	}
 
+	public void persist() {
+		AiCoderActivator.getDefault().getHistory().saveHistoryEntry(this);
+	}
+
 	public void update(Consumer<Setter> callback) {
 		callback.accept(new Setter());
 		AiCoderActivator.getDefault().getHistory().saveHistoryEntry(this);
