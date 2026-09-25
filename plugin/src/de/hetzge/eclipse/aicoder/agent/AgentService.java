@@ -23,7 +23,7 @@ import de.hetzge.eclipse.aicoder.llm.LlmRole;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.tool.CreateOrDeleteFileTool;
 import de.hetzge.eclipse.aicoder.tool.EditFileTool;
-import de.hetzge.eclipse.aicoder.tool.FileSystem;
+import de.hetzge.eclipse.aicoder.tool.AgentFileSystem;
 import de.hetzge.eclipse.aicoder.tool.ListFilesTool;
 import de.hetzge.eclipse.aicoder.tool.ReadFileTool;
 import de.hetzge.eclipse.aicoder.tool.SearchTool;
@@ -143,7 +143,7 @@ public final class AgentService {
 						AiCoderActivator.getDefault().getAgentTasksState().appendTrajectory(task.getId(), new MessageTrajectoryEntry(message));
 					}
 					final List<IProject> projects = this.request.projects();
-					final FileSystem fileSystem = new FileSystem(projects, projects.get(0).getWorkspace().getRoot());
+					final AgentFileSystem fileSystem = new AgentFileSystem(projects, projects.get(0).getWorkspace().getRoot());
 
 					final List<Tool> tools;
 					if (this.request.readonly()) {

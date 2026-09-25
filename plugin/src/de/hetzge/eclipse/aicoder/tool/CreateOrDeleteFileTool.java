@@ -37,9 +37,9 @@ public final class CreateOrDeleteFileTool extends Tool {
 	}
 
 	private final List<IProject> projects;
-	private final FileSystem fileSystem;
+	private final AgentFileSystem fileSystem;
 
-	public CreateOrDeleteFileTool(List<IProject> projects, FileSystem fileSystem) {
+	public CreateOrDeleteFileTool(List<IProject> projects, AgentFileSystem fileSystem) {
 		super(prepareDefinition(projects));
 		this.projects = projects;
 		this.fileSystem = fileSystem;

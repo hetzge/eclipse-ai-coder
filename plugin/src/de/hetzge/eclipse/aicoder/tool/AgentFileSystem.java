@@ -29,14 +29,14 @@ import de.hetzge.eclipse.aicoder.quicksearch.SearchResult;
 import de.hetzge.eclipse.aicoder.util.DiffUtils;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 
-public final class FileSystem {
+public final class AgentFileSystem {
 
 	private final List<IProject> projects;
 	private final IWorkspaceRoot workspaceRoot;
 	private final Map<IPath, String> referenceContentByPath;
 	private final Map<IPath, String> contentByPath;
 
-	public FileSystem(List<IProject> projects, IWorkspaceRoot workspaceRoot) {
+	public AgentFileSystem(List<IProject> projects, IWorkspaceRoot workspaceRoot) {
 		this.projects = projects;
 		this.workspaceRoot = workspaceRoot;
 		this.referenceContentByPath = new HashMap<>();

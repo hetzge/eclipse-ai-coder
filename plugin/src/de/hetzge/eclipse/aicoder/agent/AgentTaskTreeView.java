@@ -63,7 +63,7 @@ import de.hetzge.eclipse.aicoder.handler.AbortAllAgentTasksHandler;
 import de.hetzge.eclipse.aicoder.handler.RerunAgentTaskHandler;
 import de.hetzge.eclipse.aicoder.inline.InlineCompletionController;
 import de.hetzge.eclipse.aicoder.inline.Suggestion;
-import de.hetzge.eclipse.aicoder.tool.FileSystem;
+import de.hetzge.eclipse.aicoder.tool.AgentFileSystem;
 import de.hetzge.eclipse.aicoder.util.DiffUtils;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 import de.hetzge.eclipse.aicoder.util.Utils;
@@ -397,9 +397,9 @@ public final class AgentTaskTreeView extends ViewPart {
 		return changes;
 	}
 
-	private FileSystem loadFileSystem(AgentTask task) throws IOException {
+	private AgentFileSystem loadFileSystem(AgentTask task) throws IOException {
 		final List<IProject> projects = task.getRequest().projects();
-		final FileSystem fileSystem = new FileSystem(projects, projects.get(0).getWorkspace().getRoot());
+		final AgentFileSystem fileSystem = new AgentFileSystem(projects, projects.get(0).getWorkspace().getRoot());
 		fileSystem.load(AgentStorage.getFileSystemPath(task.getId()).toPath());
 		return fileSystem;
 	}
@@ -407,7 +407,7 @@ public final class AgentTaskTreeView extends ViewPart {
 	private void applyTaskChanges(List<AgentTask> tasks, boolean reset) {
 		for (final AgentTask task : tasks) {
 			try {
-				final FileSystem fileSystem = loadFileSystem(task);
+				final AgentFileSystem fileSystem = loadFileSystem(task);
 				applyFileSystemChanges(fileSystem, new ArrayList<>(fileSystem.getChangedPaths()), reset);
 			} catch (final Exception exception) {
 				logAndShowError("Failed to " + (reset ? "reset" : "apply") + " changes", exception);
@@ -422,7 +422,7 @@ public final class AgentTaskTreeView extends ViewPart {
 		}
 		for (final Map.Entry<AgentTask, List<IPath>> entry : pathsByTask.entrySet()) {
 			try {
-				final FileSystem fileSystem = loadFileSystem(entry.getKey());
+				final AgentFileSystem fileSystem = loadFileSystem(entry.getKey());
 				applyFileSystemChanges(fileSystem, entry.getValue(), reset);
 			} catch (final Exception exception) {
 				logAndShowError("Failed to " + (reset ? "reset" : "apply") + " changes", exception);
@@ -430,7 +430,7 @@ public final class AgentTaskTreeView extends ViewPart {
 		}
 	}
 
-	private void applyFileSystemChanges(FileSystem fileSystem, List<IPath> paths, boolean reset) throws CoreException {
+	private void applyFileSystemChanges(AgentFileSystem fileSystem, List<IPath> paths, boolean reset) throws CoreException {
 		ResourcesPlugin.getWorkspace().run(monitor -> {
 			for (final IPath path : paths) {
 				final String content = reset ? fileSystem.getReferenceContent(path) : fileSystem.getChangedContent(path);
@@ -470,7 +470,7 @@ public final class AgentTaskTreeView extends ViewPart {
 		try {
 			final AgentTask task = findTask(agentChange).orElseThrow(() -> new IllegalStateException("No task found for change: " + agentChange.path().toPortableString()));
 			final List<IProject> projects = task.getRequest().projects();
-			final FileSystem fileSystem = new FileSystem(projects, projects.get(0).getWorkspace().getRoot());
+			final AgentFileSystem fileSystem = new AgentFileSystem(projects, projects.get(0).getWorkspace().getRoot());
 			fileSystem.load(AgentStorage.getFileSystemPath(task.getId()).toPath());
 			final List<Suggestion> suggestions = fileSystem.toSuggestions(agentChange.path());
 			final IFile file = ResourcesPlugin.getWorkspace().getRoot().getFile(agentChange.path());
@@ -487,7 +487,7 @@ public final class AgentTaskTreeView extends ViewPart {
 	private void openCompareDialog(AgentChange change, boolean reference) {
 		try {
 			final AgentTask task = findTask(change).orElseThrow(() -> new IllegalStateException("No task found for change: " + change.path().toPortableString()));
-			final FileSystem fileSystem = loadFileSystem(task);
+			final AgentFileSystem fileSystem = loadFileSystem(task);
 			final IPath path = change.path();
 			final String proposedContent = fileSystem.getChangedContent(path);
 			final String compareContent = reference ? fileSystem.getReferenceContent(path) : fileSystem.readWorktreeFile(path);

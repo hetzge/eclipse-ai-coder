@@ -23,9 +23,9 @@ public final class BuildTool extends Tool {
 	}
 
 	private final List<IProject> projects;
-	private final FileSystem fileSystem;
+	private final AgentFileSystem fileSystem;
 
-	public BuildTool(List<IProject> projects, FileSystem fileSystem) {
+	public BuildTool(List<IProject> projects, AgentFileSystem fileSystem) {
 		super(prepareDefinition(projects));
 		if (projects.isEmpty()) {
 			throw new IllegalArgumentException("At least one project must be provided.");

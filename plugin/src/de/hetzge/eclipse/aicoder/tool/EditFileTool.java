@@ -33,9 +33,9 @@ public final class EditFileTool extends Tool {
 	}
 
 	private final List<IProject> projects;
-	private final FileSystem fileSystem;
+	private final AgentFileSystem fileSystem;
 
-	public EditFileTool(List<IProject> projects, FileSystem fileSystem) {
+	public EditFileTool(List<IProject> projects, AgentFileSystem fileSystem) {
 		super(prepareDefinition(projects));
 		this.projects = projects;
 		this.fileSystem = fileSystem;

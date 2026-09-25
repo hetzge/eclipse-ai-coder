@@ -44,9 +44,9 @@ public final class ReadFileTool extends Tool {
 	}
 
 	private final List<IProject> projects;
-	private final FileSystem fileSystem;
+	private final AgentFileSystem fileSystem;
 
-	public ReadFileTool(List<IProject> projects, FileSystem fileSystem) {
+	public ReadFileTool(List<IProject> projects, AgentFileSystem fileSystem) {
 		super(prepareDefinition(projects));
 		this.projects = projects;
 		this.fileSystem = fileSystem;

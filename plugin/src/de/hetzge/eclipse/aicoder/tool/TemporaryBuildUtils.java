@@ -24,7 +24,7 @@ public final class TemporaryBuildUtils {
 	private TemporaryBuildUtils() {
 	}
 
-	public static synchronized List<IProblem> buildWithModifiedSource(IProgressMonitor progressMonitor, IProject project, FileSystem fileSystem) throws Exception {
+	public static synchronized List<IProblem> buildWithModifiedSource(IProgressMonitor progressMonitor, IProject project, AgentFileSystem fileSystem) throws Exception {
 		final List<IProblem> problems = new ArrayList<>();
 		final List<ICompilationUnit> units = new ArrayList<>();
 		try {
