@@ -45,6 +45,8 @@ public record EditorView(String path, int lineIndex, List<String> lines) {
 
 	public static String getPathString(final IDocument document) {
 		final ITextFileBuffer textFileBuffer = ITextFileBufferManager.DEFAULT.getTextFileBuffer(document);
+		if(textFileBuffer == null)
+			return "";
 		String pathString = textFileBuffer.getLocation().toOSString();
 		pathString = pathString.startsWith("/") ? pathString.substring(1) : pathString;
 		return pathString;
