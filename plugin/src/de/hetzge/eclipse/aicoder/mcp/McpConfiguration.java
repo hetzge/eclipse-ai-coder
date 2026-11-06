@@ -25,10 +25,15 @@ public sealed interface McpConfiguration permits CommandMcpConfiguration, HttpMc
 	Json toJson();
 
 	public static McpConfiguration fromJson(Json json) {
-		if (json.has("type") && json.at("type").asString().equalsIgnoreCase("http")) {
+		final String type = json.has("type") ? json.at("type").asString() : "";
+		if (type.equalsIgnoreCase("http") || json.has("url")) {
 			return HttpMcpConfiguration.fromJson(json);
-		} else {
+		} else if (type.equalsIgnoreCase("stdio") || json.has("command")) {
 			return CommandMcpConfiguration.fromJson(json);
+		} else if (type.equalsIgnoreCase("sse")) {
+			return SseMcpConfiguration.fromJson(json);
+		} else {
+			throw new IllegalArgumentException("Unknown MCP configuration type: " + type);
 		}
 	}
 

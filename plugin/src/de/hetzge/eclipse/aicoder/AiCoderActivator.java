@@ -2,13 +2,13 @@ package de.hetzge.eclipse.aicoder;
 
 import org.eclipse.core.runtime.ILog;
 import org.eclipse.core.runtime.IPath;
-import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
@@ -62,14 +62,26 @@ public class AiCoderActivator extends AbstractUIPlugin {
 		this.configManager = new ConfigManager();
 		this.historyDatabase = new HistoryDatabase(getStateLocationPath().append("history.db").toPath());
 		this.history = new AiCoderHistory(this.historyDatabase);
-		this.history.loadHistoryEntries();
+		try {
+			this.history.loadHistoryEntries();
+		} catch (final Exception exception) {
+			handleErrorWithDialog("Failed to load history", exception);
+		}
 		this.agentService = new AgentService();
 		this.agentTasksState = new AgentTasksState();
-		this.agentTasksState.load();
+		try {
+			this.agentTasksState.load();
+		} catch (final Exception exception) {
+			handleErrorWithDialog("Failed to load agent tasks", exception);
+		}
 		this.mcpManager = new McpManager();
-		this.mcpManager.startAllMcpServers(() -> {
-			// ignore
-		});
+		try {
+			this.mcpManager.startAllMcpServers(() -> {
+				// ignore
+			});
+		} catch (final Exception exception) {
+			handleErrorWithDialog("Failed to start MCP servers", exception);
+		}
 		final IWorkbench workbench = PlatformUI.getWorkbench();
 		final IWorkbenchWindow[] windows = workbench.getWorkbenchWindows();
 		for (final IWorkbenchWindow window : windows) {
@@ -152,7 +164,14 @@ public class AiCoderActivator extends AbstractUIPlugin {
 	}
 
 	public static void openErrorDialog(String title, String message, Throwable throwable) {
-		ErrorDialog.openError(null, title, null, new Status(IStatus.ERROR, AiCoderActivator.PLUGIN_ID, message, throwable));
+		ErrorDialog.openError(null, title, null, Status.error(message, throwable));
+	}
+
+	public static void handleErrorWithDialog(String title, Exception exception) {
+		log().error(title, exception);
+		Display.getDefault().execute(() -> {
+			openErrorDialog("AI Coder: " + title, exception.getMessage(), exception);
+		});
 	}
 
 	public static IPath getStateLocationPath() {
