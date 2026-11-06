@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -36,6 +37,8 @@ import org.eclipse.jface.viewers.ILabelProviderListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.ITreeSelection;
+import org.eclipse.jface.viewers.TreePath;
+import org.eclipse.jface.viewers.TreeSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
@@ -91,7 +94,6 @@ public final class AgentTaskTreeView extends ViewPart {
 		this.treeViewer.setUseHashlookup(true);
 		this.treeViewer.setContentProvider(new AgentTaskContentProvider());
 		this.treeViewer.setLabelProvider(new AgentTaskLabelProvider());
-		getSite().setSelectionProvider(this.treeViewer);
 		this.treeViewer.addDoubleClickListener(event -> {
 			try {
 				final Object selected = event.getSelection();
@@ -100,16 +102,14 @@ public final class AgentTaskTreeView extends ViewPart {
 						try {
 							PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().openEditor(new AgentTrajectoryEditorInput(agentTask), AgentTrajectoryEditor.ID);
 						} catch (final PartInitException exception) {
-							AiCoderActivator.log().error("Failed to open agent task editor", exception);
-							ErrorDialog.openError(getSite().getShell(), "Error", "Failed to open agent task editor", Status.error(exception.getMessage(), exception));
+							AiCoderActivator.handleErrorWithDialog("Failed to open agent task editor", exception);
 						}
 					} else if (treeSelection.getFirstElement() instanceof final AgentChange agentChange) {
 						openChange(agentChange);
 					}
 				}
 			} catch (final Exception exception) {
-				AiCoderActivator.log().error("Failed to open agent task editor", exception);
-				ErrorDialog.openError(getSite().getShell(), "Error", "Failed to open agent task editor", Status.error(exception.getMessage(), exception));
+				AiCoderActivator.handleErrorWithDialog("Failed to open agent task editor", exception);
 			}
 		});
 		this.treeViewer.addSelectionChangedListener(event -> {
@@ -145,12 +145,17 @@ public final class AgentTaskTreeView extends ViewPart {
 			public void partOpened(IWorkbenchPart part) {
 			}
 		};
+		getSite().setSelectionProvider(this.treeViewer);
 		getSite().getPage().addPartListener(this.partListener);
+		refresh(null);
 		new Job("Refresh agent task tree") {
 			@Override
 			protected IStatus run(IProgressMonitor monitor) {
 				if (!AgentTaskTreeView.this.treeViewer.getTree().isDisposed()) {
-					refresh();
+					final List<Object> list = (List<Object>) AgentTaskTreeView.this.treeViewer.getInput();
+					for (final Object object : list) {
+						refresh(object);
+					}
 					this.schedule(1000 * 60);
 				}
 				return Status.OK_STATUS;
@@ -591,13 +596,39 @@ public final class AgentTaskTreeView extends ViewPart {
 		AiCoderActivator.getDefault().getAgentTasksState().removeListener(this.agentTasksStateListener);
 	}
 
-	private void refresh() {
+	private void select(Object object) {
+		Display.getDefault().asyncExec(() -> {
+			if (AgentTaskTreeView.this.treeViewer.getTree().isDisposed() || !AgentTaskTreeView.this.treeViewer.contains(null, object)) {
+				return;
+			}
+			AgentTaskTreeView.this.treeViewer.setSelection(
+					new TreeSelection(new TreePath(new Object[] { object })), true);
+		});
+	}
+
+	private boolean contains(AgentTask task) {
+		return AgentTaskTreeView.this.treeViewer.contains(null, task);
+	}
+
+	private void refresh(Object object) {
 		Display.getDefault().asyncExec(() -> {
 			if (AgentTaskTreeView.this.treeViewer.getTree().isDisposed()) {
 				return;
 			}
-			AgentTaskTreeView.this.treeViewer.setInput(List.of());
-			AgentTaskTreeView.this.treeViewer.refresh();
+			if (object != null) {
+				if (object instanceof final Collection collection) {
+					for (final Object it : collection) {
+						AgentTaskTreeView.this.treeViewer.refresh(it);
+					}
+				} else {
+					AgentTaskTreeView.this.treeViewer.refresh(object);
+				}
+			} else {
+				final Object[] expandedElements = this.treeViewer.getExpandedElements();
+				AgentTaskTreeView.this.treeViewer.setInput(List.of());
+				AgentTaskTreeView.this.treeViewer.refresh();
+				this.treeViewer.setExpandedElements(expandedElements);
+			}
 			updateActionEnablement();
 		});
 	}
@@ -618,7 +649,12 @@ public final class AgentTaskTreeView extends ViewPart {
 
 		@Override
 		public void onAgentTasksChanged(AgentTask task) {
-			refresh();
+			if (!contains(task)) {
+				refresh(null);
+				select(task);
+			} else {
+				refresh(task);
+			}
 		}
 	}
 
