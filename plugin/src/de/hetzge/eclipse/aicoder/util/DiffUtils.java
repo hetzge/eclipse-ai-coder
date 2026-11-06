@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import org.eclipse.compare.CompareConfiguration;
 import org.eclipse.compare.CompareEditorInput;
@@ -22,6 +23,9 @@ import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.PlatformUI;
+
+import de.hetzge.eclipse.aicoder.history.HistoryEntry;
+import de.hetzge.eclipse.aicoder.inline.Suggestion;
 
 public final class DiffUtils {
 
@@ -198,6 +202,23 @@ public final class DiffUtils {
 	}
 
 	public static record Change(int startLine, String newContent, String oldContent) {
+		public Suggestion toSuggestion(String fullContent) {
+			return toSuggestion(fullContent, Optional.empty());
+		}
+
+		public Suggestion toSuggestion(String fullContent, Optional<HistoryEntry> historyEntryOptional) {
+			final int modelOffset = Arrays.asList(fullContent.split("(?<=\\n)")).stream().limit(this.startLine).mapToInt(String::length).sum();
+			final int originalLength = this.oldContent.length();
+			final int oldLineCount = (int) this.oldContent.lines().count();
+			final int newLineCount = (int) this.newContent.lines().count();
+			return new Suggestion(
+					historyEntryOptional,
+					this.newContent,
+					modelOffset,
+					originalLength,
+					newLineCount,
+					oldLineCount);
+		}
 	}
 
 	public static record Diff(String patch, List<Change> changes, int added, int removed) {

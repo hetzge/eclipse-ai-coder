@@ -27,8 +27,9 @@ public final class SuggestionStyledTextViewer {
 	private final StyledText styledText;
 	private final Color addedColor;
 	private final Color removedColor;
+	private DiffMode diffMode;
 
-	public SuggestionStyledTextViewer(Composite parent, ITextViewer parentTextViewer, Suggestion suggestion) {
+	public SuggestionStyledTextViewer(Composite parent, ITextViewer parentTextViewer, Suggestion suggestion, DiffMode initialDiffMode) {
 		this.suggestion = suggestion;
 		this.parentTextViewer = parentTextViewer;
 		this.parentStyledText = parentTextViewer.getTextWidget();
@@ -49,6 +50,11 @@ public final class SuggestionStyledTextViewer {
 		this.styledText.setBackground(this.parentStyledText.getBackground());
 		this.styledText.setLineSpacing(this.parentStyledText.getLineSpacing());
 		this.styledText.setLayoutData(GridDataFactory.fillDefaults().grab(true, true).create());
+		setupDiffMode(initialDiffMode);
+	}
+
+	public DiffMode getDiffMode() {
+		return this.diffMode;
 	}
 
 	public int getLineCount() {
@@ -59,7 +65,22 @@ public final class SuggestionStyledTextViewer {
 		return this.styledText.getLineHeight();
 	}
 
+	public void setupDiffMode(DiffMode diffMode) {
+		if (diffMode == DiffMode.LINE) {
+			setupLineDiff();
+		} else if (diffMode == DiffMode.CHAR) {
+			setupCharDiff();
+		} else if (diffMode == DiffMode.ORIGINAL) {
+			setupOriginalDiff();
+		} else if (diffMode == DiffMode.NEW) {
+			setupNewDiff();
+		} else {
+			throw new IllegalStateException("Unknown diff mode: " + diffMode);
+		}
+	}
+
 	public void setupLineDiff() {
+		this.diffMode = DiffMode.LINE;
 		this.styledText.setText("");
 		final List<String> diffLines = DiffUtils.diff(this.originalContent, this.suggestion.content()).patch().lines().toList();
 		int originalOffset = EclipseUtils.getWidgetOffset(this.parentTextViewer, this.suggestion.modelOffset());
@@ -105,6 +126,7 @@ public final class SuggestionStyledTextViewer {
 	}
 
 	public void setupCharDiff() {
+		this.diffMode = DiffMode.CHAR;
 		this.styledText.setText("");
 		final List<Diff> diffs = new DiffMatchPatch().diffMain(this.originalContent, this.suggestion.content());
 		this.styledText.setText(diffs.stream().map(it -> it.text).collect(Collectors.joining()));
@@ -156,6 +178,7 @@ public final class SuggestionStyledTextViewer {
 	}
 
 	public void setupOriginalDiff() {
+		this.diffMode = DiffMode.ORIGINAL;
 		this.styledText.setText("");
 		this.styledText.setText(this.originalContent);
 		final int originalOffset = this.suggestion.modelOffset(); // TODO handle collapsed
@@ -175,6 +198,7 @@ public final class SuggestionStyledTextViewer {
 	}
 
 	public void setupNewDiff() {
+		this.diffMode = DiffMode.NEW;
 		this.styledText.setText("");
 		this.styledText.setText(this.suggestion.content());
 

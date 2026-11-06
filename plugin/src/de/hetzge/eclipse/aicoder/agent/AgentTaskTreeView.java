@@ -153,8 +153,10 @@ public final class AgentTaskTreeView extends ViewPart {
 			protected IStatus run(IProgressMonitor monitor) {
 				if (!AgentTaskTreeView.this.treeViewer.getTree().isDisposed()) {
 					final List<Object> list = (List<Object>) AgentTaskTreeView.this.treeViewer.getInput();
-					for (final Object object : list) {
-						refresh(object);
+					if (list != null) {
+						for (final Object object : list) {
+							refresh(object);
+						}
 					}
 					this.schedule(1000 * 60);
 				}
@@ -477,7 +479,12 @@ public final class AgentTaskTreeView extends ViewPart {
 			final List<IProject> projects = task.getRequest().projects();
 			final AgentFileSystem fileSystem = new AgentFileSystem(projects, projects.get(0).getWorkspace().getRoot());
 			fileSystem.load(AgentStorage.getFileSystemPath(task.getId()).toPath());
-			final List<Suggestion> suggestions = fileSystem.toSuggestions(agentChange.path());
+			final Optional<List<Suggestion>> suggestionsOptional = fileSystem.toSuggestions(agentChange.path());
+			if (suggestionsOptional.isEmpty()) {
+				MessageDialog.openInformation(null, "Change not compatible", "The change is not compatible with the current file content.");
+				return;
+			}
+			final List<Suggestion> suggestions = suggestionsOptional.get();
 			final IFile file = ResourcesPlugin.getWorkspace().getRoot().getFile(agentChange.path());
 			IDE.openEditor(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage(), file);
 			final InlineCompletionController controller = InlineCompletionController.setup(EclipseUtils.getActiveTextEditor().orElseThrow());

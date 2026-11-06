@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -14,7 +13,6 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
@@ -77,6 +75,7 @@ import de.hetzge.eclipse.aicoder.llm.LlmUtils;
 import de.hetzge.eclipse.aicoder.next.NextEditRequest;
 import de.hetzge.eclipse.aicoder.preferences.AiCoderPreferences;
 import de.hetzge.eclipse.aicoder.preferences.ContextPreferences;
+import de.hetzge.eclipse.aicoder.util.DiffUtils;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils.Runnable_WithExceptions;
 import de.hetzge.eclipse.aicoder.util.Utils;
@@ -387,57 +386,22 @@ public final class InlineCompletionController {
 		final String editable = document.get(firstLine, lastLine - firstLine);
 		final String suffix = document.get(lastLine, document.getLength() - lastLine);
 		final int cursorOffset = modelOffset - document.getLineOffset(firstLine);
-		final List<String> diffs = EditHistoryDiffUtils.getDiffs(Duration.ofMinutes(1));
-		for (int i = 0; i < diffs.size(); i++) {
-			System.out.println("diff " + i + ":\n" + diffs.get(i));
-		}
+		final List<String> diffs = EditHistoryDiffUtils.getDiffs(Duration.ofMinutes(10));
 		final NextEditRequest request = new NextEditRequest(currentPath, prefix, editable, suffix, cursorOffset, List.of(), diffs);
+
+		System.out.println("next edit prompt: \n" + request.toInceptionLabsNextEditPrompt());
+
 		final LlmResponse response = LlmUtils.executeNextEdit(request).get(); // TODO
 		final String content = Utils.stripCodeMarkdownTags(response.getContent());
-		System.out.println("content:\n " + content);
-		System.out.println("editable:\n " + editable);
-		final List<String> contentLines = content.lines().toList();
-		final List<String> editableLines = editable.lines().toList();
 
-		int prefixLineOffset = 0;
-		for (int i = 0; i < Math.min(editableLines.size(), contentLines.size()); i++) {
-			final String editableLine = editableLines.size() > i ? editableLines.get(i) : "";
-			final String contentLine = contentLines.size() > i ? contentLines.get(i) : "";
-			if (!Objects.equals(editableLine.trim(), contentLine.trim())) {
-				break;
-			}
-			prefixLineOffset++;
-		}
-		int suffixLineOffset = 0;
-		for (int i = 0; i < Math.min(editableLines.size(), contentLines.size()); i++) {
-			final String editableLine = editableLines.size() > i ? editableLines.get(editableLines.size() - 1 - i) : "";
-			final String contentLine = contentLines.size() > i ? contentLines.get(contentLines.size() - 1 - i) : "";
-			if (!Objects.equals(editableLine.trim(), contentLine.trim())) {
-				break;
-			}
-			suffixLineOffset++;
-		}
+		System.out.println("===\nResponse: \n" + content);
+		final HistoryEntry historyEntry = new HistoryEntry(UUID.randomUUID(), CompletionMode.NEXT_EDIT, currentPath.makeRelative().toPath(), document.get(), "", List.of(), Duration.ZERO, HistoryStatus.STARTED);
 
-		if (prefixLineOffset == editableLines.size() && prefixLineOffset == contentLines.size() && prefixLineOffset == suffixLineOffset) {
-			throw new Exception("No changes detected"); // TODO
-		}
-
-		System.out.println("editableLines: " + editableLines.size());
-		System.out.println("contentLines: " + contentLines.size());
-		System.out.println("prefixLineOffset: " + prefixLineOffset);
-		System.out.println("suffixLineOffset: " + suffixLineOffset);
-
-		final String newEditable = editableLines.subList(prefixLineOffset, editableLines.size() - suffixLineOffset).stream().collect(Collectors.joining("\n"));
-		final String newContent = contentLines.subList(prefixLineOffset, contentLines.size() - suffixLineOffset).stream().collect(Collectors.joining("\n"));
-		System.out.println("newEditable:\n " + newEditable);
-		System.out.println("newContent:\n " + newContent);
-		setup(new Suggestion(
-				Optional.of(new HistoryEntry(UUID.randomUUID(), CompletionMode.NEXT_EDIT, currentPath.makeRelative().toPath(), document.get(), "", List.of(), Duration.ZERO, HistoryStatus.STARTED)),
-				newContent,
-				document.getLineOffset(firstLine + prefixLineOffset),
-				newEditable.length(),
-				(int) newContent.lines().count(),
-				(int) newEditable.lines().count()));
+		final String oldContent = prefix + "\n" + content + "\n" + suffix;
+		final String newContent = prefix + "\n" + editable + "\n" + suffix;
+		setup(DiffUtils.diff(oldContent, newContent).changes().stream()
+				.map(change -> change.toSuggestion(document.get(), Optional.of(historyEntry)))
+				.toList());
 	}
 
 	private void cancelHttpRequest() {
@@ -636,7 +600,7 @@ public final class InlineCompletionController {
 		if (this.suggestionControllers != null) {
 			acceptSuggestion(suggestionController);
 		}
-		if (AiCoderPreferences.isCleanupCodeOnApplyEnabled() && this.suggestionControllers.isEmpty()) {
+		if (AiCoderPreferences.isCleanupCodeOnApplyEnabled() && (this.suggestionControllers == null || this.suggestionControllers.isEmpty())) {
 			// TODO only cleanup if syntax is complete
 			AiCoderActivator.log().info("Trigger code cleanup on apply");
 			final Optional<ICompilationUnit> compilationUnitOptional = EclipseUtils.getCompilationUnit(this.textEditor.getEditorInput());

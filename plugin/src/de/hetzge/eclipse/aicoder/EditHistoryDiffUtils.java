@@ -18,9 +18,9 @@ import org.eclipse.ui.INavigationLocation;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.PlatformUI;
 
-import de.hetzge.eclipse.aicoder.util.DiffUtils;
 import de.hetzge.eclipse.aicoder.util.EclipseUtils;
 import de.hetzge.eclipse.aicoder.util.LambdaExceptionUtils;
+import de.hetzge.eclipse.aicoder.util.PatchUtils;
 
 public final class EditHistoryDiffUtils {
 
@@ -34,48 +34,20 @@ public final class EditHistoryDiffUtils {
 				.toList();
 	}
 
-	/**
-	 * Creates a list of diffs for the given file. The diffs are created between the current content of the file and the content of the file at the given duration ago. The diffs are created for each state of the file that was modified within the given duration. The diffs are returned in reverse order, so the most recent diff is last.
-	 */
-	public static List<String> createDiffs(IFile file, Duration duration) throws UnsupportedEncodingException, IOException, CoreException, Exception {
+	private static List<String> createDiffs(IFile file, Duration duration) throws UnsupportedEncodingException, IOException, CoreException, Exception {
 		final IFileState[] states = file.getHistory(new NullProgressMonitor());
 		if (states.length == 0) {
 			return List.of();
 		}
-		final List<String> list = Stream.concat(Stream.of(getFileContent(file)), Arrays.stream(states)
+		final List<String> list = Stream.concat(Stream.of(EclipseUtils.readContentFromBufferOrFile(file.getWorkspace().getRoot(), file.getFullPath())), Arrays.stream(states)
 				.filter(it -> it.getModificationTime() > System.currentTimeMillis() - duration.toMillis())
 				.map(LambdaExceptionUtils.rethrowFunction(it -> new String(it.getContents().readAllBytes(), file.getCharset()))))
 				.toList();
 		return IntStream.range(0, list.size() - 1)
-				.mapToObj(i -> DiffUtils.diff(list.get(i + 1), list.get(i)).patch())
+				.filter(i -> !list.get(i + 1).equals(list.get(i)))
+				.mapToObj(i -> PatchUtils.createPatch(list.get(i + 1), list.get(i), file.getFullPath().toOSString(), file.getFullPath().toOSString(), 3))
 				.toList()
 				.reversed();
-	}
-
-	/**
-	 * Creates a diff of the given file. The diff is created between the current content of the file and the content of the file at the given duration ago.
-	 */
-	public static String createDiff(IFile file, Duration duration) throws CoreException, UnsupportedEncodingException, IOException {
-		final IFileState[] states = file.getHistory(new NullProgressMonitor());
-		if (states.length == 0) {
-			return "";
-		}
-		IFileState state = states[0];
-		for (int i = 0; i < states.length; i++) {
-			if (states[i].getModificationTime() > System.currentTimeMillis() - duration.toMillis()) {
-				state = states[i];
-				break;
-			}
-		}
-		final String a = new String(state.getContents().readAllBytes(), file.getCharset());
-		final String b = getFileContent(file);
-		final String pathString = file.getFullPath().toString();
-		final String diff = DiffUtils.diff(a, b).patch();
-		return String.format("---%s\n+++%s\n@@\n%s\n", pathString, pathString, diff);
-	}
-
-	private static String getFileContent(IFile file) throws UnsupportedEncodingException, IOException, CoreException {
-		return new String(file.getContents().readAllBytes(), file.getCharset());
 	}
 
 	private static List<IFile> getLastEditedFiles() {

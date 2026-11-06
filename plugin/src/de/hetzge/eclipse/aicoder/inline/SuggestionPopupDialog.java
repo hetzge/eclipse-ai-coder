@@ -58,19 +58,8 @@ public final class SuggestionPopupDialog {
 		this.container.setLayout(layout);
 		this.container.moveAbove(null);
 
-		this.styledTextViewer = new SuggestionStyledTextViewer(this.container, this.parentTextViewer, this.suggestion);
-		final DiffMode diffMode = AiCoderPreferences.getDiffMode();
-		if (diffMode == DiffMode.LINE) {
-			this.styledTextViewer.setupLineDiff();
-		} else if (diffMode == DiffMode.CHAR) {
-			this.styledTextViewer.setupCharDiff();
-		} else if (diffMode == DiffMode.ORIGINAL) {
-			this.styledTextViewer.setupOriginalDiff();
-		} else if (diffMode == DiffMode.NEW) {
-			this.styledTextViewer.setupNewDiff();
-		} else {
-			throw new IllegalStateException("Unknown diff mode: " + diffMode);
-		}
+		DiffMode diffMode = AiCoderPreferences.getDiffMode();
+		this.styledTextViewer = new SuggestionStyledTextViewer(this.container, this.parentTextViewer, this.suggestion, diffMode);
 
 		final Composite toolbarContainer = new Composite(this.container, SWT.NONE);
 		final GridData gridData = GridDataFactory.fillDefaults().grab(true, false).hint(SWT.DEFAULT, TOOLBAR_HEIGHT).create();

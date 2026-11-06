@@ -6,7 +6,6 @@ import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,33 +43,21 @@ public final class AgentFileSystem {
 		this.contentByPath = new HashMap<>();
 	}
 
-	public List<Suggestion> toSuggestions(IPath path) throws IOException {
+	public Optional<List<Suggestion>> toSuggestions(IPath path) throws IOException {
 		final IPath normalizedPath = normalizePath(path);
 		final String oldContent = EclipseUtils.readContentFromBufferOrFile(this.workspaceRoot, normalizedPath);
 		final String referenceContent = getReferenceContent(normalizedPath);
 		final String newContent = this.contentByPath.getOrDefault(normalizedPath, oldContent);
 		final String targetContent = PatchUtils.applyPatch(oldContent, PatchUtils.createPatch(referenceContent, newContent));
+		if (targetContent == null) {
+			return Optional.empty();
+		}
 		if (oldContent.equals(newContent)) {
-			return List.of();
+			return Optional.of(List.of());
 		}
-		final List<Suggestion> suggestions = new ArrayList<>();
-		final DiffUtils.Diff diff = DiffUtils.diff(oldContent, targetContent);
-		for (final DiffUtils.Change change : diff.changes()) {
-			final String oldChangeContent = change.oldContent();
-			final String newChangeContent = change.newContent();
-			final int modelOffset = Arrays.asList(oldContent.split("(?<=\\n)")).stream().limit(change.startLine()).mapToInt(String::length).sum();
-			final int originalLength = oldChangeContent.length();
-			final int oldLineCount = (int) oldChangeContent.lines().count();
-			final int newLineCount = (int) newChangeContent.lines().count();
-			suggestions.add(new Suggestion(
-					Optional.empty(),
-					newChangeContent,
-					modelOffset,
-					originalLength,
-					newLineCount,
-					oldLineCount));
-		}
-		return suggestions;
+		return Optional.of(DiffUtils.diff(oldContent, targetContent).changes().stream()
+				.map(it -> it.toSuggestion(oldContent))
+				.toList());
 	}
 
 	public List<AgentChange> toAgentChanges() {

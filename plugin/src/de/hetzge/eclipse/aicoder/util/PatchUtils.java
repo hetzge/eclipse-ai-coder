@@ -28,15 +28,15 @@ public final class PatchUtils {
 	private PatchUtils() {
 	}
 
-	public static String createPatch(String oldContent, String newContent) throws IOException {
+	public static String createPatch(String oldContent, String newContent) {
 		return createPatch(oldContent, newContent, "file.txt", "file.txt");
 	}
 
-	public static String createPatch(String oldContent, String newContent, String oldPath, String newPath) throws IOException {
+	public static String createPatch(String oldContent, String newContent, String oldPath, String newPath) {
 		return createPatch(oldContent, newContent, oldPath, newPath, 5);
 	}
 
-	public static String createPatch(String oldContent, String newContent, String oldPath, String newPath, int context) throws IOException {
+	public static String createPatch(String oldContent, String newContent, String oldPath, String newPath, int context) {
 		if (oldContent == null) {
 			oldContent = "";
 		}
@@ -62,6 +62,8 @@ public final class PatchUtils {
 		try (DiffFormatter formatter = new DiffFormatter(out)) {
 			formatter.setContext(context);
 			formatter.format(diffList, oldText, newText);
+		} catch (final IOException exception) {
+			throw new RuntimeException("Failed to create patch", exception);
 		}
 		final String patchBody = out.toString(StandardCharsets.UTF_8);
 		return "--- " + oldPath + "\n"
@@ -275,7 +277,7 @@ public final class PatchUtils {
 		for (int lineIndex = 0; lineIndex < rawLines.length; lineIndex++) {
 			final String rawLine = rawLines[lineIndex];
 			final boolean isLast = lineIndex == rawLines.length - 1;
-			String line = rawLine.endsWith("\r") ? rawLine.substring(0, rawLine.length() - 1) : rawLine;
+			final String line = rawLine.endsWith("\r") ? rawLine.substring(0, rawLine.length() - 1) : rawLine;
 			if (isLast && line.isEmpty() && endsWithNewline) {
 				// Trailing split artifact, not a hunk line.
 				continue;

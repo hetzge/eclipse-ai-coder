@@ -17,16 +17,14 @@ public record NextEditRequest(
 		final StringBuilder prompt = new StringBuilder();
 		// Recently Viewed Snippets
 		if (this.locations == null || this.locations.isEmpty()) {
-			prompt.append("<|recently_viewed_code_snippets|>\n\n<|/recently_viewed_code_snippets|>");
+			prompt.append("<|recently_viewed_code_snippets|>\n\n<|/recently_viewed_code_snippets|>\n\n");
 		} else {
 			prompt.append("<|recently_viewed_code_snippets|>\n");
-			if (this.locations != null && !this.locations.isEmpty()) {
-				for (final LastLocation location : this.locations) {
-					prompt.append("<|recently_viewed_code_snippet|>\n");
-					prompt.append("code_snippet_file_path: ").append(location.path().toOSString()).append("\n");
-					prompt.append(location.content()).append("\n");
-					prompt.append("<|/recently_viewed_code_snippet|>\n\n");
-				}
+			for (final LastLocation location : this.locations) {
+				prompt.append("<|recently_viewed_code_snippet|>\n");
+				prompt.append("code_snippet_file_path: ").append(location.path().toOSString()).append("\n");
+				prompt.append(location.content()).append("\n");
+				prompt.append("<|/recently_viewed_code_snippet|>\n\n");
 			}
 			prompt.append("<|/recently_viewed_code_snippets|>\n\n");
 		}
@@ -40,13 +38,15 @@ public record NextEditRequest(
 		prompt.append(this.suffix).append("\n");
 		prompt.append("<|/current_file_content|>\n\n");
 		// Edit History
-		prompt.append("<|edit_diff_history|>\n");
-		if (this.diffs != null && !this.diffs.isEmpty()) {
+		if (this.diffs == null || this.diffs.isEmpty()) {
+			prompt.append("<|edit_diff_history|>\n\n<|/edit_diff_history|>");
+		} else {
+			prompt.append("<|edit_diff_history|>\n");
 			for (final String diff : this.diffs) {
 				prompt.append(diff).append("\n\n");
 			}
+			prompt.append("<|/edit_diff_history|>");
 		}
-		prompt.append("<|/edit_diff_history|>");
 		return prompt.toString();
 	}
 }
