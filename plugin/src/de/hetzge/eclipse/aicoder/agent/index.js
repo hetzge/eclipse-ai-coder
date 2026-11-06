@@ -17,7 +17,7 @@ function createButton({ text, onClick }) {
 	return button;
 }
 
-function addMessage({ role, content, reasoning, timestamp }) {
+function addMessage({ role, content, reasoning, timestamp, toolCallRequest }) {
 	// ----------------------------------------------------
 	const openResultButton = createButton({
 		text: 'Open in result',
@@ -58,9 +58,20 @@ function addMessage({ role, content, reasoning, timestamp }) {
 	contentContainer.style.whiteSpace = 'pre-wrap';
 	contentContainer.textContent = content;
 	// ----------------------------------------------------
+	const toolCallRequestContainers = (toolCallRequest || []).map(request => {
+		const toolCallContainer = document.createElement('pre');
+		toolCallContainer.style.color = '#333';
+		toolCallContainer.style.whiteSpace = 'pre-wrap';
+		toolCallContainer.textContent = `${request.functionName}(${JSON.stringify(request.arguments, null, 2)})`;
+		return toolCallContainer;
+	});
+	// ----------------------------------------------------
 	const body = document.createElement('div');
 	body.append(reasoningContainer);
 	body.append(contentContainer);
+	for (const toolCallRequestContainer of toolCallRequestContainers) {
+		body.append(toolCallRequestContainer);
+	}
 	// ----------------------------------------------------
 	const showFooter = role === 'ASSISTANT' && content.trim().length > 0;
 	const footer = document.createElement('div');
